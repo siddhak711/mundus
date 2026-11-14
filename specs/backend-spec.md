@@ -272,6 +272,15 @@ CREATE TABLE room (
 );
 CREATE INDEX room_space ON room(space_id);
 
+CREATE TABLE room_adjacency (
+  room_a TEXT NOT NULL, room_b TEXT NOT NULL,    -- room_a < room_b, same space and floor
+  shared_edge_ids TEXT NOT NULL,                 -- JSON array of wall edge ids
+  shared_length_m REAL NOT NULL,
+  edge_types TEXT,                               -- JSON array of distinct edge types on the shared boundary
+  involves_void INTEGER NOT NULL DEFAULT 0,      -- 1 if either room is labelled Void
+  PRIMARY KEY (room_a, room_b)
+);
+
 CREATE TABLE wall_vertex (vertex_id TEXT PRIMARY KEY, floor_id TEXT, x REAL, y REAL);
 CREATE TABLE wall_edge (edge_id TEXT PRIMARY KEY, floor_id TEXT, v1 TEXT, v2 TEXT, type TEXT, thickness REAL);
 
@@ -346,7 +355,9 @@ CREATE TABLE embedding (
 CREATE VIRTUAL TABLE doc_fts USING fts5(doc_id UNINDEXED, doc_type UNINDEXED, text);
 
 CREATE TABLE ingest_log (step TEXT, key TEXT, status TEXT, attempts INTEGER, error TEXT, updated_at TEXT, PRIMARY KEY (step, key));
-CREATE TABLE api_log (ts TEXT, op TEXT, caller TEXT, ms REAL, cache TEXT, place_id TEXT);
+CREATE TABLE api_log (ts TEXT, op TEXT, caller TEXT, run_id TEXT, ms REAL, cache TEXT, place_id TEXT, bytes_out INTEGER);
+CREATE TABLE claim_archive (reset_id TEXT, archived_at TEXT, claim_json TEXT);
+CREATE TABLE claim_snapshot (name TEXT, created_at TEXT, claim_json TEXT);
 ```
 
 ### 3.3 Vector index
@@ -392,6 +403,7 @@ Order: id joins first, spatial joins second, nothing merged on a guess.
 4. **Residential:** join through the kit's `residential-listings.csv` (`MatterportModelId` to `ListingId`). The index's `homes_listing_id` is a `ResidentialListingId`, not a `ListingId`, and must not be matched against listing `id`. Link `relation = listing_of_space`. These spaces get `place_id = place:geo:<lat4>_<lon4>`.
 5. **Place to Vexcel:** call `property/extract` as described in 2.3. If the point lies inside a returned footprint: `match_method = contains`, distance 0. Otherwise take the nearest footprint within 50 m: `match_method = nearest`, distance recorded. No structure on the parcel (seen on 4 of the 15 places): store parcel only, `match_method = parcel_only`.
 6. **Pano to Room:** point-in-polygon of the pano's (x, y) against room polygons on the same floor: `room_match = inside`. No hit: nearest room centroid within 3 m: `nearest`. Otherwise null and `none`.
+6a. **Room adjacency:** two rooms on the same floor are adjacent when their `boundary.edges` sets share at least one wall edge id. Store one row per pair with the shared edge ids and the summed length of those edges. Checked on real data (model 1BToKRDx8fv): 5 rooms gave 7 adjacent pairs, shared lengths 0.68 to 4.19 m. Limits, both verified on that model: every edge has type `wall`, so adjacency means "shares a wall", not "connected by a door", and no walkable route can be derived from it; and `Void` rooms (shafts, unscanned areas) appear as neighbours, so they are flagged with `involves_void`. If other models return edge types besides `wall`, they are kept in `edge_types` and reported by the `verify` step.
 7. **Unmatched report:** `mundus ingest resolve` prints and saves `data/reports/unmatched.json`: counts of index property ids missing from the kit, kit properties with no models, residential ids missing, distance mismatches.
 
 `space_kind` rules, first match wins, on lower-cased name (deterministic, no model call). Matterport's `propertyClassifications` is not used: it was wrong on 2 of 6 models checked.
@@ -495,8 +507,8 @@ Base URL: `https://<vm-ip-with-dashes>.sslip.io` (see 9.4). Prefix `/v1`. JSON o
 |---|---|---|
 | `search_places` | `GET /v1/places/search?q=&lat=&lon=&radius_m=&type=&has_interior=&has_listing=&deep_only=&limit=&cursor=` | Text match on name and address (FTS5), distance filter, sorted by distance when `lat`/`lon` given, else by text rank |
 | `get_place` | `GET /v1/places/{place_id}` | Full place bundle |
-| `get_space` | `GET /v1/spaces/{space_id}` | Space, floors, rooms, pano list with caption summaries |
-| `get_room` | `GET /v1/rooms/{room_id}` | Room, polygon, panos with full captions |
+| `get_space` | `GET /v1/spaces/{space_id}` | Space, floors, rooms, pano list with caption summaries, `room_adjacency: [[room_a, room_b, shared_length_m]]` |
+| `get_room` | `GET /v1/rooms/{room_id}` | Room, polygon, panos with full captions, `adjacent_rooms: [{room_id, label, shared_length_m, involves_void}]` |
 | `get_pano` | `GET /v1/panos/{pano_id}` | Position, room, caption JSON, face URLs |
 | `get_pano_image` | `GET /v1/panos/{pano_id}/image?face=1&defurnished=false&size=2k|thumb` | JPEG bytes from disk. `Cache-Control: public, max-age=86400` |
 | `get_floorplan` | `GET /v1/spaces/{space_id}/floorplans` and `GET /v1/floors/{floor_id}/plan` | Metadata (origin, pixels per metre) and image bytes |
@@ -512,6 +524,7 @@ Base URL: `https://<vm-ip-with-dashes>.sslip.io` (see 9.4). Prefix `/v1`. JSON o
 | Map layer | `GET /v1/map/spaces?bbox=&deep_only=` | GeoJSON points of LA spaces: `space_id, place_id, name, space_kind, depth` |
 | Basemap | `GET /v1/map/basemap` | `basemap.json` as served by Matterport |
 | Stats | `GET /v1/stats` | Counts per table, claims per place, API calls by cache status |
+| Claims reset | `POST /v1/admin/claims/reset` body `{mode, name?, clear_caches?}` | Admin only, see 8.1. Not exposed as an MCP tool |
 | Health | `GET /healthz` | `{"ok": true, "db": true, "deep_places": 15}` |
 
 ### 6.3 Response shapes (normative)
@@ -581,7 +594,7 @@ Tool results are JSON text. Results are trimmed for model context: long lists ar
 | `search_places` | Find buildings in Los Angeles by name, address or location. Start here when you have an address or an area and need a place_id. Only places with `is_deep: true` have interiors, captions and aerial facts. | `query?: string`, `near?: {lat, lon, radius_m}`, `filters?: {type?, has_interior?, has_listing?, deep_only?}`, `limit?: int = 10` |
 | `get_place` | Get everything known about one building: market records (listings, tenants, sales), its interior spaces, aerial facts, and claims that earlier agents already established. Read `claims` first: if a claim answers your question, cite it and skip the expensive work. | `place_id: string` |
 | `get_space` | Get one scanned interior space (one Matterport model): summary, rooms with sizes, and the camera positions with short captions. | `space_id: string` |
-| `get_room` | Get one room: dimensions, floor polygon, and full visual captions of each camera position in it. | `room_id: string` |
+| `get_room` | Get one room: dimensions, floor polygon, full visual captions of each camera position in it, and which rooms share a wall with it. Sharing a wall does not mean there is a door: the data has no doors. | `room_id: string` |
 | `view_pano` | Get the caption for one camera position and, when `include_image` is true, the actual photo so you can look at it yourself. Use the image only when the caption does not answer the question: images cost far more tokens. | `pano_id: string`, `face?: int 1..4 = 1`, `defurnished?: bool = false`, `include_image?: bool = false` |
 | `search_interiors` | Search inside buildings by what is visible, in plain words, for example "gym with free weights and mirrors" or "kitchen with an island". Returns matching camera positions, rooms and spaces. | `text: string`, `place_id?: string`, `near?: {lat, lon, radius_m}`, `kinds?: string[]`, `limit?: int = 10` |
 | `get_aerial` | Get what is visible from above for a building: footprint and parcel outline, roof and site attributes, and links to top-down and angled aerial photos. Set `include_image` to look at one photo. | `place_id: string`, `kind?: string = "ortho"`, `size_m?: int = 80`, `include_image?: bool = false` |
@@ -629,6 +642,20 @@ CREATE INDEX claim_key ON claim(place_id, subject, predicate);
 - **Invalidation:** `invalidate_claim` sets `retracted`, or `superseded` when `superseded_by` is given. Rows are never deleted.
 - **Staleness:** after any ingest step rewrites an evidence row with a different `content_sha256`, claims citing it become `stale`. `get_claims` excludes stale claims by default.
 - **The "cheaper and smarter" number:** `get_claims` and `get_place` increment `read_count`. `/v1/stats` reports, per place: active claims, claim reads, and expensive calls (`view_pano` with image, `aerial_semantic_search`, `query_market`). The Frontend can show this as the memory payoff.
+
+### 8.1 Reset between evaluation runs
+
+Agent-written claims carry over from one run to the next, so a later run reads answers an earlier run stored. Evaluation runs need a known starting state.
+
+- **CLI:** `mundus claims reset [--mode empty|restore] [--name <snapshot>] [--clear-caches]`, `mundus claims snapshot --name <snapshot>`, `mundus claims list-snapshots`.
+- **HTTP:** `POST /v1/admin/claims/reset` with the same options, so an evaluation runner can call it between runs without shell access. It requires a separate `WORLD_ADMIN_TOKEN`; the normal API token is refused with 401. It is never exposed through MCP, so an agent cannot wipe memory.
+- **`mode = empty`** (default): archives all rows of `claim` into `claim_archive` with a `reset_id` and timestamp, then empties `claim`. Nothing is deleted for good.
+- **`mode = restore`:** replaces `claim` with a named snapshot. This gives two controlled starting states for the memory comparison: cold (empty) and warm (a snapshot taken after a seeding run).
+- **Also reset every time:** `claim.read_count` counters, the in-memory response cache, and the per-run counters behind `/v1/stats`.
+- **`clear_caches = true`** additionally empties the query-embedding cache and the aerial-search cache. Leave it false by default: those caches hold upstream results, not agent knowledge, and clearing them adds network latency and variance to wall-clock measurements. Set it only to measure a fully cold system.
+- **Never touched:** ingested data, captions, embeddings of documents, evidence rows.
+- **Run tagging:** every request may carry header `X-Run-Id`. It is stored on `api_log` rows and on claims (`claim.run_id`), and `/v1/stats?run_id=` returns counts and latencies for that run alone. Sequential, interleaved runs therefore stay separable in the logs even without a reset.
+- **Response:** `{"reset_id": "...", "archived": 42, "restored": 0, "caches_cleared": false}`.
 
 `put_claim` response:
 
@@ -681,7 +708,7 @@ The VM choice makes the demo depend on venue wifi. Mitigation, required not opti
 
 ## 10. Security
 
-- Secrets come from environment variables or a git-ignored `.env`: `MATTERPORT_API_KEY`, `MATTERPORT_API_TOKEN`, `VEXCEL_API_KEY`, `COSTAR_KIT_URL`, `COSTAR_ZIP_PASSWORD`, `GEMINI_KEY`, `WORLD_API_TOKEN`. `.env.example` lists names with empty values.
+- Secrets come from environment variables or a git-ignored `.env`: `MATTERPORT_API_KEY`, `MATTERPORT_API_TOKEN`, `VEXCEL_API_KEY`, `COSTAR_KIT_URL`, `COSTAR_ZIP_PASSWORD`, `GEMINI_KEY`, `WORLD_API_TOKEN`, `WORLD_ADMIN_TOKEN`. `.env.example` lists names with empty values.
 - The repository is public. `data/`, `.env` and the kit are in `.gitignore` from the first commit. A pre-commit check fails if a staged file is larger than 1 MB or matches a key pattern.
 - Logs never contain keys, `Authorization` headers, or query strings of upstream URLs (the Vexcel GET style puts the key in the URL: use the header style only).
 - Signed Matterport URLs are never stored or returned.
@@ -713,6 +740,8 @@ Layout: `backend/` with package `mundus_world`, Python 3.11, `uv`, FastAPI, `htt
 | B10 | REST API, all routes of 6.2, error shapes, auth, CORS, OpenAPI at `/docs` | Contract tests: each route returns the shape of 6.3 against a fixture database; unknown id gives 404 `not_found`; missing token gives 401; `get_place` on a deep place returns non-empty `spaces`, `aerial`, and at least one non-empty `market` list |
 | B11 | Search: hybrid ranking, query cache, text-only fallback | Fixture test: the query "treadmills" ranks a fitness pano first; with the embedding call mocked to hang, the response arrives under 1 second with `mode = text_only` |
 | B12 | Claims: put, dedupe, conflicts, invalidate, staleness, stats | Writing the same claim twice gives one row with `seen_count = 2`; a second claim with the same subject and predicate and a different value returns the first in `conflicts`; a claim with an unknown evidence id is rejected; changing an evidence hash marks the claim `stale` |
+| B12a | Claims reset, snapshot, restore, run tagging (8.1) | After writing 3 claims, `reset` leaves `get_claims` empty and `claim_archive` holding 3; `snapshot` then `reset --mode restore` brings the same 3 claim ids back; the reset route returns 401 with the normal token and is absent from the MCP tool list; two requests with different `X-Run-Id` values appear separately in `/v1/stats?run_id=` |
+| B7a | Room adjacency (section 4, 6a) | Fixture of model 1BToKRDx8fv gives exactly 7 adjacent pairs with Living Room to Kitchen at 4.19 m; every pair is symmetric and on one floor; `get_room` returns `adjacent_rooms` |
 | B13 | SQL guard | `SELECT count(*) FROM costar_sale` works; `DROP TABLE place`, `SELECT 1; SELECT 2`, `ATTACH`, `PRAGMA`, `SELECT * FROM claim` and a recursive query that runs forever are each rejected or aborted with `sql_rejected` |
 | B14 | MCP server at `/mcp` | An MCP client lists exactly the 14 tools of section 7; `get_place` through MCP equals REST output; `view_pano` with `include_image` returns an image block |
 | B15 | Deploy scripts: VM provisioning, systemd unit, Caddy config, `snapshot`, `restore`, `warmup` | `curl https://<host>/healthz` returns `deep_places: 15`; restore on a second machine passes the same check |
@@ -740,6 +769,8 @@ A fixture database (`tests/fixtures/world_small.db`: 1 place, 2 spaces, 4 rooms,
 | 9 | Room polygons do not close | Moderate | Low | Hull fallback with `polygon_quality` flag |
 | 10 | Licensed data leaks from a public VM | Low | Moderate | Bearer token, no directory listing, VM deleted after the event |
 
+| 13 | The agent or an evaluation task treats "shares a wall" as "can walk between" | Moderate | Moderate: wrong route or egress answers | Tool description and field name say wall-sharing only; no door data exists in the Matterport fields we ingest |
+
 ---
 
 ## CONTRACT CHANGE PROPOSALS (carry to Frontend and Harness sessions)
@@ -765,6 +796,10 @@ A fixture database (`tests/fixtures/world_small.db`: 1 place, 2 spaces, 4 rooms,
 **CCP-11. Home places.** A single-family home is a place with id `place:home:<ResidentialListingId>`. `get_place` on it returns `market.home_listings` (all MLS listings of that home, with price, status, beds, baths and the features record when one exists) instead of the commercial lists. `property_type` is `Residential`.
 
 **CCP-13. Pano cap.** At most 20 panos per space have images and captions. `get_space` lists every pano position with `is_selected`; image and caption calls on an unselected pano return `409 not_ingested`. Each room carries `pano_total` and `pano_selected`. A room with `pano_selected: 0` has dimensions and a label but no visual evidence: the agent must say so, and evaluation questions about what such a room looks like have no answer in the data.
+
+**CCP-14. Room adjacency.** `get_room` returns `adjacent_rooms` and `get_space` returns `room_adjacency`, derived from shared wall edges. It states which rooms share a wall and for what length. It does not state that a door or opening connects them: all edges checked have type `wall`.
+
+**CCP-15. Claims reset and run tagging.** `POST /v1/admin/claims/reset` (admin token, not an MCP tool) empties or restores the claims store between evaluation runs. The Harness sends `X-Run-Id` on every World API and MCP request so cost and latency can be reported per run from `/v1/stats?run_id=`.
 
 **CCP-12. Evaluation set.** The 15 deep places are fixed in `config/selection.json`. The Harness session can build evaluation questions against the coverage tables in section 1.2 of the backend spec.
 
