@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..110,400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+        "leaflet": "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet-src.esm.js"
+    } }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="#/">Atlas</a>
+    <nav class="cities" aria-label="City">
+      <a data-city="houston" href="#/houston">Houston</a>
+      <a data-city="los-angeles" href="#/los-angeles">Los Angeles</a>
+    </nav>
+    <span class="topbar-note" id="topbar-note"></span>
+    <button class="ask-toggle" id="ask-toggle" type="button" aria-expanded="false">Ask Atlas</button>
+  </header>
+
+  <main id="browse" class="browse" hidden>
+    <section class="browse-list">
+      <div class="filters">
+        <input id="search" type="search" placeholder="Search by name or address" aria-label="Search">
+        <div class="filter-row">
+          <select id="type-filter" aria-label="Property type"></select>
+          <select id="sort" aria-label="Sort">
+            <option value="scans">Most interior scans</option>
+            <option value="size">Largest</option>
+            <option value="stories">Tallest</option>
+            <option value="available">Most space available</option>
+            <option value="tenancies">Most tenant history</option>
+            <option value="newest">Newest</option>
+          </select>
+        </div>
+        <p class="result-count" id="result-count"></p>
+      </div>
+      <ol class="results" id="results"></ol>
+    </section>
+    <div id="map" class="map" aria-label="Map of properties"></div>
+  </main>
+
+  <main id="twin" class="twin" hidden>
+    <aside class="record" id="record"></aside>
+    <section class="stage">
+      <canvas id="canvas"></canvas>
+      <div class="stage-labels" id="stage-labels"></div>
+      <div class="stage-status" id="stage-status" hidden></div>
+      <div class="floor-tip" id="floor-tip" hidden></div>
+      <div class="stage-controls" id="stage-controls" hidden>
+        <div class="segmented" role="group" aria-label="View">
+          <button type="button" data-view="model" aria-pressed="true">Model</button>
+          <button type="button" data-view="floors" aria-pressed="false">Floors</button>
+          <button type="button" data-view="stacked" aria-pressed="false">Stacked</button>
+          <button type="button" data-view="plan" aria-pressed="false">Plan</button>
+        </div>
+        <label class="check"><input type="checkbox" id="layer-heights"> Height map</label>
+        <label class="check"><input type="checkbox" id="layer-footprints"> Footprints</label>
+        <div class="timeline" id="timeline" hidden>
+          <button type="button" id="timeline-play">Play</button>
+          <input type="range" id="timeline-year" min="1980" max="2026" value="2026" aria-label="Year">
+          <output id="timeline-out">2026</output>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="ask" id="ask" hidden>
+    <div class="ask-log" id="ask-log"></div>
+    <form class="ask-form" id="ask-form">
+      <textarea id="ask-input" rows="2" placeholder="Ask about this city or building" aria-label="Question"></textarea>
+      <button type="submit">Send</button>
+    </form>
+  </aside>
+
+  <dialog class="lightbox" id="lightbox"><img alt=""><p></p></dialog>
+  <dialog class="tour" id="tour"><button type="button" id="tour-close">Close tour</button><iframe title="Matterport tour" allow="xr-spatial-tracking; fullscreen"></iframe></dialog>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

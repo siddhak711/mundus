@@ -1,0 +1,243 @@
+// Routing and the glue between the record panel, the 3-D viewer and the ask drawer.
+//   #/houston                      city list and map
+//   #/houston/commercial/233899    one property
+import { fetchDetail, fetchScan, fetchTwin } from './api.js';
+import { showCity, showOnly } from './browse.js';
+import { createFloorModel, CURRENT_YEAR } from './floors.js';
+import { escapeHtml, number, rate, CITY_NAMES } from './format.js';
+import { renderRecord } from './record.js';
+import { setUpAsk } from './ask.js';
+import { Viewer } from './twin/viewer.js';
+
+const DEFAULT_CITY = 'houston';
+const el = (id) => document.getElementById(id);
+const browseView = el('browse');
+const twinView = el('twin');
+const status = el('stage-status');
+const controls = el('stage-controls');
+const tip = el('floor-tip');
+
+let current = null; // everything belonging to the open property
+
+// ---- property view ------------------------------------------------------------
+function closeProperty() {
+  if (!current) return;
+  current.viewer.dispose();
+  clearInterval(current.playTimer);
+  current = null;
+}
+
+function freshCanvas() {
+  // A new canvas per property drops the old WebGL context and its listeners in one go.
+  const old = el('canvas');
+  const canvas = old.cloneNode();
+  old.replaceWith(canvas);
+  return canvas;
+}
+
+function showStatus(title, body = '') {
+  status.hidden = !title;
+  status.innerHTML = title ? `<strong>${escapeHtml(title)}</strong>${escapeHtml(body)}` : '';
+}
+
+function repaint() {
+  const { viewer, floors, year, marked, hovered } = current;
+  viewer.paint((floor) => {
+    const info = floors.at(floor, year);
+    return {
+      leasedShare: info.leasedShare,
+      available: info.available.length > 0,
+      emphasised: floor === hovered || marked.has(floor),
+    };
+  });
+}
+
+function showFloorTip(floor, event) {
+  if (!floor || !event) { tip.hidden = true; return; }
+  const info = current.floors.at(floor, current.year);
+  const lines = info.tenants.slice(0, 4).map((t) => `${escapeHtml(t.tenant)}, ${number(t.sf)} sq ft`);
+  info.available.forEach((s) => lines.push(`Suite ${escapeHtml(s.suite || '')} available, ${number(s.sf)} sq ft at ${rate(s.rate)}`));
+  if (info.scans.length) lines.push('Has an interior scan');
+  tip.innerHTML = `<strong>Floor ${floor}</strong>${lines.length ? lines.join('<br>') : 'Nothing on record'}`;
+  const stage = tip.parentElement.getBoundingClientRect();
+  tip.style.left = `${event.clientX - stage.left + 14}px`;
+  tip.style.top = `${event.clientY - stage.top + 14}px`;
+  tip.hidden = false;
+}
+
+function setYear(year) {
+  current.year = year;
+  el('timeline-year').value = year;
+  const { tenants, leasedSf } = current.floors.summary(year);
+  el('timeline-out').textContent = year;
+  el('timeline-out').title = `${tenants} tenants, ${number(leasedSf)} sq ft on record`;
+  repaint();
+}
+
+function togglePlay() {
+  const button = el('timeline-play');
+  if (current.playTimer) {
+    clearInterval(current.playTimer);
+    current.playTimer = null;
+    button.textContent = 'Play';
+    return;
+  }
+  let year = current.year >= CURRENT_YEAR ? current.floors.firstYear : current.year;
+  button.textContent = 'Pause';
+  current.playTimer = setInterval(() => {
+    setYear(year);
+    if (year++ >= CURRENT_YEAR) togglePlay();
+  }, 300);
+}
+
+async function openScan(scan) {
+  if (!current || !scan) return;
+  const session = current;
+  showStatus('Loading the interior scan', ' The first load downloads the mesh from Matterport.');
+  try {
+    const assets = await fetchScan(scan.id);
+    if (current !== session) return;
+    const cutRange = await session.viewer.showScan(assets, scan.floor);
+    session.record.setOpenScan({ id: scan.id, cutRange, photos: assets.photos });
+    showStatus('');
+  } catch (error) {
+    showStatus('The scan could not be loaded', ` ${error.message}`);
+  }
+}
+
+function closeScan() {
+  current.viewer.hideScan();
+  current.record.setOpenScan(null);
+  current.viewer.setView(current.viewer.view);
+}
+
+function setView(view) {
+  if (!current) return;
+  if (current.viewer.scan) { current.viewer.hideScan(); current.record.setOpenScan(null); }
+  controls.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  current.viewer.setView(view);
+}
+
+function openTour(scan) {
+  el('tour').querySelector('iframe').src = `${scan.tourUrl}&play=1&qs=1&brand=0`;
+  el('tour').showModal();
+}
+
+async function openProperty(city, kind, id) {
+  closeProperty();
+  browseView.hidden = true;
+  twinView.hidden = false;
+  controls.hidden = true;
+  tip.hidden = true;
+  el('record').innerHTML = '';
+  el('topbar-note').textContent = '';
+  showStatus('Building the site model', ' Fetching the aerial photo, height model and scans. This takes a few seconds the first time.');
+
+  const viewer = new Viewer({
+    canvas: freshCanvas(),
+    labelLayer: el('stage-labels'),
+    onFloorHover: (floor, event) => { if (current) { current.hovered = floor; repaint(); showFloorTip(floor, event); } },
+    onFloorClick: (floor) => current?.record.focusFloor(current.floors.at(floor, current.year)),
+  });
+  const session = (current = { viewer, year: CURRENT_YEAR, marked: new Set(), hovered: 0, playTimer: null, kind, id, city });
+
+  try {
+    const [detail, twin] = await Promise.all([fetchDetail(kind, id), fetchTwin(kind, id)]);
+    if (current !== session) return;
+    session.detail = detail;
+    session.twin = twin;
+    session.floors = createFloorModel(detail, twin);
+    session.record = renderRecord(el('record'), {
+      detail, twin, floors: session.floors, city,
+      handlers: {
+        onOpenScan: openScan,
+        onCloseScan: closeScan,
+        onCut: (height) => viewer.setScanCut(height),
+        onTour: openTour,
+        onTenantHover: (floors) => { session.marked = new Set(floors); repaint(); },
+        onFloorFocus: (floor) => { session.marked = new Set([floor]); repaint(); session.record.focusFloor(session.floors.at(floor)); },
+      },
+    });
+    await viewer.load(twin);
+    if (current !== session) return;
+
+    const heightFt = Math.round(twin.building.top * 3.28084);
+    viewer.setPins([
+      { label: `${number(heightFt)} ft` },
+      ...twin.scans.filter((s) => s.floor).map((s) => ({ floor: s.floor, label: `Scan, floor ${s.floor}`, onClick: () => openScan(s) })),
+    ]);
+    repaint();
+
+    el('timeline').hidden = !session.floors.hasHistory;
+    el('timeline-year').min = session.floors.firstYear;
+    setYear(CURRENT_YEAR);
+    el('layer-heights').checked = el('layer-footprints').checked = false;
+    setView('model');
+    controls.hidden = false;
+    showStatus('');
+    el('topbar-note').textContent = `${CITY_NAMES[city]}, ${detail.type}`;
+    document.title = `${detail.name} | Atlas`;
+  } catch (error) {
+    if (current === session) showStatus('This property could not be loaded', ` ${error.message}`);
+  }
+}
+
+// ---- routing ------------------------------------------------------------------
+function route() {
+  const [city = DEFAULT_CITY, kind, id] = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const knownCity = CITY_NAMES[city] ? city : DEFAULT_CITY;
+  document.querySelectorAll('.cities a').forEach((a) => {
+    if (a.dataset.city === knownCity) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  });
+  if (kind && id) return openProperty(knownCity, kind, id);
+
+  closeProperty();
+  twinView.hidden = true;
+  browseView.hidden = false;
+  el('topbar-note').textContent = '';
+  document.title = `${CITY_NAMES[knownCity]} | Atlas`;
+  showCity(knownCity);
+}
+
+// ---- wiring ------------------------------------------------------------------
+controls.addEventListener('click', (event) => {
+  const view = event.target.closest('[data-view]');
+  if (view) setView(view.dataset.view);
+});
+el('layer-heights').addEventListener('change', (e) => current?.viewer.setLayer('heights', e.target.checked));
+el('layer-footprints').addEventListener('change', (e) => current?.viewer.setLayer('footprints', e.target.checked));
+el('timeline-year').addEventListener('input', (e) => setYear(Number(e.target.value)));
+el('timeline-play').addEventListener('click', togglePlay);
+el('tour-close').addEventListener('click', () => { el('tour').close(); el('tour').querySelector('iframe').src = 'about:blank'; });
+
+document.addEventListener('click', (event) => {
+  const image = event.target.closest('.photo-grid img');
+  if (!image) return;
+  const box = el('lightbox');
+  box.querySelector('img').src = image.src;
+  box.querySelector('p').textContent = image.alt;
+  box.showModal();
+});
+el('lightbox').addEventListener('click', () => el('lightbox').close());
+
+// The agent drives the same functions a person does.
+setUpAsk({
+  context: () => ({
+    city: current?.city || location.hash.split('/')[1] || DEFAULT_CITY,
+    property: current?.detail ? { kind: current.kind, id: current.id, name: current.detail.name } : null,
+  }),
+  actions: {
+    open_property: ({ city, kind, id }) => { location.hash = `#/${city}/${kind}/${id}`; },
+    show_list: ({ city, ids }) => {
+      if (location.hash !== `#/${city}`) location.hash = `#/${city}`;
+      setTimeout(() => showOnly(ids), 400);
+    },
+    mark_floors: ({ floors }) => { if (current?.floors) { current.marked = new Set(floors); repaint(); current.record.show('floors'); } },
+    set_view: ({ view }) => setView(view),
+    open_scan: ({ scan_id }) => openScan(current?.twin?.scans.find((s) => s.id === scan_id)),
+  },
+});
+
+addEventListener('hashchange', route);
+route();
