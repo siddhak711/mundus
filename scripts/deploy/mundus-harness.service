@@ -1,0 +1,14 @@
+[Unit]
+Description=Mundus agent server (LangGraph)
+After=network-online.target mundus-world.service
+
+[Service]
+User=@USER@
+WorkingDirectory=@ROOT@/harness
+EnvironmentFile=@ROOT@/.env
+ExecStart=@ROOT@/harness/.venv/bin/langgraph dev --host 127.0.0.1 --port 2024 --no-browser
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
