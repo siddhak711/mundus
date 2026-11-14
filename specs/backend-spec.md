@@ -14,7 +14,7 @@ Confidence labels: (high), (moderate), (low). "VERIFY" marks a fact that no one 
 | Caption and embedding provider | Gemini for both, billed to the Google Cloud credits | Siddha |
 | Database | One SQLite file (WAL mode). No separate vector database | Backend session, see 3.1 |
 | Claims store | Backend database is the single source of truth | Shared kit recommendation, adopted |
-| Live key verification | Not done. No keys were available to this session | See VERIFY items |
+| Live key verification | Done for Matterport, Vexcel and Gemini on 2026-11-14 (results below). Not done for the CoStar kit: `COSTAR_KIT_URL` is missing | See next table |
 
 What was checked without keys (high confidence, computed from `models_index.csv` on 2026-11-14):
 
@@ -29,6 +29,26 @@ What was checked without keys (high confidence, computed from `models_index.csv`
 | LA models with an AI summary | 5,065 |
 | LA models with defurnished panos | 2,935 |
 | LA models with a splat | 34 |
+
+Live verification results (2026-11-14, real keys, about 40 requests in total):
+
+| Check | Result | Confidence |
+|---|---|---|
+| Matterport key pair | Works. Root folder "HackPrinceton 2026", 14,945 models | high |
+| Model visibility | `public` on all 6 models checked, so the Showcase embed should work | moderate (6 of 126 checked) |
+| AI summaries | Real, one sentence of 25 to 40 words, listing tone. Example (Pool, 5ccpzGRBuXZ): "A modern outdoor amenity deck in downtown Los Angeles featuring a resort-style pool, spacious sun terrace, and a covered cabana lounge with urban skyline views." | high |
+| `propertyClassifications` | Unreliable. Two studio apartments came back as `education` and `healthcare`; amenity spaces came back empty. Do not use it for `space_kind` | high |
+| Rooms query | Works. Rooms include a `Void` room with no dimensions; `height` is missing on some rooms | high |
+| Floor plans | 8 assets per model: JPG and PNG renders at 100 pixels per metre with origin, plus schematic DXF and PNG | high |
+| Skybox faces | 6 signed URLs per pano on host `cdn-2.matterport.com`, query keys `t` and `k`. Each face is 2048 x 2048 JPEG, 0.5 to 1.0 MB. 6 faces downloaded in 2.6 seconds | high |
+| Defurnished view | View id returned for a model flagged `defurnished = yes` | high |
+| Vexcel `property/extract` | Returns a GeoJSON FeatureCollection. One feature per **parcel**: `geometry` is the parcel, `properties.structures[]` holds each building with `footprint.wkt`, `footprint.area` and roof attributes; parcel-level keys cover pool, vehicles, hardscape, tree cover, sport court | high |
+| Vexcel coverage of the 10 buildings | 8 of 10 answer at the point; 2 return HTTP 404 at the point and answer with a 25 m square polygon (which can return 2 to 3 parcels). 3 of 10 return a parcel with 0 structures | high |
+| Vexcel ortho | Works, 80 x 80 m at zoom 21 is a 439 KB JPEG | high |
+| Vexcel embedding search | Works. Features carry only `score`, `source.product-type` and a geometry | high |
+| Gemini caption model | `gemini-4-hydrogen` exists and produced a detailed, accurate JSON caption of a real pano (found the life ring, rescue pole, spa rules sign, emergency shutoff). 31.5 seconds per call, 4,595 input tokens, 760 output tokens, 3,036 thinking tokens | high |
+| Gemini embeddings | `gemini-embedding-001` returns 768 dimensions on request, 0.32 seconds | high |
+| CoStar kit and join | NOT verified. The password is set but there is no kit URL | n/a |
 
 ---
 
@@ -105,24 +125,24 @@ One CLI, `mundus ingest <step>`, with `mundus ingest all` running steps in order
 | 3 | `select` | Steps 1 and 2 | `data/selection.json`; `place.is_deep = 1` for 10 places | 0 | seconds |
 | 4 | `basics` | Model ids of deep places | `space` rows updated (summary, classification, address), preview image bytes | 126 GraphQL + 126 images | 2 minutes |
 | 5 | `rooms` | Same | `floor`, `room`, `wall_vertex`, `wall_edge`, `pano` (positions), floor plan images and DXF | 126 GraphQL + about 400 files | 3 minutes |
-| 6 | `panos` | Same | 6 faces per pano at 2k on disk | 126 GraphQL + 8,772 images | 30 minutes (moderate) |
+| 6 | `panos` | Same | 6 faces per pano at 2k on disk | 126 GraphQL + 8,772 images | 10 to 15 minutes at 8 concurrent (measured 0.43 s per face) |
 | 7 | `panos-defurnished` (P2) | Models with a defurnished view | Defurnished faces on disk | 82 GraphQL + about 3,000 images | 10 minutes |
 | 8 | `aerial` | Deep places | `aerial_facts` rows, ortho x2 and oblique x4 images per place | 70 | 2 minutes |
 | 9 | `resolve` | All of the above | `link` rows, pano to room assignment, `space_kind` | 0 | seconds |
-| 10 | `caption` | Pano faces | `pano_caption` rows | 1,462 Gemini calls | 10 to 20 minutes |
+| 10 | `caption` | Pano faces | `pano_caption` rows | 1,462 Gemini calls | 50 to 100 minutes, see section 5 |
 | 11 | `cards` | Captions, rooms, kit, aerial | `room.card_text`, `space.card_text`, `place.card_text`; no model calls | 0 | seconds |
 | 12 | `embed` | Card texts and captions | `embedding` rows | about 25 batched calls | 1 minute |
 | 13 | `evidence` | All tables | `evidence` rows for every record, image and caption | 0 | seconds |
 | 14 | `verify` | Database | Prints the acceptance report of section 11, exits non-zero on failure | 0 | seconds |
 
-Total wall time from empty: about 60 to 75 minutes (moderate). Total Matterport API requests: about 460 GraphQL calls, well inside the shared-key budget.
+Total wall time from empty: about 1.5 to 2.5 hours, dominated by captioning (moderate). Total Matterport API requests: about 460 GraphQL calls, well inside the shared-key budget.
 
 ### 2.3 Step details that are not obvious
 
 - **`costar`:** the kit's schema is unknown. Load each dataset by flattening top-level scalar fields into columns (pandas `json_normalize`, max depth 2) and keep the full original record in a `raw_json` column. Column names are snake_cased. Print for each dataset: record count, detected id column, detected lat/lon columns. Compare record counts with the expected table in the shared kit (3,339 / 1,022 / 74,093 / 49,575 / 6,120 / 1,747 / 2,120 / 1,899) and warn on any difference above 1%.
 - **`rooms`:** a room's `boundary.edges` is an unordered set of wall edge ids. Build the polygon by chaining edges through shared vertex ids. If the chain does not close, store the convex hull of the edge vertices and set `room.polygon_quality = 'hull'`.
-- **`panos`:** store all 6 faces so the Frontend can run its own cube-map viewer if the Showcase embed is not possible. Face index semantics: 0 up, 1 to 4 horizon, 5 down. The compass direction of faces 1 to 4 is VERIFY.
-- **`aerial`:** per deep place: `property/extract` at the place point; ortho at zoom 21 with bbox 80 x 80 m; ortho at bbox 250 x 250 m (context); the four obliques around the footprint with `buffer-meter=28`. The response shape of `property/extract` is VERIFY: store the raw JSON and read footprint, parcel and attributes defensively.
+- **`panos`:** store all 6 faces so the Frontend can run its own cube-map viewer if the Showcase embed is not possible. Face index semantics: 0 up, 1 to 4 horizon, 5 down. The compass direction of faces 1 to 4 is still VERIFY (B5).
+- **`aerial`:** per deep place: `property/extract` at the place point; ortho at zoom 21 with bbox 80 x 80 m; ortho at bbox 250 x 250 m (context); the four obliques around the footprint with `buffer-meter=28`. `property/extract` returns parcels, each with a `structures` list (verified). Call it with the place point first. On HTTP 404, retry with a 25 m square polygon around the point. When several parcels or structures come back, keep the structure with the largest `footprint.area` whose footprint is within 50 m of the point, and its parcel. Store the raw JSON. Flatten parcel-level keys and the chosen structure's keys into `attributes_json`, dropping null values.
 
 ---
 
@@ -273,7 +293,7 @@ CREATE TABLE api_log (ts TEXT, op TEXT, caller TEXT, ms REAL, cache TEXT, place_
 | Item | Value |
 |---|---|
 | Documents | Pano caption text (about 1,462), room cards (415), space cards (126), place cards (10) |
-| Model | `EMBED_MODEL` env var, default `gemini-embedding-001` (moderate: confirm the id against the Gemini docs at build time) |
+| Model | `EMBED_MODEL` env var, default `gemini-embedding-001` (verified) |
 | Dimensions | 768 (request reduced output size), L2-normalised, float32 |
 | Document task type | retrieval document; queries use retrieval query |
 | Search | Hybrid: cosine top 50 and FTS5 BM25 top 50, merged by reciprocal rank fusion with k = 60 |
@@ -297,7 +317,7 @@ data/
   img/aerial/<pid>/<kind>_<size_m>.jpg
 ```
 
-`data/` is git-ignored in full. Expected size: about 4 GB (moderate; assumes 400 KB per 2k face).
+`data/` is git-ignored in full. Expected size: about 6.5 GB furnished, about 8.5 GB with defurnished (measured average 0.74 MB per 2k face).
 
 ---
 
@@ -309,11 +329,11 @@ Order: id joins first, spatial joins second, nothing merged on a guess.
 2. **Sanity check on every id join:** compute haversine distance between the model's lat/lon and the kit property's lat/lon. Above 150 m: keep the link but add `note = 'distance_mismatch'` and log it. Above 1,000 m: set `status = candidate` and exclude from place responses.
 3. **Space to Place, spatial:** for LA spaces with no property id, find kit properties within 40 m. Exactly one: link with `method = spatial`, `confidence = 0.6`, `status = candidate`. Several: one candidate link each with `confidence = 0.3`. Candidates are returned by the API in a separate `candidate_spaces` array and never mixed with accepted ones.
 4. **Residential:** `space.homes_listing_id` equals the residential listing id in the kit. Link `relation = listing_of_space`. These spaces get `place_id = place:geo:<lat4>_<lon4>`.
-5. **Place to Vexcel:** call `property/extract` at the place point. If the point lies inside a returned footprint: `match_method = contains`, distance 0. Otherwise take the nearest footprint within 50 m: `match_method = nearest`, distance recorded. None within 50 m: store parcel only, `match_method = parcel_only`.
+5. **Place to Vexcel:** call `property/extract` as described in 2.3. If the point lies inside a returned footprint: `match_method = contains`, distance 0. Otherwise take the nearest footprint within 50 m: `match_method = nearest`, distance recorded. No structure on the parcel (seen on 3 of the 10 buildings): store parcel only, `match_method = parcel_only`.
 6. **Pano to Room:** point-in-polygon of the pano's (x, y) against room polygons on the same floor: `room_match = inside`. No hit: nearest room centroid within 3 m: `nearest`. Otherwise null and `none`.
 7. **Unmatched report:** `mundus ingest resolve` prints and saves `data/reports/unmatched.json`: counts of index property ids missing from the kit, kit properties with no models, residential ids missing, distance mismatches.
 
-`space_kind` rules, first match wins, on lower-cased name (deterministic, no model call):
+`space_kind` rules, first match wins, on lower-cased name (deterministic, no model call). Matterport's `propertyClassifications` is not used: it was wrong on 2 of 6 models checked.
 
 | Kind | Rule |
 |---|---|
@@ -332,14 +352,14 @@ Order: id joins first, spatial joins second, nothing merged on a guess.
 
 | Item | Choice |
 |---|---|
-| Model | `CAPTION_MODEL` env var. Set it to the Gemini flash-tier model the team calls "Hydrogen". This session does not know that model's API id: Siddha supplies it |
+| Model | `CAPTION_MODEL` env var, default `gemini-4-hydrogen` (verified to exist and to caption well). Fallback `gemini-3.5-flash` |
 | Unit of work | One call per pano: the 4 horizon faces (1 to 4), each downscaled to 1024 px, sent as 4 images in one request |
 | Panos | All panos in the 10 buildings (about 1,462) |
 | Defurnished | Not captioned in v1. Furniture removal is generative, so captions of those images describe invented surfaces. Bytes are stored for display only (P2) |
 | Context given | Space name, Matterport room label if assigned, room dimensions if assigned |
 | Output | JSON, schema below, temperature 0 |
-| Estimated cost | Under $10 (low: depends on the model's image token pricing) |
-| Estimated time | 10 to 20 minutes at 8 concurrent calls |
+| Tokens | Measured per call: 4,595 input, about 3,800 output including thinking. For 1,462 panos: about 6.7 million input and 5.6 million output tokens. Dollar cost unknown: this session does not know the model's price |
+| Time | Measured 31.5 seconds per call, mostly thinking. At 16 concurrent calls: about 50 minutes. Set the lowest thinking level the model accepts; if that cuts latency below 10 seconds, the job takes about 15 minutes. HTTP 503 "high demand" was seen on a sibling model, so retries with backoff are required |
 
 Prompt (version `cap-v1`):
 
@@ -600,7 +620,7 @@ The VM choice makes the demo depend on venue wifi. Mitigation, required not opti
 
 ## 10. Security
 
-- Secrets come from environment variables or a git-ignored `.env`: `MATTERPORT_API_KEY`, `MATTERPORT_API_TOKEN`, `VEXCEL_API_KEY`, `COSTAR_KIT_URL`, `COSTAR_ZIP_PASSWORD`, `GEMINI_API_KEY`, `WORLD_API_TOKEN`. `.env.example` lists names with empty values.
+- Secrets come from environment variables or a git-ignored `.env`: `MATTERPORT_API_KEY`, `MATTERPORT_API_TOKEN`, `VEXCEL_API_KEY`, `COSTAR_KIT_URL`, `COSTAR_ZIP_PASSWORD`, `GEMINI_KEY`, `WORLD_API_TOKEN`. `.env.example` lists names with empty values.
 - The repository is public. `data/`, `.env` and the kit are in `.gitignore` from the first commit. A pre-commit check fails if a staged file is larger than 1 MB or matches a key pattern.
 - Logs never contain keys, `Authorization` headers, or query strings of upstream URLs (the Vexcel GET style puts the key in the URL: use the header style only).
 - Signed Matterport URLs are never stored or returned.
@@ -625,7 +645,7 @@ Layout: `backend/` with package `mundus_world`, Python 3.11, `uv`, FastAPI, `htt
 | B3 | Step `costar` (LIVE: needs kit) | 8 `costar_*` tables exist; counts within 1% of the expected table or a printed warning; `describe_market` output saved to `data/reports/market_schema.json`; unmatched report exists. **VERIFY result recorded:** how many of the 731 LA property ids from the index exist in the kit |
 | B4 | Steps `select`, `basics`, `rooms` (LIVE) | `selection.json` has 10 places, each present in the kit. Every model of those places has `depth >= 3`. At least 90% of rooms have `polygon_quality = 'loop'`. **VERIFY results recorded:** 5 real AI summaries printed to `data/reports/summaries.md`; whether `visibility` allows Showcase embedding, saved for the Frontend |
 | B5 | Step `panos` (LIVE) | At least 99% of expected face files exist and decode as JPEG; no URL containing `?t=` appears anywhere in the database; rerun downloads 0 files. **VERIFY result recorded:** face order and compass direction, from one contact sheet image |
-| B6 | Step `aerial` (LIVE) | 10 `aerial_facts` rows; at least 8 have `match_method = contains`; 6 images per place on disk. **VERIFY result recorded:** list of attribute keys actually returned |
+| B6 | Step `aerial` (LIVE) | 10 `aerial_facts` rows, each with a parcel; at least 6 have a footprint; the point-then-polygon fallback is exercised by 8810904 and 8829852; 6 images per place on disk |
 | B7 | Step `resolve` | Every pano of a deep space has `room_match` set; at least 70% are `inside`; `link` has one accepted row per deep space; distance mismatches listed |
 | B8 | Step `caption` and `qa captions` (LIVE) | At least 98% of panos have a valid caption; HTML sheet renders 30 samples; rerun makes 0 model calls |
 | B9 | Steps `cards`, `embed`, `evidence` | Every deep place, space, room has `card_text`; `embedding` row count equals document count; every row of every fact table has a non-null `evidence_id` that resolves |
@@ -651,9 +671,10 @@ A fixture database (`tests/fixtures/world_small.db`: 1 place, 2 spaces, 4 rooms,
 | 3 | Venue wifi fails during judging | Moderate | High | Snapshot and local restore, tested before midnight (9.5) |
 | 4 | Shared keys get throttled or revoked by another team's abuse | Moderate | Moderate | Ingest early; whole pipeline needs about 460 Matterport API calls; everything cached to disk |
 | 5 | Captions invent details | Moderate | Moderate: a judge checks a claim against the photo | Factual prompt, temperature 0, human sample check, evidence link from every caption back to the photo |
-| 6 | Models are private, so the Showcase embed is blocked | Unknown | Moderate for Frontend | All 6 faces stored and served, so a cube-map viewer works without Matterport |
+| 6 | Some models are private, so the Showcase embed is blocked | Low (6 of 6 checked are public) | Moderate for Frontend | All 6 faces stored and served, so a cube-map viewer works without Matterport |
 | 7 | Vexcel `property/extract` shape differs or returns several buildings per parcel | Moderate | Low | Raw JSON kept, defensive parser, `match_method` recorded |
-| 8 | The "Hydrogen" model id or the embedding model id is wrong | Moderate | Low | Both are env vars; B8 and B9 fail fast with the provider's error |
+| 8 | Captioning is slow or the model returns 503 under load | Moderate | Moderate | 16 concurrent calls, lowest thinking level, backoff, fallback model, resumable ledger; start the job as soon as faces are on disk |
+| 11 | Outbound network allowlists block image hosts | Seen in this session | Low | Hosts needed: `api.matterport.com`, `cdn-2.matterport.com`, `static.matterport.com`, `api.vexcelgroup.com`, `generativelanguage.googleapis.com`, plus the kit download host |
 | 9 | Room polygons do not close | Moderate | Low | Hull fallback with `polygon_quality` flag |
 | 10 | Licensed data leaks from a public VM | Low | Moderate | Bearer token, no directory listing, VM deleted after the event |
 
@@ -685,6 +706,6 @@ A fixture database (`tests/fixtures/world_small.db`: 1 place, 2 spaces, 4 rooms,
 
 ## Open items for Siddha
 
-1. Supply the API id of the Gemini "Hydrogen" model for `CAPTION_MODEL`.
-2. The live keys (Matterport pair, Vexcel, kit URL and password, Gemini) go into `.env` on the ingestion VM. No one has yet tested them against this spec's VERIFY items; B3 to B6 do that first.
-3. Confirm or replace the provisional building list after B3 reports which property ids exist in the kit.
+1. `COSTAR_KIT_URL` is missing. The kit download link is on the CoStar keys card in Discord. Without it, B3 cannot run and the building list stays provisional.
+2. Confirm or replace the provisional building list after B3 reports which property ids exist in the kit.
+3. Carry the contract change proposals above to the Frontend and Harness sessions.
