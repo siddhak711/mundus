@@ -99,7 +99,9 @@ def verify(s, db: Database) -> dict[str, Any]:
     check("caption evidence ids resolve", dangling == 0, dangling)
     emb = db.scalar("SELECT count(*) FROM embedding WHERE vector IS NOT NULL")
     docs = db.scalar("SELECT count(*) FROM embedding WHERE doc_type!='claim'")
-    check("search documents embedded", docs > 0 and emb >= 0.95 * docs, {"docs": docs, "embedded": emb}, hard=False)
+    # semantic search is required unless it was switched off on purpose
+    check("search documents embedded", docs > 0 and emb >= 0.95 * docs, {"docs": docs, "embedded": emb},
+          hard=s.embed_provider != "none")
     edges = db.scalar("SELECT count(*) FROM edges")
     check("graph edges built", edges > 0, edges)
     types = {r[0] or "null": r[1] for r in db.q("SELECT type, count(*) FROM wall_edge GROUP BY 1")}

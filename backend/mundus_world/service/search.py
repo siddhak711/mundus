@@ -18,7 +18,10 @@ from mundus_world.types.ids import haversine_m, now_iso, sha256_hex
 log = logging.getLogger("mundus.search")
 _WORD = re.compile(r"[A-Za-z0-9]{2,}")
 STOP = {"the", "and", "with", "for", "that", "this", "from", "are", "has", "have", "what", "which", "where", "there",
-        "any", "does", "is", "in", "of", "on", "to", "an", "it", "at", "by", "or", "be", "as"}
+        "any", "does", "is", "in", "of", "on", "to", "an", "it", "at", "by", "or", "be", "as",
+        "out", "can", "some", "somewhere", "anywhere", "place", "places", "how", "who", "do", "you", "me", "my"}
+VECTOR_WEIGHT = 3.0
+RRF_K = 10   # small k keeps the top of each list decisive
 
 
 def fts_query(text: str) -> str | None:
@@ -98,15 +101,16 @@ class Search:
         fq = fts_query(text)
         if fq:
             for i, r in enumerate(self.db.q("SELECT doc_id FROM doc_fts WHERE doc_fts MATCH ? ORDER BY bm25(doc_fts) LIMIT 80", (fq,))):
-                ranks[r["doc_id"]] = ranks.get(r["doc_id"], 0.0) + 1.0 / (60 + i + 1)
+                ranks[r["doc_id"]] = ranks.get(r["doc_id"], 0.0) + 1.0 / (RRF_K + i + 1)
         vec, cache = self._query_vector(text) if self._mat is not None else (None, "none")
         mode = "text_only"
         if vec is not None and self._mat is not None and vec.shape[0] == self._mat.shape[1]:
             mode = "hybrid"
             sims = self._mat @ vec
+            # meaning outranks word overlap: a paraphrase ("somewhere to work out") shares no useful words with a gym caption
             for i, j in enumerate(np.argsort(-sims)[:80]):
                 d = self._ids[int(j)]
-                ranks[d] = ranks.get(d, 0.0) + 1.0 / (60 + i + 1)
+                ranks[d] = ranks.get(d, 0.0) + VECTOR_WEIGHT / (RRF_K + i + 1)
         hits: list[dict[str, Any]] = []
         for doc_id, score in sorted(ranks.items(), key=lambda kv: (-kv[1], kv[0])):
             d = self.db.one("SELECT doc_id, doc_type, place_id, space_id, title, text, evidence_id FROM embedding WHERE doc_id=?", (doc_id,))

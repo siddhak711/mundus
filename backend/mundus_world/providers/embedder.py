@@ -28,6 +28,8 @@ class Embedder:
             with self._lock:
                 if self._model is None and not self._failed:
                     try:
+                        import os
+                        os.environ.setdefault("HF_HUB_DISABLE_XET", "1")   # plain HTTPS download: fewer hosts, the tested path
                         from fastembed import TextEmbedding
                         cache = self.s.data_dir / "models"
                         cache.mkdir(parents=True, exist_ok=True)
