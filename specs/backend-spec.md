@@ -68,7 +68,7 @@ Live verification results (2026-11-14, real keys, about 40 requests in total):
 | T1 | CoStar kit, all 8 datasets + 2 starter CSVs | All records | P0 |
 | T2 | Matterport Basics (summary, type, counts, preview image) | The 15 places (108 models) | P0 |
 | T3 | Rooms, walls, floor plans, pano positions | The 15 places | P0 |
-| T4 | Pano image bytes (6 faces, 2k) and captions | Every pano in the 15 places (2,175 panos) | P0 |
+| T4 | Pano image bytes (6 faces, 2k) and captions | At most 20 panos per space (Siddha's cap): 1,270 of the 2,175 panos in the 15 places | P0 |
 | T4d | Defurnished pano bytes | Models in the 15 places that have them (49 models) | P1: the evaluation set relies on them |
 | T4s | Drone photos for splat models (places 13 and 15): up to 12 photos per model, with GPS and gimbal angles read from XMP | 9 models | P1 |
 | T5 | Vexcel elements, ortho, 4 obliques | The 15 places | P0 |
@@ -169,17 +169,17 @@ One CLI, `mundus ingest <step>`, with `mundus ingest all` running steps in order
 | 3 | `select` | `config/selection.json` | `place.is_deep = 1` for 15 places (14 commercial properties and 1 home); fails if any id is missing from the kit | 0 | seconds |
 | 4 | `basics` | Model ids of deep places | `space` rows updated (summary, classification, address), preview image bytes | 108 GraphQL + 108 images | 2 minutes |
 | 5 | `rooms` | Same | `floor`, `room`, `wall_vertex`, `wall_edge`, `pano` (positions), floor plan images and DXF | 108 GraphQL + about 860 files | 4 minutes |
-| 6 | `panos` | Same | 6 faces per pano at 2k on disk | 108 GraphQL + 13,050 images | 15 to 25 minutes at 8 concurrent (measured 0.43 s per face) |
-| 7 | `panos-defurnished` (P1) | Models with a defurnished view | Defurnished faces on disk | 98 GraphQL + about 5,000 images | 10 minutes |
+| 6 | `panos` | Same | 6 faces per pano at 2k on disk | 108 GraphQL + 7,620 images | 8 to 12 minutes at 8 concurrent (measured 0.43 s per face) |
+| 7 | `panos-defurnished` (P1) | Models with a defurnished view | Defurnished faces on disk | 98 GraphQL + 2,586 images | 5 minutes |
 | 8 | `aerial` | Deep places | `aerial_facts` rows, ortho x2 and oblique x4 images per place | 70 | 2 minutes |
 | 9 | `resolve` | All of the above | `link` rows, pano to room assignment, `space_kind` | 0 | seconds |
-| 10 | `caption` | Pano faces | `pano_caption` rows | 2,175 Gemini calls | 25 to 75 minutes, see section 5 |
+| 10 | `caption` | Pano faces | `pano_caption` rows | 1,270 Gemini calls | 15 to 45 minutes, see section 5 |
 | 11 | `cards` | Captions, rooms, kit, aerial | `room.card_text`, `space.card_text`, `place.card_text`; no model calls | 0 | seconds |
 | 12 | `embed` | Card texts and captions | `embedding` rows | about 25 batched calls | 1 minute |
 | 13 | `evidence` | All tables | `evidence` rows for every record, image and caption | 0 | seconds |
 | 14 | `verify` | Database | Prints the acceptance report of section 11, exits non-zero on failure | 0 | seconds |
 
-Total wall time from empty: about 1.5 to 2.5 hours, dominated by captioning (moderate). Total Matterport API requests: about 450 GraphQL calls, well inside the shared-key budget.
+Step order note: pano selection needs room polygons, so `resolve` runs its pano-to-room and selection parts right after `rooms`, before `panos`. Total wall time from empty: about 45 to 75 minutes, dominated by captioning (moderate). Total Matterport API requests: about 450 GraphQL calls, well inside the shared-key budget.
 
 ### 2.3 Step details that are not obvious
 
@@ -195,6 +195,11 @@ Total wall time from empty: about 1.5 to 2.5 hours, dominated by captioning (mod
   - The kit's `models/*.md` field pages are copied to `data/kit_docs/` and their one-line field meanings feed `describe_market`.
   - Contact names, emails and phone numbers of brokers and agents are in the records. They are excluded from extracted columns and from the tables the SQL tool can read (`raw_json` is not selectable through `query_market`).
 - **`rooms`:** a room's `boundary.edges` is an unordered set of wall edge ids. Build the polygon by chaining edges through shared vertex ids. If the chain does not close, store the convex hull of the edge vertices and set `room.polygon_quality = 'hull'`.
+- **Pano cap:** `MAX_PANOS_PER_SPACE = 20` (config). The `rooms` step stores the position of every pano; the `resolve` step then marks at most 20 per space as `is_selected`, and only those are downloaded, captioned and embedded. 27 of the 108 spaces exceed the cap (largest: 225, 193 and 104 panos). Selection is deterministic so reruns pick the same panos:
+  1. Spaces with 20 panos or fewer: select all.
+  2. Otherwise, room coverage first: for each room, largest floor area first, select the pano nearest the room's centroid, until 20 are selected or every room with a pano has one.
+  3. Fill the remaining slots by farthest-point sampling on (x, y, floor): repeatedly select the unselected pano farthest from all selected ones. Ties break on pano id.
+  4. Record `room.pano_total` and `room.pano_selected`. Two spaces have more rooms than the cap (The Annex: 33 rooms; 5134 Medina Rd: 36 rooms), so some of their rooms end with `pano_selected = 0`.
 - **`panos`:** store all 6 faces so the Frontend can run its own cube-map viewer if the Showcase embed is not possible. Face index semantics: 0 up, 1 to 4 horizon, 5 down. The compass direction of faces 1 to 4 is still VERIFY (B5).
 - **`aerial`:** per deep place: `property/extract` at the place point; ortho at zoom 21 with bbox 80 x 80 m; ortho at bbox 250 x 250 m (context); the four obliques around the footprint with `buffer-meter=28`. `property/extract` returns parcels, each with a `structures` list (verified). Call it with the place point first. On HTTP 404, retry with a 25 m square polygon around the point. When several parcels or structures come back, keep the structure with the largest `footprint.area` whose footprint is within 50 m of the point, and its parcel. If the point query returns a parcel whose largest structure is under 100 sq m while the kit says the building is over 5,000 sq ft, run the 25 m polygon query as well and apply the same rule across all returned parcels (seen on 8810904, where the tower sits on the adjacent parcel). Store the raw JSON. Flatten parcel-level keys and the chosen structure's keys into `attributes_json`, dropping null values.
 
@@ -205,12 +210,12 @@ Total wall time from empty: about 1.5 to 2.5 hours, dominated by captioning (mod
 ### 3.1 Database choice
 
 SQLite, one file `data/world.db`, WAL mode, opened by the single API process. Reasons:
-- Data volume is tiny: about 140,000 kit rows, 15,000 spaces, 2,200 panos, 3,000 vectors.
+- Data volume is tiny: about 140,000 kit rows, 15,000 spaces, 2,200 pano positions, 2,100 vectors.
 - SQLite offers a real read-only connection (`file:world.db?mode=ro`) for the SQL tool, which is the safest guard available.
 - FTS5 full-text search is built in.
 - The whole world state is one file plus one image folder, so a snapshot is one `tar` command.
 
-Vectors: stored as float32 blobs in SQLite and loaded into one in-memory numpy matrix at startup. Brute-force cosine over 3,000 x 768 takes under 5 ms (high). A vector database adds an install and a failure mode for no gain at this size. Revisit above about 200,000 vectors.
+Vectors: stored as float32 blobs in SQLite and loaded into one in-memory numpy matrix at startup. Brute-force cosine over 2,100 x 768 takes under 5 ms (high). A vector database adds an install and a failure mode for no gain at this size. Revisit above about 200,000 vectors.
 
 ### 3.2 Tables (DDL)
 
@@ -262,6 +267,7 @@ CREATE TABLE room (
   area_m2 REAL, width_m REAL, depth_m REAL, height_m REAL,
   polygon_json TEXT,                    -- [[x,y],...] metres, model frame
   polygon_quality TEXT,                 -- loop|hull|none
+  pano_total INTEGER, pano_selected INTEGER,   -- pano_selected = 0 means the room has no image or caption
   card_text TEXT, evidence_id TEXT
 );
 CREATE INDEX room_space ON room(space_id);
@@ -273,6 +279,7 @@ CREATE TABLE pano (
   pano_id TEXT PRIMARY KEY,             -- pano:<sid>:<panoId>
   space_id TEXT NOT NULL, room_id TEXT, room_match TEXT,  -- inside|nearest|none
   label TEXT, x REAL, y REAL, z REAL,
+  is_selected INTEGER NOT NULL DEFAULT 0,   -- 1 if inside the 20-per-space cap: only these have images and captions
   has_faces INTEGER DEFAULT 0, has_defurnished_faces INTEGER DEFAULT 0,
   evidence_id TEXT
 );
@@ -346,7 +353,7 @@ CREATE TABLE api_log (ts TEXT, op TEXT, caller TEXT, ms REAL, cache TEXT, place_
 
 | Item | Value |
 |---|---|
-| Documents | Pano caption text (2,175), room cards (about 700), space cards (108), place cards (15): about 3,000 vectors |
+| Documents | Pano caption text (1,270), room cards (about 700), space cards (108), place cards (15): about 2,100 vectors |
 | Model | `EMBED_MODEL` env var, default `gemini-embedding-001` (verified) |
 | Dimensions | 768 (request reduced output size), L2-normalised, float32 |
 | Document task type | retrieval document; queries use retrieval query |
@@ -371,7 +378,7 @@ data/
   img/aerial/<pid>/<kind>_<size_m>.jpg
 ```
 
-`data/` is git-ignored in full. Expected size: about 10 GB furnished, about 14 GB with defurnished (measured average 0.74 MB per 2k face). Use a 50 GB disk on the VM, not 30 GB.
+`data/` is git-ignored in full. Expected size: about 5.6 GB furnished, about 7.5 GB with defurnished (measured average 0.74 MB per 2k face). Use a 50 GB disk on the VM, not 30 GB.
 
 ---
 
@@ -408,12 +415,12 @@ Order: id joins first, spatial joins second, nothing merged on a guess.
 |---|---|
 | Model | `CAPTION_MODEL` env var, default `gemini-4-hydrogen` (verified to exist and to caption well). Fallback `gemini-3.5-flash` |
 | Unit of work | One call per pano: the 4 horizon faces (1 to 4), each downscaled to 1024 px, sent as 4 images in one request |
-| Panos | All panos in the 15 places (2,175). If time is short, cap at 12 panos per space, chosen to spread across rooms |
+| Panos | The selected panos only: at most 20 per space, 1,270 in total (selection rule in 2.3) |
 | Defurnished | Not captioned in v1. Furniture removal is generative, so captions of those images describe invented surfaces. Bytes are stored for display only (P2) |
 | Context given | Space name, Matterport room label if assigned, room dimensions if assigned |
 | Output | JSON, schema below, temperature 0 |
-| Tokens | Measured per call: 4,595 input, about 3,800 output including thinking. For 2,175 panos: about 10.0 million input and 8.3 million output tokens. Dollar cost unknown: this session does not know the model's price |
-| Time | Measured 31.5 seconds per call, mostly thinking. At 16 concurrent calls: about 75 minutes. Set the lowest thinking level the model accepts; if that cuts latency below 10 seconds, the job takes about 25 minutes. HTTP 503 "high demand" was seen on a sibling model, so retries with backoff are required |
+| Tokens | Measured per call: 4,595 input, about 3,800 output including thinking. For 1,270 panos: about 5.8 million input and 4.8 million output tokens. Dollar cost unknown: this session does not know the model's price |
+| Time | Measured 31.5 seconds per call, mostly thinking. At 16 concurrent calls: about 45 minutes. Set the lowest thinking level the model accepts; if that cuts latency below 10 seconds, the job takes about 15 minutes. HTTP 503 "high demand" was seen on a sibling model, so retries with backoff are required |
 
 Prompt (version `cap-v1`):
 
@@ -698,7 +705,7 @@ Layout: `backend/` with package `mundus_world`, Python 3.11, `uv`, FastAPI, `htt
 | B2 | Step `index` | `space` has 14,945 rows; 5,734 have `is_la = 1`; 2,523 of those have a property id; `space_kind` counts for LA printed, with `unit` between 3,500 and 4,000 |
 | B3 | Step `costar` (LIVE: needs kit) | 8 `costar_*` tables exist; counts equal 3,339 / 1,022 / 74,093 / 49,575 / 6,120 / 1,747 / 2,120 / 1,899; `kit_model_link` has 13,096 rows over 12,994 distinct models; 1,581 places have market 20; the report lists 224 index-versus-kit id disagreements; `describe_market` output saved to `data/reports/market_schema.json` |
 | B4 | Steps `select`, `basics`, `rooms` (LIVE) | 15 places are deep, matching the table in 1.2, including `place:home:216888684`. Every model of those places has `depth >= 3`. At least 90% of rooms have `polygon_quality = 'loop'`. **VERIFY results recorded:** 5 real AI summaries printed to `data/reports/summaries.md`; whether `visibility` allows Showcase embedding, saved for the Frontend |
-| B5 | Step `panos` (LIVE) | At least 99% of expected face files (13,050) exist and decode as JPEG; no URL containing `?t=` appears anywhere in the database; rerun downloads 0 files. **VERIFY result recorded:** face order and compass direction, from one contact sheet image |
+| B5 | Step `panos` (LIVE) | No space has more than 20 selected panos; 1,270 panos are selected in total; at least 99% of expected face files (7,620) exist and decode as JPEG; no URL containing `?t=` appears anywhere in the database; rerun downloads 0 files. **VERIFY result recorded:** face order and compass direction, from one contact sheet image |
 | B6 | Step `aerial` (LIVE) | 15 `aerial_facts` rows, each with a parcel; 11 have a footprint and 4 are `parcel_only` (9134890, 6067080, 21290728, 256445); for 8810904 the chosen structure is larger than 1,000 sq m (adjacent-parcel fallback); 6 images per place on disk |
 | B7 | Step `resolve` | Every pano of a deep space has `room_match` set; at least 70% are `inside`; `link` has one accepted row per deep space; distance mismatches listed |
 | B8 | Step `caption` and `qa captions` (LIVE) | At least 98% of panos have a valid caption; HTML sheet renders 30 samples; rerun makes 0 model calls |
@@ -757,6 +764,8 @@ A fixture database (`tests/fixtures/world_small.db`: 1 place, 2 spaces, 4 rooms,
 
 **CCP-11. Home places.** A single-family home is a place with id `place:home:<ResidentialListingId>`. `get_place` on it returns `market.home_listings` (all MLS listings of that home, with price, status, beds, baths and the features record when one exists) instead of the commercial lists. `property_type` is `Residential`.
 
+**CCP-13. Pano cap.** At most 20 panos per space have images and captions. `get_space` lists every pano position with `is_selected`; image and caption calls on an unselected pano return `409 not_ingested`. Each room carries `pano_total` and `pano_selected`. A room with `pano_selected: 0` has dimensions and a label but no visual evidence: the agent must say so, and evaluation questions about what such a room looks like have no answer in the data.
+
 **CCP-12. Evaluation set.** The 15 deep places are fixed in `config/selection.json`. The Harness session can build evaluation questions against the coverage tables in section 1.2 of the backend spec.
 
 **CCP-10. Space gains `space_kind`** (`unit`, `amenity`, `office`, `retail`, `industrial`, `common`, `home`, `other`) and `depth` (0, 2, 3, 4).
@@ -766,5 +775,4 @@ A fixture database (`tests/fixtures/world_small.db`: 1 place, 2 spaces, 4 rooms,
 ## Open items for Siddha
 
 1. Confirm the 15-place evaluation set in 1.2, or name swaps from the alternates.
-2. Decide whether to caption all 2,175 panos (about 75 minutes at measured speed) or cap at 12 per space.
-3. Carry the contract change proposals above to the Frontend and Harness sessions.
+2. Carry the contract change proposals above to the Frontend and Harness sessions.
