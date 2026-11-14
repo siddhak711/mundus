@@ -461,6 +461,43 @@ Run with LangSmith: dataset `mundus-eval`, one experiment per run of the suite, 
 
 Suite passes when 13 of 15 questions pass every applicable check, and citation validity is 100% across all 15.
 
+### 10b. Context-engineering eval (task H13)
+
+Goal: find which interior context gives the best answers per token.
+
+Inputs:
+
+| Code | Input |
+|---|---|
+| S | Matterport space summary. One per scan, not per room. |
+| G | Room geometry. |
+| C | Pano captions we generate with a vision model. |
+| P | Raw panos. Fixed at 4 images per room: one pano, four horizontal faces. |
+| M | Mesh-derived input. Form not decided. |
+
+S+G is always on. C, P and M are each switched on or off. That gives 8 arms:
+
+`S+G`, `+C`, `+P`, `+M`, `+C+P`, `+C+M`, `+P+M`, `+C+P+M`
+
+Size: 15 questions, 3 repeats each. 45 runs per arm, 360 runs total.
+
+Fixed across arms: model, prompt, questions. Logged per arm: accuracy, tokens, latency.
+
+Not decided yet (do not build past these without Siddha):
+
+- The form of M. A model cannot read a mesh. It must be a top-down render or measurements computed by code.
+- Which spaces to test on.
+- The 15 questions and their hand-checked answers.
+- Card layout: flat or hierarchical. Not chosen.
+
+Prerequisites, in order:
+
+1. Confirm keys (model keys and Matterport keys).
+2. Pick spaces.
+3. Write the 15 questions with hand-checked answers.
+4. Build the S, G, P, C and M inputs for those spaces.
+5. Write a runner script that runs all 8 arms.
+
 ## 11. Build plan
 
 Repo layout:
@@ -503,6 +540,7 @@ The mock World API implements every tool in 2a, including the `put_claim` algori
 | H10 | VM deploy. e2-standard-4, Ubuntu 24.04. systemd unit runs `langgraph dev --host 0.0.0.0 --port 2024 --no-browser`. Caddy in front for HTTPS (browsers block a secure page calling an insecure API) and a shared-secret header check. | Frontend on another machine streams a full run. A request without the header gets 401. |
 | H11 (stretch) | `similar_to` traversal: orchestrator uses `get_neighbors(rel="similar_to")` to answer "other spaces like this one". | Question returns 3 spaces, each cited. |
 | H12 (stretch) | Offline consolidation graph `curator`: finds `disputed` pairs and queues a re-look. | Not required for judging. |
+| H13 | Context-engineering eval (section 10b). Runner `eval/context_arms.py` runs 8 arms x 15 questions x 3 repeats with model, prompt and questions fixed. Blocked until the open items in 10b are decided and its prerequisites are done. | 360 runs logged. One results table with accuracy, tokens and latency per arm. |
 
 Order: H0, H1, H2, H3, H4 serial. Then H5, H7, H8 in parallel. Then H6. Then H9 and H10. H1 to H8 need no Backend.
 
