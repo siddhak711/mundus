@@ -6,7 +6,8 @@ After=network-online.target mundus-world.service
 User=@USER@
 WorkingDirectory=@ROOT@/harness
 EnvironmentFile=@ROOT@/.env
-ExecStart=@ROOT@/harness/.venv/bin/langgraph dev --host 127.0.0.1 --port 2024 --no-browser
+Environment=LANGGRAPH_CLI_NO_ANALYTICS=1
+ExecStart=@ROOT@/harness/.venv/bin/langgraph dev --host 127.0.0.1 --port 2024 --no-browser --no-reload
 Restart=on-failure
 RestartSec=3
 
