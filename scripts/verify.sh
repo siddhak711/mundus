@@ -7,7 +7,13 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-scripts/check-work.sh --check
+scripts/check-work.sh
+
+# Unresolved merge conflict markers must never be committed.
+if git grep -nIE '^(<<<<<<< |>>>>>>> |=======$)' -- . ':!scripts/verify.sh' >&2; then
+  echo "verify: merge conflict markers found in the files above" >&2
+  exit 1
+fi
 
 if [ -d scripts/verify.d ]; then
   for gate in scripts/verify.d/*.sh; do

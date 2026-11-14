@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Runs the gate at commit time. Enabled by: git config core.hooksPath .githooks
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+
+branch="$(git symbolic-ref --quiet --short HEAD || true)"
+if [ "$branch" = "main" ]; then
+  echo "pre-commit: do not commit on main. Create a branch from origin/main." >&2
+  exit 1
+fi
+
+exec "$root/scripts/verify.sh"

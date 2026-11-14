@@ -15,6 +15,6 @@ Goal: an approved `work/<name>/spec.md` that an agent can build from with no fur
 5. Write each behavior as a numbered, observable statement that a test or command could check.
 6. Keep it small. If the work will not fit one build session, split it into several specs and say so.
 7. `Open questions` must be empty before approval.
-8. When the human approves, set `status: approved`, run `scripts/check-work.sh`, and commit `docs(spec): approve <name> [<name>]`.
+8. When the human approves, set `status: approved`, run `scripts/check-work.sh`, and commit `docs(spec): approve <name> [<name>]` on a branch from the latest `origin/main`, following `docs/git-workflow.md`. A spec reaches `main` through its own small pull request so that others can see and claim it.
 
 After approval the conversation is over. Tell the human to run `/build <name>`, or start it if they asked you to.

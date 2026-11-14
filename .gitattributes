@@ -1,0 +1,2 @@
+# One line-ending convention for everyone, so files never conflict on whitespace alone.
+* text=auto eol=lf

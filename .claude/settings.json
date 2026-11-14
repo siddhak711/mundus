@@ -17,6 +17,8 @@
       "Bash(scripts/verify.sh)",
       "Bash(scripts/check-work.sh *)",
       "Bash(scripts/check-work.sh)",
+      "Bash(scripts/check-title.sh *)",
+      "Bash(scripts/check-pr-scope.sh *)",
       "Bash(git status *)",
       "Bash(git status)",
       "Bash(git diff *)",
@@ -28,25 +30,27 @@
       "Bash(git checkout *)",
       "Bash(git branch *)",
       "Bash(git fetch *)",
+      "Bash(git merge *)",
       "Bash(git pull *)",
       "Bash(git push *)"
     ],
     "deny": [
       "Bash(git push --force *)",
       "Bash(git push -f *)",
-      "Bash(git reset --hard *)"
+      "Bash(git push origin main*)",
+      "Bash(git reset --hard *)",
+      "Bash(git commit --no-verify *)",
+      "Bash(git commit -n *)"
     ]
   },
   "hooks": {
-    "PreToolUse": [
+    "SessionStart": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-verify.sh\"",
-            "timeout": 120,
-            "statusMessage": "Running scripts/verify.sh"
+            "command": "git -C \"$CLAUDE_PROJECT_DIR\" config core.hooksPath .githooks",
+            "timeout": 10
           }
         ]
       }
