@@ -10,8 +10,15 @@ from dotenv import load_dotenv
 HARNESS_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = HARNESS_DIR.parent
 
-# USD per million tokens (input, output). Fill from the provider price pages; a model missing here costs "unknown".
-PRICES: dict[str, tuple[float, float]] = {}
+# USD per million tokens (input, output). A model missing here costs "unknown" rather than a guess.
+# Claude prices are Anthropic's first-party list prices as of 2026-11-03. Gemini prices are not filled in:
+# set them with MODEL_PRICES ("model=in,out;model=in,out") from the Google price page.
+PRICES: dict[str, tuple[float, float]] = {
+    "claude-fable-5-2": (8.00, 40.00),
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+}
 
 
 def _env(name: str, default: str = "") -> str:
