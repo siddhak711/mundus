@@ -11,8 +11,8 @@ HARNESS_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = HARNESS_DIR.parent
 
 # USD per million tokens (input, output). A model missing here costs "unknown" rather than a guess.
-# Claude prices are Anthropic's first-party list prices as of 2026-11-03. Gemini prices are not filled in:
-# set them with MODEL_PRICES ("model=in,out;model=in,out") from the Google price page.
+# Claude prices are Anthropic's first-party list prices as of 2026-11-03. Add others with MODEL_PRICES
+# ("model=in,out;model=in,out").
 PRICES: dict[str, tuple[float, float]] = {
     "claude-fable-5-2": (8.00, 40.00),
     "claude-opus-5-5": (4.00, 20.00),
@@ -45,13 +45,22 @@ class Config:
     coverage_min_claims: int = 3
 
 
+def use_mundus_anthropic_key() -> None:
+    """Some hosted shells reserve ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL for their own use. When the key is
+    supplied as MUNDUS_ANTHROPIC_KEY, point this process at the public API with that key."""
+    key = _env("MUNDUS_ANTHROPIC_KEY")
+    if key:
+        os.environ["ANTHROPIC_API_KEY"] = key
+        os.environ["ANTHROPIC_BASE_URL"] = _env("MUNDUS_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+        os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
+
+
 def load_config() -> Config:
     load_dotenv(REPO_ROOT / ".env", override=False)
     load_dotenv(HARNESS_DIR / ".env", override=False)
-    if not os.environ.get("GOOGLE_API_KEY") and os.environ.get("GEMINI_KEY"):
-        os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_KEY"]      # langchain-google-genai reads GOOGLE_API_KEY
+    use_mundus_anthropic_key()
     rest = _env("WORLD_REST_URL", "http://127.0.0.1:8000").rstrip("/")
-    worker = _env("WORKER_MODEL", "google_genai:gemini-4-hydrogen")
+    worker = _env("WORKER_MODEL", "anthropic:claude-haiku-5-5")
     dd = Path(_env("HARNESS_DATA_DIR") or (HARNESS_DIR / "data")).resolve()
     for line in _env("MODEL_PRICES").split(";"):       # "model=in,out;model2=in,out"
         if "=" in line:

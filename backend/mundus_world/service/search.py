@@ -10,8 +10,7 @@ from typing import Any
 import numpy as np
 
 from mundus_world.config.settings import Settings
-from mundus_world.providers.gemini import Gemini
-from mundus_world.providers.http import Http
+from mundus_world.providers.embedder import Embedder
 from mundus_world.repo.db import Database
 from mundus_world.types.errors import ApiError
 from mundus_world.types.ids import haversine_m, now_iso, sha256_hex
@@ -37,10 +36,10 @@ class Search:
         self._ids: list[str] = []
         self._mat: np.ndarray | None = None
         self._checked = 0.0
-        # one attempt, short timeout: a slow embedding call must not hold up a search
-        self._gm = Gemini(settings, Http(limits={}, max_attempts=1))
-        from mundus_world.service.evidence import usage_logger
-        self._gm.on_usage = usage_logger(db)
+        self._emb = Embedder(settings)
+        if self._emb.enabled and db.scalar("SELECT count(*) FROM embedding WHERE vector IS NOT NULL"):
+            # load the model off the request path so the first search is not slow
+            threading.Thread(target=self._emb.available, daemon=True).start()
 
     def _load(self) -> None:
         if time.monotonic() - self._checked < 5 and self._sig is not None:
@@ -62,11 +61,12 @@ class Search:
         r = self.db.one("SELECT vector FROM query_embed_cache WHERE qhash=?", (key,))
         if r:
             return np.frombuffer(r["vector"], dtype=np.float32), "hit"
-        if not self.s.gemini_key:
+        if not self._emb.enabled:
             return None, "none"
         try:
-            v = np.asarray(self._gm.embed([text], task_type="RETRIEVAL_QUERY", timeout=1.5)[0], dtype=np.float32)
-            v /= (np.linalg.norm(v) or 1.0)
+            v = self._emb.query(text)
+            if v is None:
+                return None, "none"
             self.db.execute("INSERT OR REPLACE INTO query_embed_cache(qhash,query,model,vector,created_at) VALUES(?,?,?,?,?)",
                             (key, text[:500], self.s.embed_model, v.tobytes(), now_iso()))
             return v, "miss"

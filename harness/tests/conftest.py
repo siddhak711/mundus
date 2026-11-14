@@ -34,7 +34,7 @@ def world_url(tmp_path_factory) -> str:
     subprocess.run([str(py), "-c", f"import sys; sys.path.insert(0, 'tests'); from conftest import build_world; "
                                    f"from pathlib import Path; build_world(Path({str(data)!r}))"], cwd=BACKEND, check=True)
     port = _free_port()
-    env = {**os.environ, "WORLD_DATA_DIR": str(data), "WORLD_API_TOKEN": "", "WORLD_ADMIN_TOKEN": "adm", "GEMINI_KEY": ""}
+    env = {**os.environ, "WORLD_DATA_DIR": str(data), "WORLD_API_TOKEN": "", "WORLD_ADMIN_TOKEN": "adm", "EMBED_PROVIDER": "none"}
     proc = subprocess.Popen([str(py), "-m", "mundus_world.runtime.cli", "serve", "--port", str(port)], cwd=BACKEND, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     url = f"http://127.0.0.1:{port}"

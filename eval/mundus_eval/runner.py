@@ -202,7 +202,17 @@ def cmd_report(args) -> int:
     return 0
 
 
+def use_mundus_anthropic_key() -> None:
+    """Same rule as the harness: a key supplied as MUNDUS_ANTHROPIC_KEY is used against the public API."""
+    key = os.environ.get("MUNDUS_ANTHROPIC_KEY", "").strip()
+    if key:
+        os.environ["ANTHROPIC_API_KEY"] = key
+        os.environ["ANTHROPIC_BASE_URL"] = os.environ.get("MUNDUS_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+        os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
+
+
 def main(argv: list[str] | None = None) -> int:
+    use_mundus_anthropic_key()
     p = argparse.ArgumentParser(prog="mundus-eval")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("truth", help="compute ground truth from the World API").set_defaults(fn=cmd_truth)

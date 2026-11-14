@@ -22,7 +22,6 @@ ask MATTERPORT_API_TOKEN "Matterport API token"
 ask VEXCEL_API_KEY       "Vexcel API key"
 ask COSTAR_KIT_URL       "CoStar kit download URL"
 ask COSTAR_ZIP_PASSWORD  "CoStar kit zip password"
-ask GEMINI_KEY           "Gemini API key (paid tier)"
 ask ANTHROPIC_API_KEY    "Anthropic API key"
 ask LANGSMITH_API_KEY    "LangSmith API key (optional)"
 grep -q '^WORLD_API_TOKEN=.'   .env || echo "WORLD_API_TOKEN=$(openssl rand -hex 16)"   >> .env
@@ -44,7 +43,7 @@ if ! command -v caddy >/dev/null; then
 fi
 
 echo "== python environments"
-(cd backend && uv venv -q --python 3.12 .venv && uv pip install -q -e .)
+(cd backend && uv venv -q --python 3.12 .venv && uv pip install -q -e ".[embed]")
 (cd harness && uv venv -q --python 3.12 .venv && uv pip install -q -e ".[serve]")
 (cd eval    && uv venv -q --python 3.12 .venv && uv pip install -q -e .)
 

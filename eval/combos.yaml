@@ -4,12 +4,12 @@
 # env: environment overrides applied when the agent for this combination is built
 runs_per_task: 3
 combos:
-  - name: cold-sonnet-hydrogen
+  - name: cold-sonnet-haiku
     memory: cold
-    env: {ORCH_MODEL: "anthropic:claude-sonnet-5-5", WORKER_MODEL: "google_genai:gemini-4-hydrogen"}
-  - name: warm-sonnet-hydrogen
+    env: {ORCH_MODEL: "anthropic:claude-sonnet-5-5", WORKER_MODEL: "anthropic:claude-haiku-5-5"}
+  - name: warm-sonnet-haiku
     memory: warm
-    env: {ORCH_MODEL: "anthropic:claude-sonnet-5-5", WORKER_MODEL: "google_genai:gemini-4-hydrogen"}
-  - name: cold-all-hydrogen
+    env: {ORCH_MODEL: "anthropic:claude-sonnet-5-5", WORKER_MODEL: "anthropic:claude-haiku-5-5"}
+  - name: cold-all-haiku
     memory: cold
-    env: {ORCH_MODEL: "google_genai:gemini-4-hydrogen", WORKER_MODEL: "google_genai:gemini-4-hydrogen"}
+    env: {ORCH_MODEL: "anthropic:claude-haiku-5-5", WORKER_MODEL: "anthropic:claude-haiku-5-5"}
