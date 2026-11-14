@@ -35,7 +35,7 @@ Live verification results (2026-11-14, real keys, about 40 requests in total):
 | Check | Result | Confidence |
 |---|---|---|
 | Matterport key pair | Works. Root folder "HackPrinceton 2026", 14,945 models | high |
-| Model visibility | `public` on all 6 models checked, so the Showcase embed should work | moderate (6 of 126 checked) |
+| Model visibility | `public` on all 6 models checked, so the Showcase embed should work | moderate (6 models checked, all in apartment buildings) |
 | AI summaries | Real, one sentence of 25 to 40 words, listing tone. Example (Pool, 5ccpzGRBuXZ): "A modern outdoor amenity deck in downtown Los Angeles featuring a resort-style pool, spacious sun terrace, and a covered cabana lounge with urban skyline views." | high |
 | `propertyClassifications` | Unreliable. Two studio apartments came back as `education` and `healthcare`; amenity spaces came back empty. Do not use it for `space_kind` | high |
 | Rooms query | Works. Rooms include a `Void` room with no dimensions; `height` is missing on some rooms | high |
@@ -48,7 +48,13 @@ Live verification results (2026-11-14, real keys, about 40 requests in total):
 | Vexcel embedding search | Works. Features carry only `score`, `source.product-type` and a geometry | high |
 | Gemini caption model | `gemini-4-hydrogen` exists and produced a detailed, accurate JSON caption of a real pano (found the life ring, rescue pole, spa rules sign, emergency shutoff). 31.5 seconds per call, 4,595 input tokens, 760 output tokens, 3,036 thinking tokens | high |
 | Gemini embeddings | `gemini-embedding-001` returns 768 dimensions on request, 0.32 seconds | high |
-| CoStar kit and join | NOT verified. The password is set but there is no kit URL | n/a |
+| CoStar kit | Downloaded (51.7 MB zip, 423 MB unzipped) and opened with the password. 8 JSON Lines files in `data/`; record counts match the documentation exactly (3,339 / 1,022 / 74,093 / 49,575 / 6,120 / 1,747 / 2,120 / 1,899). Field docs in `models/`, JSON Schemas and `enums.json` in `schemas/` | high |
+| Commercial join | The kit's `commercial-properties.csv` (PropertyId, MatterportModelId) links 12,994 models to all 3,339 properties, and every one of those models is in `models_index.csv`. The index's own `costar_property_id` column covers only 6,191 models and disagrees with the kit on 224 of them (3.6%, mostly mistyped ids such as 1070785 for 10707085). 55 models are listed under more than one property | high |
+| Residential join | The index's `homes_listing_id` matches the kit's `ResidentialListingId` (1,620 of 1,939), never `ListingId`. The kit's `residential-listings.csv` links 1,938 models, all present in the index | high |
+| Child datasets | Every `propertyId` in occupancies, listings and apartment listings exists in the property file. Sale comps name 10,791 property ids of which 2,434 are in the kit (portfolio sales include outside properties) | high |
+| Location agreement | Model geolocation against kit property coordinates, 9,863 pairs: median 33 m, 90th percentile 112 m, 512 pairs over 150 m, 70 over 1,000 m | high |
+| LA composition | 1,581 LA properties: 1,417 multifamily, 98 office, 24 retail, 24 industrial, 10 flex, 8 other. 1,554 have at least one model; 147 have 8 or more | high |
+| Where the market data is | Office buildings carry hundreds of tenancies each (Westside Towers East: 752). Apartment buildings carry 1 to 51 | high |
 
 ---
 
@@ -60,10 +66,10 @@ Live verification results (2026-11-14, real keys, about 40 requests in total):
 |---|---|---|---|
 | T0 | `models_index.csv`, `basemap.json` | All 14,945 rows loaded; LA flag set by lon < -110 | P0 |
 | T1 | CoStar kit, all 8 datasets + 2 starter CSVs | All records | P0 |
-| T2 | Matterport Basics (summary, type, counts, preview image) | The 10 buildings (about 126 models) | P0 |
+| T2 | Matterport Basics (summary, type, counts, preview image) | The 10 buildings (120 models) | P0 |
 | T3 | Rooms, walls, floor plans, pano positions | The 10 buildings | P0 |
-| T4 | Pano image bytes (6 faces, 2k) and captions | Every pano in the 10 buildings (about 1,462 panos) | P0 |
-| T4d | Defurnished pano bytes | Models in the 10 buildings that have them (about 41 models) | P2 |
+| T4 | Pano image bytes (6 faces, 2k) and captions | Every pano in the 10 buildings (2,784 panos) | P0 |
+| T4d | Defurnished pano bytes | Models in the 10 buildings that have them (about 39 models) | P2 |
 | T5 | Vexcel elements, ortho, 4 obliques | The 10 buildings | P0 |
 | T6 | Vexcel embedding search | Live tool, cached by query | P1 |
 | T2-wide | Matterport Basics for all 5,734 LA models | Stretch: about 24 minutes at 4 requests per second | P2 |
@@ -73,34 +79,33 @@ The other 5,700 LA models still appear in the API as shallow Space records (inde
 
 ### 1.2 Building selection
 
-Selection is a pipeline step, not a hard-coded list, because the deciding fact is unknown until the CoStar kit is unzipped: whether a building's property id exists in the kit and how many kit records hang off it. A building with 19 scans and zero kit records is useless for the CoStar track (30% of the score is data combination).
+The join was tested against the real kit, and the result overturns the scan-only ranking. Ranked by scans alone, all 10 buildings are apartment buildings, and apartment buildings hold almost no tenancy data (Park Fifth and sageLA have 1 tenancy each). The office buildings hold the market depth: 250 to 750 tenancies each, 2 to 7 listings, 1 to 5 sales, and their scans are office suites. A proof of concept on apartments alone would show interiors with thin market records; on offices alone it would lose the amenity scans, the defurnished views and the pool-from-above cross-check. The selection therefore takes 5 of each.
 
-Selection rule (`select_buildings` step):
-1. Candidates: LA rows of the index grouped by `costar_property_id`, with at least 8 models.
-2. Hard filter: the property id exists in the kit's commercial property dataset.
-3. Score = 3 x (count of non-unit models, capped at 8) + 2 x (count of distinct kit datasets with at least 1 record for the property, range 0 to 5) + 1 x (models with defurnished panos, capped at 5) + 1 x min(total panos / 50, 5).
-4. Take the top 10. Write them to `data/selection.json` with the score breakdown.
-5. A manual override file `config/selection_override.json` (list of property ids) replaces the result if present.
+Selection rule (`select` step):
+1. Candidates: LA properties (kit `primaryAddress.researchMarketId = 20`) with models taken from the kit's `commercial-properties.csv`.
+2. Office group: property type Office with at least 5 models. Score = total panos / 50 + ln(1 + tenancies) x 3 + listings + sales + 3 if any model is a lobby or amenity. Take the top 5.
+3. Multifamily group: property type Multifamily with at least 8 models. Score = 3 x (non-unit models, capped at 8) + ln(1 + tenancies) x 2 + listings + sales + 2 if it has an apartment listing + (models with defurnished panos, capped at 5). Take the top 5.
+4. Write `data/selection.json` with the score breakdown. `config/selection_override.json` (list of property ids) replaces the result if present.
 
-Provisional list (ranked by scans only, kit membership VERIFY):
+Selected buildings (kit record counts verified on 2026-11-14):
 
-| # | CoStar property id | Address (from index) | Models | Non-unit | Panos | Rooms | Defurnished models |
-|---|---|---|---|---|---|---|---|
-| 1 | 8810904 | 803 S Hope St (Downtown) | 17 | 11 | 202 | 54 | 6 |
-| 2 | 256445 | 736 S Los Angeles St (Downtown) | 15 | 9 | 183 | 23 | 0 |
-| 3 | 11044249 | 228 N Vermont Ave | 13 | 8 | 235 | 55 | 13 |
-| 4 | 6531330 | 427 W 5th St (Downtown) | 10 | 7 | 128 | 38 | 10 |
-| 5 | 9332157 | 679 S Hobart Blvd (Koreatown) | 13 | 7 | 92 | 38 | 6 |
-| 6 | 9266183 | 550 Main St (Downtown) | 12 | 7 | 82 | 22 | 0 |
-| 7 | 6167888 | 1530 N Poinsettia Pl (Hollywood) | 19 | 3 | 212 | 73 | 0 |
-| 8 | 10117553 | 445 S San Pedro St (Downtown) | 10 | 5 | 151 | 28 | 0 |
-| 9 | 5695320 | 417 Hill St (Downtown) | 9 | 7 | 54 | 15 | 0 |
-| 10 | 8829852 | 232 E 2nd St (Little Tokyo) | 8 | 6 | 123 | 69 | 6 |
-| | Total | | 126 | 70 | 1,462 | 415 | 41 |
+| # | Property id | Name and address | Type | Models | Panos | Tenancies | Listings | Sales | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 246941 | Westside Towers East, 11835 Olympic Blvd | Office | 8 | 448 | 752 | 4 | 5 | 8 office suites, 12 storeys |
+| 2 | 246899 | Executive Tower, 11400 Olympic Blvd | Office | 9 | 300 | 590 | 7 | 4 | 9 suites, 17 storeys |
+| 3 | 246836 | The Tower, 10940 Wilshire Blvd | Office | 8 | 416 | 571 | 5 | 4 | 8 suites, 24 storeys |
+| 4 | 246993 | 12400 Wilshire Blvd | Office | 8 | 229 | 622 | 7 | 2 | 8 suites, 16 storeys |
+| 5 | 249530 | The Launch at Airport Center, 5901 Century Blvd | Office | 5 | 205 | 386 | 3 | 6 | Lobby plus 4 suites, 4 defurnished |
+| 6 | 8810904 | Josephine DTLA, 801 Hope St | Multifamily | 17 | 202 | 18 | 3 | 2 | Pool, clubhouse, rooftop deck; 22 storeys |
+| 7 | 256445 | Grether & Grether Lofts, 730 Los Angeles St | Multifamily | 15 | 183 | 51 | 2 | 2 | Two vacant retail spaces plus amenities |
+| 8 | 11044249 | sageLA, 200 Vermont Ave | Multifamily | 32 | 550 | 1 | 1 | 0 | Two pools, 13 defurnished models |
+| 9 | 6531330 | Park Fifth, 427 5th St | Multifamily | 10 | 128 | 1 | 1 | 1 | All 10 models defurnished; 24 storeys |
+| 10 | 8829852 | Arrive Wakaba, 232 2nd St | Multifamily | 8 | 123 | 21 | 1 | 2 | 6 defurnished |
+| | Total | | | 120 | 2,784 | 3,013 | 34 | 28 | |
 
-Alternates if any of the 10 fail the kit filter: 4799547 (630 Masselin Ave), 5340268 (3770 Figueroa St), 10310657 (4247 Eagle Rock Blvd), 6808656 (235 San Pedro St), 4559947 (7230 Franklin Ave).
+Alternates: offices 246948 (Bundy Olympic), 246942 (Westside Towers West), 247337 (The Plaza, has a rooftop gym scan); multifamily 9252475 (Aliso), 8145791 (Lumina Hollywood), 9332157 (The Pearl on Wilshire).
 
-Known weakness of this list (high confidence): by scan names, all 10 are apartment or mixed-use buildings. Their scans are lobbies, gyms, pools, lounges and units. Only #2 (two vacant retail spaces), #8 (live/work lofts) and #9 (executive suites) have commercial-flavoured interiors. Tenancy and lease records in the kit are more likely to attach to office and retail properties, so the kit filter in step 2 may reshuffle this list heavily. Six of the 10 sit within about 1.5 km of each other in Downtown LA, which helps map views and "nearby" queries.
+Four of the five offices sit within about 3 km of each other in West LA, and four of the five apartment buildings are in Downtown. That gives two clusters for map views and "nearby" queries.
 
 ---
 
@@ -121,25 +126,35 @@ One CLI, `mundus ingest <step>`, with `mundus ingest all` running steps in order
 | # | Step | Input | Output | Upstream requests | Estimated time |
 |---|---|---|---|---|---|
 | 1 | `index` | `models_index.csv`, `basemap.json` (static, no auth) | `space` rows for all 14,945 models with `depth = 0`; `data/basemap.json` | 2 | under 1 minute |
-| 2 | `costar` | Kit zip at `COSTAR_KIT_URL`, password `COSTAR_ZIP_PASSWORD` | `costar_*` tables, `place` rows for every LA commercial property, unmatched-id report | 1 download (about 160 MB) | 5 minutes |
+| 2 | `costar` | Kit zip at `COSTAR_KIT_URL`, password `COSTAR_ZIP_PASSWORD` | `costar_*` tables, `place` rows for all 1,581 LA commercial properties, `kit_model_link` rows, unmatched-id report | 1 download (51.7 MB) | 2 minutes |
 | 3 | `select` | Steps 1 and 2 | `data/selection.json`; `place.is_deep = 1` for 10 places | 0 | seconds |
-| 4 | `basics` | Model ids of deep places | `space` rows updated (summary, classification, address), preview image bytes | 126 GraphQL + 126 images | 2 minutes |
-| 5 | `rooms` | Same | `floor`, `room`, `wall_vertex`, `wall_edge`, `pano` (positions), floor plan images and DXF | 126 GraphQL + about 400 files | 3 minutes |
-| 6 | `panos` | Same | 6 faces per pano at 2k on disk | 126 GraphQL + 8,772 images | 10 to 15 minutes at 8 concurrent (measured 0.43 s per face) |
-| 7 | `panos-defurnished` (P2) | Models with a defurnished view | Defurnished faces on disk | 82 GraphQL + about 3,000 images | 10 minutes |
+| 4 | `basics` | Model ids of deep places | `space` rows updated (summary, classification, address), preview image bytes | 120 GraphQL + 120 images | 2 minutes |
+| 5 | `rooms` | Same | `floor`, `room`, `wall_vertex`, `wall_edge`, `pano` (positions), floor plan images and DXF | 120 GraphQL + about 960 files | 4 minutes |
+| 6 | `panos` | Same | 6 faces per pano at 2k on disk | 120 GraphQL + 16,704 images | 20 to 30 minutes at 8 concurrent (measured 0.43 s per face) |
+| 7 | `panos-defurnished` (P2) | Models with a defurnished view | Defurnished faces on disk | 78 GraphQL + about 4,000 images | 10 minutes |
 | 8 | `aerial` | Deep places | `aerial_facts` rows, ortho x2 and oblique x4 images per place | 70 | 2 minutes |
 | 9 | `resolve` | All of the above | `link` rows, pano to room assignment, `space_kind` | 0 | seconds |
-| 10 | `caption` | Pano faces | `pano_caption` rows | 1,462 Gemini calls | 50 to 100 minutes, see section 5 |
+| 10 | `caption` | Pano faces | `pano_caption` rows | 2,784 Gemini calls | 30 to 95 minutes, see section 5 |
 | 11 | `cards` | Captions, rooms, kit, aerial | `room.card_text`, `space.card_text`, `place.card_text`; no model calls | 0 | seconds |
 | 12 | `embed` | Card texts and captions | `embedding` rows | about 25 batched calls | 1 minute |
 | 13 | `evidence` | All tables | `evidence` rows for every record, image and caption | 0 | seconds |
 | 14 | `verify` | Database | Prints the acceptance report of section 11, exits non-zero on failure | 0 | seconds |
 
-Total wall time from empty: about 1.5 to 2.5 hours, dominated by captioning (moderate). Total Matterport API requests: about 460 GraphQL calls, well inside the shared-key budget.
+Total wall time from empty: about 1.5 to 2.5 hours, dominated by captioning (moderate). Total Matterport API requests: about 450 GraphQL calls, well inside the shared-key budget.
 
 ### 2.3 Step details that are not obvious
 
-- **`costar`:** the kit's schema is unknown. Load each dataset by flattening top-level scalar fields into columns (pandas `json_normalize`, max depth 2) and keep the full original record in a `raw_json` column. Column names are snake_cased. Print for each dataset: record count, detected id column, detected lat/lon columns. Compare record counts with the expected table in the shared kit (3,339 / 1,022 / 74,093 / 49,575 / 6,120 / 1,747 / 2,120 / 1,899) and warn on any difference above 1%.
+- **`costar`:** the kit is one password-protected zip (traditional zip encryption, Python's `zipfile` opens it). Each dataset is `data/<dataset>.jsonl`, one record per line, with deep nesting (a property record has 39 top-level keys and arrays of attachments, contacts, floors, parking). Load each record's top-level scalar fields into columns, keep the whole record in `raw_json`, and add these extracted columns:
+  - `costar_property`: `id`, `buildingName`, `propertyType` (decoded through `schemas/enums.json`), `primaryAddress.latitude`, `.longitude`, `.city`, `.postcode`, `.researchMarketId` (14 Houston, 20 Los Angeles), `rentableBuildingAreaSquareFeet`, `numStoriesAboveGrade`, year built from `constructionEvents`.
+  - `costar_occupancy`: `propertyId`, `tenantLocationId`, `fromDate`, `moveInDate`, lease fields from `leaseDeal`, floor from `spaces[].propertyFloorId`.
+  - `costar_sale`: one row per sale, plus a child table `costar_sale_entity(sale_id, property_id)` from `entities[].propertyId`, because a sale can cover several properties.
+  - `costar_listing`: `propertyId`, `listingType`, `listingStatus`, fields of `forLeaseSummary`.
+  - `costar_apartment_listing`: `propertyId`, rents, units available; child table of `apartmentModels[]` floor plans.
+  - `costar_res_listing`: `id`, `residentialListingId`, price, status, `property.address` with coordinates.
+  - Integer enum columns get a sibling `<name>_label` column decoded from `enums.json`, so the agent's SQL reads `property_type_label = 'Office'`.
+  - `kit_model_link(property_id, sid)` from `commercial-properties.csv` and `kit_res_model_link(listing_id, residential_listing_id, sid)` from `residential-listings.csv`.
+  - The kit's `models/*.md` field pages are copied to `data/kit_docs/` and their one-line field meanings feed `describe_market`.
+  - Contact names, emails and phone numbers of brokers and agents are in the records. They are excluded from extracted columns and from the tables the SQL tool can read (`raw_json` is not selectable through `query_market`).
 - **`rooms`:** a room's `boundary.edges` is an unordered set of wall edge ids. Build the polygon by chaining edges through shared vertex ids. If the chain does not close, store the convex hull of the edge vertices and set `room.polygon_quality = 'hull'`.
 - **`panos`:** store all 6 faces so the Frontend can run its own cube-map viewer if the Showcase embed is not possible. Face index semantics: 0 up, 1 to 4 horizon, 5 down. The compass direction of faces 1 to 4 is still VERIFY (B5).
 - **`aerial`:** per deep place: `property/extract` at the place point; ortho at zoom 21 with bbox 80 x 80 m; ortho at bbox 250 x 250 m (context); the four obliques around the footprint with `buffer-meter=28`. `property/extract` returns parcels, each with a `structures` list (verified). Call it with the place point first. On HTTP 404, retry with a 25 m square polygon around the point. When several parcels or structures come back, keep the structure with the largest `footprint.area` whose footprint is within 50 m of the point, and its parcel. Store the raw JSON. Flatten parcel-level keys and the chosen structure's keys into `attributes_json`, dropping null values.
@@ -151,12 +166,12 @@ Total wall time from empty: about 1.5 to 2.5 hours, dominated by captioning (mod
 ### 3.1 Database choice
 
 SQLite, one file `data/world.db`, WAL mode, opened by the single API process. Reasons:
-- Data volume is tiny: about 140,000 kit rows, 15,000 spaces, 1,500 panos, 2,100 vectors.
+- Data volume is tiny: about 140,000 kit rows, 15,000 spaces, 2,800 panos, 3,700 vectors.
 - SQLite offers a real read-only connection (`file:world.db?mode=ro`) for the SQL tool, which is the safest guard available.
 - FTS5 full-text search is built in.
 - The whole world state is one file plus one image folder, so a snapshot is one `tar` command.
 
-Vectors: stored as float32 blobs in SQLite and loaded into one in-memory numpy matrix at startup. Brute-force cosine over 2,100 x 768 takes under 5 ms (high). A vector database adds an install and a failure mode for no gain at this size. Revisit above about 200,000 vectors.
+Vectors: stored as float32 blobs in SQLite and loaded into one in-memory numpy matrix at startup. Brute-force cosine over 3,700 x 768 takes under 5 ms (high). A vector database adds an install and a failure mode for no gain at this size. Revisit above about 200,000 vectors.
 
 ### 3.2 Tables (DDL)
 
@@ -292,7 +307,7 @@ CREATE TABLE api_log (ts TEXT, op TEXT, caller TEXT, ms REAL, cache TEXT, place_
 
 | Item | Value |
 |---|---|
-| Documents | Pano caption text (about 1,462), room cards (415), space cards (126), place cards (10) |
+| Documents | Pano caption text (2,784), room cards (about 800), space cards (120), place cards (10): about 3,700 vectors |
 | Model | `EMBED_MODEL` env var, default `gemini-embedding-001` (verified) |
 | Dimensions | 768 (request reduced output size), L2-normalised, float32 |
 | Document task type | retrieval document; queries use retrieval query |
@@ -317,7 +332,7 @@ data/
   img/aerial/<pid>/<kind>_<size_m>.jpg
 ```
 
-`data/` is git-ignored in full. Expected size: about 6.5 GB furnished, about 8.5 GB with defurnished (measured average 0.74 MB per 2k face).
+`data/` is git-ignored in full. Expected size: about 12.5 GB furnished, about 15.5 GB with defurnished (measured average 0.74 MB per 2k face). Use a 50 GB disk on the VM, not 30 GB.
 
 ---
 
@@ -325,10 +340,10 @@ data/
 
 Order: id joins first, spatial joins second, nothing merged on a guess.
 
-1. **Space to Place, id join:** `space.costar_property_id` equals a kit property id. Link `method = id_join`, `confidence = 1.0`, `status = accepted`.
+1. **Space to Place, id join:** the kit's `commercial-properties.csv` is the source of truth (12,994 models, all 3,339 properties). Link `method = id_join`, `confidence = 1.0`, `status = accepted`. The index's `costar_property_id` column is not used for joining: it covers half as many models and is wrong on 224. Where it disagrees with the kit, log it. The 55 models listed under more than one property get one accepted link per property.
 2. **Sanity check on every id join:** compute haversine distance between the model's lat/lon and the kit property's lat/lon. Above 150 m: keep the link but add `note = 'distance_mismatch'` and log it. Above 1,000 m: set `status = candidate` and exclude from place responses.
 3. **Space to Place, spatial:** for LA spaces with no property id, find kit properties within 40 m. Exactly one: link with `method = spatial`, `confidence = 0.6`, `status = candidate`. Several: one candidate link each with `confidence = 0.3`. Candidates are returned by the API in a separate `candidate_spaces` array and never mixed with accepted ones.
-4. **Residential:** `space.homes_listing_id` equals the residential listing id in the kit. Link `relation = listing_of_space`. These spaces get `place_id = place:geo:<lat4>_<lon4>`.
+4. **Residential:** join through the kit's `residential-listings.csv` (`MatterportModelId` to `ListingId`). The index's `homes_listing_id` is a `ResidentialListingId`, not a `ListingId`, and must not be matched against listing `id`. Link `relation = listing_of_space`. These spaces get `place_id = place:geo:<lat4>_<lon4>`.
 5. **Place to Vexcel:** call `property/extract` as described in 2.3. If the point lies inside a returned footprint: `match_method = contains`, distance 0. Otherwise take the nearest footprint within 50 m: `match_method = nearest`, distance recorded. No structure on the parcel (seen on 3 of the 10 buildings): store parcel only, `match_method = parcel_only`.
 6. **Pano to Room:** point-in-polygon of the pano's (x, y) against room polygons on the same floor: `room_match = inside`. No hit: nearest room centroid within 3 m: `nearest`. Otherwise null and `none`.
 7. **Unmatched report:** `mundus ingest resolve` prints and saves `data/reports/unmatched.json`: counts of index property ids missing from the kit, kit properties with no models, residential ids missing, distance mismatches.
@@ -354,12 +369,12 @@ Order: id joins first, spatial joins second, nothing merged on a guess.
 |---|---|
 | Model | `CAPTION_MODEL` env var, default `gemini-4-hydrogen` (verified to exist and to caption well). Fallback `gemini-3.5-flash` |
 | Unit of work | One call per pano: the 4 horizon faces (1 to 4), each downscaled to 1024 px, sent as 4 images in one request |
-| Panos | All panos in the 10 buildings (about 1,462) |
+| Panos | All panos in the 10 buildings (2,784). If time is short, cap at 12 panos per space, chosen to spread across rooms |
 | Defurnished | Not captioned in v1. Furniture removal is generative, so captions of those images describe invented surfaces. Bytes are stored for display only (P2) |
 | Context given | Space name, Matterport room label if assigned, room dimensions if assigned |
 | Output | JSON, schema below, temperature 0 |
-| Tokens | Measured per call: 4,595 input, about 3,800 output including thinking. For 1,462 panos: about 6.7 million input and 5.6 million output tokens. Dollar cost unknown: this session does not know the model's price |
-| Time | Measured 31.5 seconds per call, mostly thinking. At 16 concurrent calls: about 50 minutes. Set the lowest thinking level the model accepts; if that cuts latency below 10 seconds, the job takes about 15 minutes. HTTP 503 "high demand" was seen on a sibling model, so retries with backoff are required |
+| Tokens | Measured per call: 4,595 input, about 3,800 output including thinking. For 2,784 panos: about 12.8 million input and 10.6 million output tokens. Dollar cost unknown: this session does not know the model's price |
+| Time | Measured 31.5 seconds per call, mostly thinking. At 16 concurrent calls: about 95 minutes. Set the lowest thinking level the model accepts; if that cuts latency below 10 seconds, the job takes about 30 minutes. HTTP 503 "high demand" was seen on a sibling model, so retries with backoff are required |
 
 Prompt (version `cap-v1`):
 
@@ -604,7 +619,7 @@ Open question 4 is answered: the backend database is the source of truth. The Ha
 None for reads of the 10 buildings. Two calls go out live: the Gemini embedding of a new search query (falls back to text search) and `aerial_semantic_search` (falls back to `upstream_unavailable`). `mundus warmup --queries config/demo_queries.txt` pre-embeds and pre-runs the demo's queries so both are cache hits.
 
 ### 9.4 Deployment
-- One `e2-standard-2` VM (2 vCPU, 8 GB), 30 GB disk, Ubuntu 24.04, region `us-east4`. Firewall: 80 and 443 open.
+- One `e2-standard-2` VM (2 vCPU, 8 GB), 50 GB disk, Ubuntu 24.04, region `us-east4`. Firewall: 80 and 443 open.
 - Process: `uvicorn` on `127.0.0.1:8000`, run by systemd with restart on failure.
 - TLS: Caddy reverse proxy with the hostname `<ip-with-dashes>.sslip.io`, which gets an automatic certificate (moderate). HTTPS matters because a Frontend served over HTTPS cannot call an HTTP API.
 - CORS: allow the Frontend origins listed in `CORS_ORIGINS`.
@@ -642,9 +657,9 @@ Layout: `backend/` with package `mundus_world`, Python 3.11, `uv`, FastAPI, `htt
 | B0 | Repo skeleton, `.gitignore`, `.env.example`, config loader, CLI entry `mundus`, schema migration that creates all tables | `uv run mundus --help` lists `ingest`, `serve`, `snapshot`, `restore`, `warmup`, `qa`. `pytest` passes. `git status` shows no file under `data/` |
 | B1 | HTTP client with per-host token bucket, retries, raw-response saving, ingest ledger | Unit test with a fake server: 20 calls at a 4 per second limit take at least 4 seconds; a 500-then-200 sequence succeeds; a 403 aborts the step; a rerun makes 0 requests |
 | B2 | Step `index` | `space` has 14,945 rows; 5,734 have `is_la = 1`; 2,523 of those have a property id; `space_kind` counts for LA printed, with `unit` between 3,500 and 4,000 |
-| B3 | Step `costar` (LIVE: needs kit) | 8 `costar_*` tables exist; counts within 1% of the expected table or a printed warning; `describe_market` output saved to `data/reports/market_schema.json`; unmatched report exists. **VERIFY result recorded:** how many of the 731 LA property ids from the index exist in the kit |
-| B4 | Steps `select`, `basics`, `rooms` (LIVE) | `selection.json` has 10 places, each present in the kit. Every model of those places has `depth >= 3`. At least 90% of rooms have `polygon_quality = 'loop'`. **VERIFY results recorded:** 5 real AI summaries printed to `data/reports/summaries.md`; whether `visibility` allows Showcase embedding, saved for the Frontend |
-| B5 | Step `panos` (LIVE) | At least 99% of expected face files exist and decode as JPEG; no URL containing `?t=` appears anywhere in the database; rerun downloads 0 files. **VERIFY result recorded:** face order and compass direction, from one contact sheet image |
+| B3 | Step `costar` (LIVE: needs kit) | 8 `costar_*` tables exist; counts equal 3,339 / 1,022 / 74,093 / 49,575 / 6,120 / 1,747 / 2,120 / 1,899; `kit_model_link` has 13,096 rows over 12,994 distinct models; 1,581 places have market 20; the report lists 224 index-versus-kit id disagreements; `describe_market` output saved to `data/reports/market_schema.json` |
+| B4 | Steps `select`, `basics`, `rooms` (LIVE) | `selection.json` has 10 places, 5 Office and 5 Multifamily, matching the table in 1.2 unless overridden. Every model of those places has `depth >= 3`. At least 90% of rooms have `polygon_quality = 'loop'`. **VERIFY results recorded:** 5 real AI summaries printed to `data/reports/summaries.md`; whether `visibility` allows Showcase embedding, saved for the Frontend |
+| B5 | Step `panos` (LIVE) | At least 99% of expected face files (16,704) exist and decode as JPEG; no URL containing `?t=` appears anywhere in the database; rerun downloads 0 files. **VERIFY result recorded:** face order and compass direction, from one contact sheet image |
 | B6 | Step `aerial` (LIVE) | 10 `aerial_facts` rows, each with a parcel; at least 6 have a footprint; the point-then-polygon fallback is exercised by 8810904 and 8829852; 6 images per place on disk |
 | B7 | Step `resolve` | Every pano of a deep space has `room_match` set; at least 70% are `inside`; `link` has one accepted row per deep space; distance mismatches listed |
 | B8 | Step `caption` and `qa captions` (LIVE) | At least 98% of panos have a valid caption; HTML sheet renders 30 samples; rerun makes 0 model calls |
@@ -666,8 +681,9 @@ A fixture database (`tests/fixtures/world_small.db`: 1 place, 2 spaces, 4 rooms,
 
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
-| 1 | The scan-rich buildings have few or no kit records (they are apartment buildings; tenancy data is likely concentrated in office and retail) | High | High: no data fusion on the hero buildings | Kit-aware selection in 1.2; alternates listed; if fewer than 10 pass, lower the model threshold from 8 to 5 (196 buildings qualify) |
-| 2 | CoStar kit join fails or the kit schema differs from the docs | Moderate | High | Schema-agnostic loader, raw JSON kept, unmatched report, B3 runs first among live tasks |
+| 1 | Scan-rich buildings are apartment buildings with thin market records (confirmed: 1 to 51 tenancies against 250 to 750 for offices) | Confirmed | High if ignored | Selection takes 5 offices and 5 apartment buildings (1.2) |
+| 2 | Join built on the index's `costar_property_id` or `homes_listing_id` columns | High if the Matterport quickstart is copied | High: half the links missing, 224 wrong | Join through the kit's two starter CSVs only (section 4) |
+| 12 | Broker and agent contact details in kit records leak through the API or SQL tool | Moderate | Moderate | Not extracted; `raw_json` not readable by `query_market` |
 | 3 | Venue wifi fails during judging | Moderate | High | Snapshot and local restore, tested before midnight (9.5) |
 | 4 | Shared keys get throttled or revoked by another team's abuse | Moderate | Moderate | Ingest early; whole pipeline needs about 460 Matterport API calls; everything cached to disk |
 | 5 | Captions invent details | Moderate | Moderate: a judge checks a claim against the photo | Factual prompt, temperature 0, human sample check, evidence link from every caption back to the photo |
@@ -706,6 +722,6 @@ A fixture database (`tests/fixtures/world_small.db`: 1 place, 2 spaces, 4 rooms,
 
 ## Open items for Siddha
 
-1. `COSTAR_KIT_URL` is missing. The kit download link is on the CoStar keys card in Discord. Without it, B3 cannot run and the building list stays provisional.
-2. Confirm or replace the provisional building list after B3 reports which property ids exist in the kit.
+1. Confirm the 5 office plus 5 apartment selection in 1.2, or name replacements.
+2. Decide whether to caption all 2,784 panos (about 95 minutes at measured speed) or cap at 12 per space.
 3. Carry the contract change proposals above to the Frontend and Harness sessions.
