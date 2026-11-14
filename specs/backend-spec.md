@@ -1,4 +1,4 @@
-# Backend Spec: World Context Layer (v1, proof of concept on 10 buildings)
+# Backend Spec: World Context Layer (v1, 15-place evaluation set)
 
 Status: draft for Siddha's review, then merge with the Frontend and Harness specs.
 Owner: Backend session. Date: 2026-11-14.
@@ -43,7 +43,7 @@ Live verification results (2026-11-14, real keys, about 40 requests in total):
 | Skybox faces | 6 signed URLs per pano on host `cdn-2.matterport.com`, query keys `t` and `k`. Each face is 2048 x 2048 JPEG, 0.5 to 1.0 MB. 6 faces downloaded in 2.6 seconds | high |
 | Defurnished view | View id returned for a model flagged `defurnished = yes` | high |
 | Vexcel `property/extract` | Returns a GeoJSON FeatureCollection. One feature per **parcel**: `geometry` is the parcel, `properties.structures[]` holds each building with `footprint.wkt`, `footprint.area` and roof attributes; parcel-level keys cover pool, vehicles, hardscape, tree cover, sport court | high |
-| Vexcel coverage of the 10 buildings | 8 of 10 answer at the point; 2 return HTTP 404 at the point and answer with a 25 m square polygon (which can return 2 to 3 parcels). 3 of 10 return a parcel with 0 structures | high |
+| Vexcel coverage of the 15 places | All 15 return a parcel when queried at the kit's coordinates. 11 include at least one structure; 4 return a parcel with 0 structures. A point with no parcel returns HTTP 404 and answers with a 25 m square polygon instead (seen when querying at model coordinates) | high |
 | Vexcel ortho | Works, 80 x 80 m at zoom 21 is a 439 KB JPEG | high |
 | Vexcel embedding search | Works. Features carry only `score`, `source.product-type` and a geometry | high |
 | Gemini caption model | `gemini-4-hydrogen` exists and produced a detailed, accurate JSON caption of a real pano (found the life ring, rescue pole, spa rules sign, emergency shutoff). 31.5 seconds per call, 4,595 input tokens, 760 output tokens, 3,036 thinking tokens | high |
@@ -383,7 +383,7 @@ Order: id joins first, spatial joins second, nothing merged on a guess.
 2. **Sanity check on every id join:** compute haversine distance between the model's lat/lon and the kit property's lat/lon. Above 150 m: keep the link but add `note = 'distance_mismatch'` and log it. Above 1,000 m: set `status = candidate` and exclude from place responses.
 3. **Space to Place, spatial:** for LA spaces with no property id, find kit properties within 40 m. Exactly one: link with `method = spatial`, `confidence = 0.6`, `status = candidate`. Several: one candidate link each with `confidence = 0.3`. Candidates are returned by the API in a separate `candidate_spaces` array and never mixed with accepted ones.
 4. **Residential:** join through the kit's `residential-listings.csv` (`MatterportModelId` to `ListingId`). The index's `homes_listing_id` is a `ResidentialListingId`, not a `ListingId`, and must not be matched against listing `id`. Link `relation = listing_of_space`. These spaces get `place_id = place:geo:<lat4>_<lon4>`.
-5. **Place to Vexcel:** call `property/extract` as described in 2.3. If the point lies inside a returned footprint: `match_method = contains`, distance 0. Otherwise take the nearest footprint within 50 m: `match_method = nearest`, distance recorded. No structure on the parcel (seen on 3 of the 10 buildings): store parcel only, `match_method = parcel_only`.
+5. **Place to Vexcel:** call `property/extract` as described in 2.3. If the point lies inside a returned footprint: `match_method = contains`, distance 0. Otherwise take the nearest footprint within 50 m: `match_method = nearest`, distance recorded. No structure on the parcel (seen on 4 of the 15 places): store parcel only, `match_method = parcel_only`.
 6. **Pano to Room:** point-in-polygon of the pano's (x, y) against room polygons on the same floor: `room_match = inside`. No hit: nearest room centroid within 3 m: `nearest`. Otherwise null and `none`.
 7. **Unmatched report:** `mundus ingest resolve` prints and saves `data/reports/unmatched.json`: counts of index property ids missing from the kit, kit properties with no models, residential ids missing, distance mismatches.
 
