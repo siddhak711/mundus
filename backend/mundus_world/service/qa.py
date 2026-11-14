@@ -10,7 +10,7 @@ from typing import Any
 from PIL import Image
 
 from mundus_world.config.settings import Settings
-from mundus_world.providers.gemini import DETAIL_WORDS, Gemini, caption_to_text
+from mundus_world.providers.claude import DETAIL_WORDS, Claude, caption_to_text
 from mundus_world.providers.http import Http
 from mundus_world.repo.db import Database
 
@@ -49,7 +49,7 @@ def caption_lengths(s: Settings, db: Database, http: Http, n: int = 5, levels: l
     """Caption the same panos at several detail levels and report words, tokens and latency per level.
     Does not change stored captions."""
     levels = [lv for lv in (levels or list(DETAIL_WORDS)) if lv in DETAIL_WORDS]
-    gm = Gemini(s, http)
+    gm = Claude(s)
     rows = _sample(db, n)
     results: list[dict[str, Any]] = []
     agg = {lv: {"words": 0, "tokens_in": 0, "tokens_out": 0, "tokens_thought": 0, "seconds": 0.0, "n": 0} for lv in levels}
@@ -80,13 +80,13 @@ def caption_lengths(s: Settings, db: Database, http: Http, n: int = 5, levels: l
             words = len(str(cap.get("description") or "").split())
             a = agg[lv]
             a["words"] += words
-            a["tokens_in"] += um.get("promptTokenCount", 0)
-            a["tokens_out"] += um.get("candidatesTokenCount", 0)
-            a["tokens_thought"] += um.get("thoughtsTokenCount", 0)
+            a["tokens_in"] += um["tokens_in"]
+            a["tokens_out"] += um["tokens_out"]
+            a["tokens_thought"] += um["tokens_thought"]
             a["seconds"] += dt
             a["n"] += 1
             results.append({"pano_id": r["pano_id"], "level": lv, "model": model, "description_words": words,
-                            "text_chars": len(text), "tokens_out": um.get("candidatesTokenCount", 0), "seconds": round(dt, 1),
+                            "text_chars": len(text), "tokens_out": um["tokens_out"], "seconds": round(dt, 1),
                             "objects": len(cap.get("objects") or []), "text": text})
             cells.append(f"<td valign=top width='25%'><b>{lv}</b>: {words} words, {um.get('candidatesTokenCount', 0)} tokens out, "
                          f"{dt:.0f}s<br><br>{html.escape(text)}</td>")

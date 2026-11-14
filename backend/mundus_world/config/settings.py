@@ -14,7 +14,7 @@ INDEX_URL = "https://static.matterport.com/hackathon/26.15.39-main-39-gef8d668/a
 BASEMAP_URL = "https://static.matterport.com/hackathon/26.15.39-main-39-gef8d668/assets/quickstart/basemap.json"
 MATTERPORT_GRAPH_URL = "https://api.matterport.com/api/models/graph"
 VEXCEL_BASE_URL = "https://api.vexcelgroup.com/v2"
-GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+ANTHROPIC_BASE_URL = "https://api.anthropic.com"
 LA_MARKET_ID = 20
 
 
@@ -30,13 +30,16 @@ class Settings:
     vexcel_key: str = field(repr=False, default="")
     kit_url: str = field(repr=False, default="")
     kit_password: str = field(repr=False, default="")
-    gemini_key: str = field(repr=False, default="")
+    anthropic_key: str = field(repr=False, default="")
+    anthropic_base_url: str = ANTHROPIC_BASE_URL
     api_token: str = field(repr=False, default="")
     admin_token: str = field(repr=False, default="")
-    caption_model: str = "gemini-4-hydrogen"
-    caption_fallback_models: tuple[str, ...] = ("gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash")
-    embed_model: str = "gemini-embedding-001"
-    embed_dim: int = 768
+    caption_model: str = "claude-haiku-5-5"
+    caption_fallback_models: tuple[str, ...] = ("claude-sonnet-5-5",)
+    caption_effort: str = "low"
+    embed_provider: str = "local"          # "local" (fastembed on CPU) or "none" (keyword search only)
+    embed_model: str = "BAAI/bge-small-en-v1.5"
+    embed_dim: int = 384
     max_panos_per_space: int = 20
     caption_detail: str = "deep"
     cors_origins: tuple[str, ...] = ("*",)
@@ -71,14 +74,18 @@ def load_settings(data_dir: str | os.PathLike | None = None) -> Settings:
         vexcel_key=_env("VEXCEL_API_KEY"),
         kit_url=_env("COSTAR_KIT_URL"),
         kit_password=_env("COSTAR_ZIP_PASSWORD"),
-        gemini_key=_env("GEMINI_KEY") or _env("GOOGLE_API_KEY") or _env("GEMINI_API_KEY"),
+        # MUNDUS_ANTHROPIC_KEY wins: some hosted shells reserve ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL for themselves
+        anthropic_key=_env("MUNDUS_ANTHROPIC_KEY") or _env("ANTHROPIC_API_KEY"),
+        anthropic_base_url=_env("MUNDUS_ANTHROPIC_BASE_URL", ANTHROPIC_BASE_URL),
         api_token=_env("WORLD_API_TOKEN"),
         admin_token=_env("WORLD_ADMIN_TOKEN"),
-        caption_model=_env("CAPTION_MODEL", "gemini-4-hydrogen"),
+        caption_model=_env("CAPTION_MODEL", "claude-haiku-5-5"),
         caption_fallback_models=tuple(x.strip() for x in _env(
-            "CAPTION_FALLBACK_MODELS", "gemini-3.8-flash,gemini-3.7-flash,gemini-3.5-flash").split(",") if x.strip()),
-        embed_model=_env("EMBED_MODEL", "gemini-embedding-001"),
-        embed_dim=int(_env("EMBED_DIM", "768")),
+            "CAPTION_FALLBACK_MODELS", "claude-sonnet-5-5").split(",") if x.strip()),
+        caption_effort=_env("CAPTION_EFFORT", "low"),
+        embed_provider=_env("EMBED_PROVIDER", "local").lower(),
+        embed_model=_env("EMBED_MODEL", "BAAI/bge-small-en-v1.5"),
+        embed_dim=int(_env("EMBED_DIM", "384")),
         max_panos_per_space=int(_env("MAX_PANOS_PER_SPACE", "20")),
         caption_detail=_env("CAPTION_DETAIL", "deep"),
         cors_origins=tuple(x.strip() for x in _env("CORS_ORIGINS", "*").split(",") if x.strip()),

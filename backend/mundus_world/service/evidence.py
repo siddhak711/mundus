@@ -44,7 +44,7 @@ def rank_of(db: Database, ev_ids: list[str]) -> int:
 
 
 def usage_logger(db: Database, run_id_getter=None):
-    """Callback for Gemini.on_usage that appends one row per model call to model_usage."""
+    """Callback for a provider's on_usage that appends one row per model call to model_usage."""
     def log(purpose: str, model: str, tin: int, tout: int, tthought: int, estimated: int, ms: float) -> None:
         try:
             db.execute("INSERT INTO model_usage(ts,purpose,model,run_id,tokens_in,tokens_out,tokens_thought,estimated,ms) "

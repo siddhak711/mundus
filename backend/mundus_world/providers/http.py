@@ -114,6 +114,5 @@ def default_http() -> Http:
     return Http(limits={
         "api.matterport.com": 4.0,
         "api.vexcelgroup.com": 2.0,
-        "generativelanguage.googleapis.com": 30.0,
         "cdn-2.matterport.com": 16.0,
     })

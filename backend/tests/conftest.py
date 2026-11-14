@@ -64,7 +64,7 @@ def _jpeg(color: tuple[int, int, int]) -> bytes:
 
 def build_world(tmp_path, cap: int = 20, api_token: str = "", admin_token: str = "") -> Container:
     s = Settings(data_dir=tmp_path, max_panos_per_space=cap, api_token=api_token, admin_token=admin_token,
-                 predicates_path=REPO_ROOT / "shared" / "predicates.yaml")
+                 predicates_path=REPO_ROOT / "shared" / "predicates.yaml", embed_provider="none")
     db = Database(s.db_path)
     with db.write() as c:
         pev = ev.register(c, "record", "costar", "property:1001", content={"id": 1001}, place_id=PLACE, excerpt="Fixture Tower")

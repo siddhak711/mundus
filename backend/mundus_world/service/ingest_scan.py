@@ -9,13 +9,13 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable
 
-import numpy as np
 from PIL import Image
 from shapely import wkt as shapely_wkt
 from shapely.geometry import Point, shape
 
 from mundus_world.config.settings import Settings
-from mundus_world.providers.gemini import CAPTION_PROMPT_VERSION, Gemini, caption_short, caption_to_text
+from mundus_world.providers.claude import CAPTION_PROMPT_VERSION, Claude, caption_short, caption_to_text
+from mundus_world.providers.embedder import Embedder
 from mundus_world.providers.http import Http, UpstreamAuthError, save_raw
 from mundus_world.providers.matterport import Matterport
 from mundus_world.providers.vexcel import OBLIQUE_KINDS, Vexcel, square_wkt
@@ -41,8 +41,9 @@ class ScanIngest:
         self.s, self.db, self.http = settings, db, http
         self.mp = Matterport(settings, http)
         self.vx = Vexcel(settings, http)
-        self.gm = Gemini(settings, http)
-        self.gm.on_usage = ev.usage_logger(db)
+        self.cl = Claude(settings)
+        self.cl.on_usage = ev.usage_logger(db)
+        self.emb = Embedder(settings)
 
     # ---- helpers ---------------------------------------------------------
     def deep_spaces(self) -> list[dict[str, Any]]:
@@ -329,7 +330,13 @@ class ScanIngest:
                     c.execute("UPDATE space SET depth=MAX(depth,4) WHERE space_id=?", (sp["space_id"],))
             missing = wanted - set(got)
             if missing and not defurnished:
-                raise RuntimeError(f"{len(missing)} selected panos returned no skybox")
+                # Matterport lists these camera positions but serves no images for them (a download error raises
+                # above instead). Deselect them so counts, captions and room notes describe what was really ingested.
+                log.warning("panos %s: %d selected panos have no images upstream; deselected", sid, len(missing))
+                with self.db.write() as c:
+                    c.executemany("UPDATE pano SET is_selected=0 WHERE pano_id=?", [(m_,) for m_ in sorted(missing)])
+                    c.execute("UPDATE room SET pano_selected=(SELECT count(*) FROM pano p WHERE p.room_id=room.room_id "
+                              "AND p.is_selected=1) WHERE space_id=?", (sp["space_id"],))
 
         return self._each(step, spaces, lambda s: s["sid"], one, force)
 
@@ -421,10 +428,10 @@ class ScanIngest:
                 dims = f"{r['area_m2']:.1f} m2 floor area, {r['width_m'] or 0:.1f} x {r['depth_m'] or 0:.1f} m"
                 if r["height_m"]:
                     dims += f", ceiling {r['height_m']:.2f} m"
-            cap, um, model = self.gm.caption(imgs, r["space_name"], r["label"] or "", dims, detail=self.s.caption_detail)
-            usage["in"] += um.get("promptTokenCount", 0)
-            usage["out"] += um.get("candidatesTokenCount", 0)
-            usage["thought"] += um.get("thoughtsTokenCount", 0)
+            cap, um, model = self.cl.caption(imgs, r["space_name"], r["label"] or "", dims, detail=self.s.caption_detail)
+            usage["in"] += um["tokens_in"]
+            usage["out"] += um["tokens_out"]
+            usage["thought"] += um["tokens_thought"]
             text = caption_to_text(cap)
             with self.db.write() as c:
                 evid = ev.register(c, "caption", "derived", r["pano_id"], content=text, place_id=r["place_id"],
@@ -504,17 +511,15 @@ class ScanIngest:
         todo = [d for d in docs if force or have.get(d["doc_id"]) != (sha256_hex(d["text"]), True)]
         vectors: dict[str, bytes | None] = {}
         failed = 0
-        if todo and self.s.gemini_key:
-            for i in range(0, len(todo), 10):  # small batches stay under per-minute token limits
-                chunk = todo[i:i + 10]
+        dim = self.s.embed_dim
+        if todo and self.emb.available():
+            for i in range(0, len(todo), 64):
+                chunk = todo[i:i + 64]
                 try:
-                    vecs = self.gm.embed([d["text"] for d in chunk])
+                    vecs = self.emb.documents([d["text"] for d in chunk])
                     for d, v in zip(chunk, vecs, strict=True):
-                        a = np.asarray(v, dtype=np.float32)
-                        a /= (np.linalg.norm(a) or 1.0)
-                        vectors[d["doc_id"]] = a.tobytes()
-                except UpstreamAuthError:
-                    raise
+                        vectors[d["doc_id"]] = v.tobytes()
+                        dim = int(v.shape[0])
                 except Exception as e:  # noqa: BLE001 - text search still works without vectors
                     log.warning("embedding batch failed: %s", e)
                     failed += len(chunk)
@@ -528,11 +533,12 @@ class ScanIngest:
                 c.execute("INSERT OR REPLACE INTO embedding(doc_id,doc_type,place_id,space_id,title,text,text_sha256,model,dim,"
                           "vector,evidence_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                           (d["doc_id"], d["doc_type"], d["place_id"], d["space_id"], d["title"], d["text"],
-                           sha256_hex(d["text"]), self.s.embed_model, self.s.embed_dim, vectors.get(d["doc_id"]), d["evidence_id"]))
+                           sha256_hex(d["text"]), self.s.embed_model, dim, vectors.get(d["doc_id"]), d["evidence_id"]))
                 c.execute("DELETE FROM doc_fts WHERE doc_id=?", (d["doc_id"],))
                 c.execute("INSERT INTO doc_fts(doc_id,doc_type,text) VALUES(?,?,?)",
                           (d["doc_id"], d["doc_type"], f"{d['title']}\n{d['text']}"))
-        return {"docs": len(docs), "updated": len(todo), "embedded": len(vectors), "embed_failed": failed}
+        return {"docs": len(docs), "updated": len(todo), "embedded": len(vectors), "embed_failed": failed,
+                "embed_provider": self.s.embed_provider if self.emb.enabled else "none"}
 
 
 def room_header(r: dict[str, Any]) -> str:
