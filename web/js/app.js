@@ -7,7 +7,7 @@ import { showCity, showOnly } from './browse.js';
 import { createFloorModel, CURRENT_YEAR } from './floors.js';
 import { escapeHtml, number, rate, CITY_NAMES } from './format.js';
 import { renderRecord } from './record.js';
-import { setUpAsk } from './ask.js';
+import { designSpace, offerSpace, setUpAsk } from './ask.js';
 import { Viewer } from './twin/viewer.js';
 import { handoff } from './handoff.js';
 import { showConversionMap } from '/city/city.js';
@@ -110,7 +110,9 @@ async function openScan(scan) {
     if (current !== session) return;
     const cutRange = await session.viewer.showScan(assets, scan.floor);
     session.record.setOpenScan({ id: scan.id, cutRange, photos: assets.photos });
+    session.openScan = scan;
     showStatus('');
+    if (session.kind === 'commercial') offerSpace(scan);
   } catch (error) {
     showStatus('The scan could not be loaded', ` ${error.message}`);
   }
@@ -119,12 +121,13 @@ async function openScan(scan) {
 function closeScan() {
   current.viewer.hideScan();
   current.record.setOpenScan(null);
+  current.openScan = null;
   current.viewer.setView(current.viewer.view);
 }
 
 function setView(view) {
   if (!current) return;
-  if (current.viewer.scan) { current.viewer.hideScan(); current.record.setOpenScan(null); }
+  if (current.viewer.scan) { current.viewer.hideScan(); current.record.setOpenScan(null); current.openScan = null; }
   controls.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
   current.viewer.setView(view);
 }
@@ -233,6 +236,7 @@ async function openProperty(city, kind, id) {
         onCloseScan: closeScan,
         onCut: (height) => viewer.setScanCut(height),
         onTour: openTour,
+        onDesign: (scan) => { if (session.openScan?.id !== scan.id) openScan(scan); designSpace(scan); },
         onTenantHover: (floors) => { session.marked = new Set(floors); repaint(); },
         onFloorFocus: (floor) => { session.marked = new Set([floor]); repaint(); session.record.focusFloor(session.floors.at(floor)); },
       },
@@ -333,7 +337,11 @@ setUpAsk({
   context: () => ({
     city: current?.city || location.hash.split('/')[1] || DEFAULT_CITY,
     property: current?.detail ? { kind: current.kind, id: current.id, name: current.detail.name } : null,
+    // the space open in the 3-D view, and every scanned space, for the apartment agent
+    scan: current?.openScan ? { id: current.openScan.id, name: current.openScan.name, floor: current.openScan.floor } : null,
+    scans: (current?.twin?.scans || []).map((s) => ({ id: s.id, name: s.name, floor: s.floor })),
   }),
+  walkthrough: (floor) => (floor && current?.floors?.walkthrough(floor)?.href) || null,
   actions: {
     open_property: ({ city, kind, id }) => { location.hash = `#/${city}/${kind}/${id}`; },
     show_list: ({ city, ids }) => {

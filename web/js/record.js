@@ -168,7 +168,7 @@ function conversionPane(c) {
 }
 
 // ---- interiors ------------------------------------------------------------------
-function scanCard(s) {
+function scanCard(s, design) {
   return `<article class="scan-card" data-scan="${s.id}">
     <h3>${h(s.name)}</h3>
     <p class="sub">${[s.floor && `Floor ${s.floor}`, s.areaSf && `${number(s.areaSf)} sq ft scanned`, `${s.capturePoints} capture points`].filter(Boolean).join(', ')}</p>
@@ -177,13 +177,14 @@ function scanCard(s) {
     <div class="actions">
       <button class="primary" type="button" data-open-scan="${s.id}">Show in model</button>
       <button class="quiet" type="button" data-tour="${s.id}">Walk through</button>
+      ${design ? `<button class="quiet" type="button" data-design="${s.id}" title="Ask the apartment agent to lay out units on this space">Design apartments</button>` : ''}
     </div>
   </article>`;
 }
 
-function interiorsPane(twin) {
+function interiorsPane(twin, design) {
   if (!twin.scans.length) return '<p class="sub">No Matterport scan is linked to this property.</p>';
-  return `${twin.scans.map(scanCard).join('')}
+  return `${twin.scans.map((s) => scanCard(s, design)).join('')}
     ${twin.scansOmitted ? `<p class="sub">${twin.scansOmitted} more scans are linked to this property and not listed here.</p>` : ''}`;
 }
 
@@ -224,7 +225,7 @@ export function renderRecord(container, { detail, twin, floors, city, conversion
     overview: () => overviewPane(detail, twin),
     floors: () => floorsPane(detail, floors),
     conversion: () => conversionPane(conversion),
-    interiors: () => interiorsPane(twin),
+    interiors: () => interiorsPane(twin, detail.kind !== 'home' && Boolean(handlers.onDesign)),
     aerial: () => aerialPane(detail, twin),
   };
   let active = null;
@@ -270,6 +271,8 @@ export function renderRecord(container, { detail, twin, floors, city, conversion
     }
     const tour = event.target.closest('[data-tour]');
     if (tour) return handlers.onTour(twin.scans.find((s) => s.id === tour.dataset.tour));
+    const design = event.target.closest('[data-design]');
+    if (design) return handlers.onDesign(twin.scans.find((s) => s.id === design.dataset.design));
     const row = event.target.closest('tr[data-floor]');
     if (row?.dataset.floor) handlers.onFloorFocus(Number(row.dataset.floor));
   });
