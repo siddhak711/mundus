@@ -1,7 +1,7 @@
 // Routing and the glue between the record panel, the 3-D viewer and the ask drawer.
 //   #/houston                      city list and map
 //   #/houston/commercial/233899    one property
-import { fetchDetail, fetchScan, fetchTwin } from './api.js';
+import { fetchConversion, fetchDetail, fetchScan, fetchTwin } from './api.js';
 import { showCity, showOnly } from './browse.js';
 import { createFloorModel, CURRENT_YEAR } from './floors.js';
 import { escapeHtml, number, rate, CITY_NAMES } from './format.js';
@@ -48,6 +48,7 @@ function repaint() {
       leasedShare: info.leasedShare,
       available: info.available.length > 0,
       emphasised: floor === hovered || marked.has(floor),
+      walk: Boolean(info.walkthrough),
     };
   });
 }
@@ -58,6 +59,7 @@ function showFloorTip(floor, event) {
   const lines = info.tenants.slice(0, 4).map((t) => `${escapeHtml(t.tenant)}, ${number(t.sf)} sq ft`);
   info.available.forEach((s) => lines.push(`Suite ${escapeHtml(s.suite || '')} available, ${number(s.sf)} sq ft at ${rate(s.rate)}`));
   if (info.scans.length) lines.push('Has an interior scan');
+  if (info.walkthrough) lines.push('<b>Click to walk this floor</b>');
   tip.innerHTML = `<strong>Floor ${floor}</strong>${lines.length ? lines.join('<br>') : 'Nothing on record'}`;
   const stage = tip.parentElement.getBoundingClientRect();
   tip.style.left = `${event.clientX - stage.left + 14}px`;
@@ -118,6 +120,12 @@ function setView(view) {
   current.viewer.setView(view);
 }
 
+// Into the floor walkthrough (web/walkthrough/), which links back to this property.
+function openWalkthrough(floor) {
+  const walk = current?.floors.walkthrough(floor);
+  if (walk) location.href = walk.href;
+}
+
 function openTour(scan) {
   el('tour').querySelector('iframe').src = `${scan.tourUrl}&play=1&qs=1&brand=0`;
   el('tour').showModal();
@@ -137,18 +145,24 @@ async function openProperty(city, kind, id) {
     canvas: freshCanvas(),
     labelLayer: el('stage-labels'),
     onFloorHover: (floor, event) => { if (current) { current.hovered = floor; repaint(); showFloorTip(floor, event); } },
-    onFloorClick: (floor) => current?.record.focusFloor(current.floors.at(floor, current.year)),
+    onFloorClick: (floor) => {
+      if (!current?.floors) return;
+      const info = current.floors.at(floor, current.year);
+      if (info.walkthrough) return openWalkthrough(floor);      // a scanned, baked floor: go straight inside
+      current.record.focusFloor(info);
+    },
   });
   const session = (current = { viewer, year: CURRENT_YEAR, marked: new Set(), hovered: 0, playTimer: null, kind, id, city });
 
   try {
-    const [detail, twin] = await Promise.all([fetchDetail(kind, id), fetchTwin(kind, id)]);
+    const [detail, twin, conversion] = await Promise.all([
+      fetchDetail(kind, id), fetchTwin(kind, id), kind === 'commercial' ? fetchConversion(id) : null]);
     if (current !== session) return;
     session.detail = detail;
     session.twin = twin;
-    session.floors = createFloorModel(detail, twin);
+    session.floors = createFloorModel(detail, twin, conversion);
     session.record = renderRecord(el('record'), {
-      detail, twin, floors: session.floors, city,
+      detail, twin, floors: session.floors, city, conversion,
       handlers: {
         onOpenScan: openScan,
         onCloseScan: closeScan,
@@ -164,7 +178,10 @@ async function openProperty(city, kind, id) {
     const heightFt = Math.round(twin.building.top * 3.28084);
     viewer.setPins([
       { label: `${number(heightFt)} ft` },
-      ...twin.scans.filter((s) => s.floor).map((s) => ({ floor: s.floor, label: `Scan, floor ${s.floor}`, onClick: () => openScan(s) })),
+      ...session.floors.walkthroughFloors.map((floor) => ({ floor, label: `Walk floor ${floor}`, walk: true, onClick: () => openWalkthrough(floor) })),
+      // a walkthrough floor's scan is still in the Interiors tab; one pin per floor keeps them apart
+      ...twin.scans.filter((s) => s.floor && !session.floors.walkthroughFloors.includes(s.floor))
+        .map((s) => ({ floor: s.floor, label: `Scan, floor ${s.floor}`, onClick: () => openScan(s) })),
     ]);
     repaint();
 

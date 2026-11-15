@@ -1,0 +1,38 @@
+/* LA office-to-housing view. Builds on /styles.css (tokens, top bar, Leaflet tweaks). */
+:root { --strong: #0e8a5f; --possible: #d99a00; --review: #7a4fd0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.city-title { font-weight: 600; font-stretch: 90%; }
+.city { display: grid; grid-template-columns: 420px 1fr; height: calc(100vh - var(--bar)); }
+.side { background: var(--surface); border-right: 1px solid var(--rule); overflow-y: auto; min-height: 0; }
+.side-head { padding: 18px 20px 14px; display: grid; gap: 6px; }
+.side-head h1 { font-size: 20px; font-weight: 650; font-stretch: 88%; line-height: 1.2; }
+.lede { color: var(--muted); }
+.facts { font-size: 13px; }
+pre { background: var(--wash); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 12px; }
+
+.legend { border: 0; margin: 0; padding: 0 20px 10px; display: grid; gap: 4px; }
+.legend-row { display: grid; grid-template-columns: auto 12px 1fr; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
+.legend-row i, .row i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.legend-row small { display: block; color: var(--muted); font-size: 12px; }
+
+.list-tools { padding: 8px 20px 8px; border-top: 1px solid var(--rule); display: grid; gap: 6px; position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.list-tools input { width: 100%; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; }
+.count { color: var(--muted); font-size: 12.5px; }
+.row { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: start; padding: 10px 20px; border-bottom: 1px solid var(--rule); color: inherit; text-decoration: none; }
+.row:hover { background: var(--wash); }
+.row i { margin-top: 4px; }
+.row small { display: block; color: var(--muted); font-size: 12.5px; }
+.score { font-weight: 650; font-size: 15px; min-width: 2ch; text-align: right; }
+.tag { font-style: normal; font-size: 11px; font-weight: 600; color: #fff; background: var(--ink); border-radius: 4px; padding: 1px 5px; vertical-align: 1px; }
+.method { padding: 14px 20px 24px; color: var(--muted); font-size: 13px; }
+.method summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+.method p, .method ul { margin-top: 8px; }
+.method ul { list-style: disc; padding-left: 18px; }
+
+@media (max-width: 760px) {
+  body { overflow: auto; height: auto; }
+  .city { grid-template-columns: 1fr; grid-template-rows: 45vh auto; height: auto; }
+  .city .map { display: block; grid-row: 1; height: 45vh; }
+  .side { grid-row: 2; overflow: visible; border-right: 0; }
+  .city-title, .topbar-note { display: none; }
+}

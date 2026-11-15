@@ -160,14 +160,30 @@ def availability(lsts):
         return None
     main = max(lease, key=lambda l: l["forLeaseSummary"].get("spaceCount") or 0)
     s = main["forLeaseSummary"]
-    spaces = [{
-        "floor": FLOOR_NUMBER.get(sp.get("floorName")),
-        "suite": sp.get("suite"),
-        "sf": sp.get("squareFeetMax"),
-        "rate": sp.get("rateLow") if sp.get("askingRateHasValue") else None,
-        "fullFloor": bool(sp.get("isFullFloor")),
-        "use": enum("SpaceUse", sp.get("spaceUse")),
-    } for sp in s.get("spaces") or []]
+
+    def space(sp):
+        return {
+            "floor": FLOOR_NUMBER.get(sp.get("floorName")),
+            "suite": sp.get("suite"),
+            "sf": sp.get("squareFeetMax"),
+            "rate": sp.get("rateLow") if sp.get("askingRateHasValue") else None,
+            "fullFloor": bool(sp.get("isFullFloor")),
+            "use": enum("SpaceUse", sp.get("spaceUse")),
+        }
+
+    spaces = [space(sp) for sp in s.get("spaces") or []]
+    # A building often has several active listings (a broker's block, a sublease, a coworking operator). The record
+    # panel shows the main one; the conversion screen needs every space, each once and none already pending a lease.
+    seen, all_spaces = set(), []
+    for listing in lease:
+        for sp in listing["forLeaseSummary"].get("spaces") or []:
+            if sp.get("isLeasePending"):
+                continue
+            row = space(sp)
+            key = (row["floor"], str(row["suite"] or "").strip().lower(), row["sf"])
+            if key not in seen:
+                seen.add(key)
+                all_spaces.append(row)
     return {
         "totalSf": s.get("totalAvailableSquareFeet"),
         "count": s.get("spaceCount"),
@@ -177,6 +193,8 @@ def availability(lsts):
         "service": enum("ServiceType", s.get("serviceType")),
         "broker": main.get("brokerageCompanyName"),
         "spaces": spaces,
+        "allSpaces": all_spaces,
+        "allTotalSf": sum(sp["sf"] or 0 for sp in all_spaces),
     }
 
 
@@ -235,7 +253,10 @@ def build_commercial(index):
         tenancies = tenancy_rows(prop, occupancies.get(pid, []), companies, floor_by_id)
         avail = availability(listings.get(pid, []))
         apt = apartment_block(prop, apartments.get(pid))
-        built = next((e["year"] for e in prop.get("constructionEvents") or [] if e.get("year")), None)
+        events = prop.get("constructionEvents") or []
+        # the year construction finished (event type 2); otherwise the first year recorded
+        built = next((e["year"] for e in events if e.get("eventType") == 2 and e.get("year")), None) \
+            or next((e["year"] for e in events if e.get("year")), None)
         type_name = enum("PropertyType", prop.get("propertyType")) or "Other"
         name = prop.get("buildingName") or street_address(addr)
         size = prop.get("rentableBuildingAreaSquareFeet") or prop.get("grossBuildingAreaSquareFeet")
@@ -247,7 +268,7 @@ def build_commercial(index):
             "stars": prop.get("buildingRating") or None,
             "stories": prop.get("numStoriesAboveGrade"), "yearBuilt": built, "sizeSf": size,
             "typicalFloorSf": prop.get("grossTypicalFloorSquareFeet"), "lotAcres": prop.get("lotSize"),
-            "floorSf": floor_sf, "tenancies": tenancies, "availability": avail,
+            "floorSf": floor_sf, "zoning": prop.get("zoningDescription"), "tenancies": tenancies, "availability": avail,
             "sales": sale_rows(sales.get(pid, [])), "apartments": apt,
             "leed": [{"year": l.get("beginYear"), "level": (enum("PropertyLeedType", l.get("propertyLeedType")) or "").replace("Leed", "LEED")}
                      for l in (prop.get("environmental") or {}).get("leedCertifications") or []],

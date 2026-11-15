@@ -24,12 +24,21 @@
   #mini{position:fixed;left:16px;bottom:18px;padding:8px;display:none} body.walk #mini{display:block} #mini canvas{display:block;cursor:pointer}
   #where{position:fixed;top:16px;right:16px;padding:6px 12px;font-size:12.5px;color:#c5ced8;display:none} body.walk #where{display:block}
   #dip{position:fixed;inset:0;background:#14171c;opacity:0;pointer-events:none;transition:opacity .18s}
+  .card .back{display:inline-block;margin:0 0 8px;color:#ffb02e;text-decoration:none;font-size:13px} .card .back:hover{text-decoration:underline}
+  .card{z-index:2} /* above the loading cover, so the way back works while the scan loads or if it fails */
+  .fallback{max-width:520px;padding:24px;text-align:left;color:#c5ced8} .fallback h2{font-size:18px;color:#e9edf2;margin:0 0 10px}
+  .fallback code{color:#e9edf2} .fallback p{margin:0 0 14px}
+  .fallback a{display:inline-block;margin:4px 10px 0 0;padding:9px 14px;border-radius:999px;text-decoration:none;font-weight:600}
+  .fb-tour{background:#ffb02e;color:#14171c} .fb-back{border:1px solid #3a4350;color:#e9edf2}
+  #apt-sum{position:fixed;top:16px;right:16px;padding:10px 14px;font-size:12.5px;max-width:260px} body.walk #apt-sum{top:52px}
+  #apt-sum b{font-variant-numeric:tabular-nums} #apt-sum .note{color:#8e9aa7;margin-top:6px}
   #loading{position:fixed;inset:0;display:grid;place-items:center;background:#14171c;font-size:15px;color:#9aa6b4;text-align:center}
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js", "three-mesh-bvh": "./vendor/three-mesh-bvh.module.js" } }</script>
 </head><body>
 <canvas id="c"></canvas>
 <div class="card panel">
+  <a class="back" id="back" hidden>&larr; Back to the building</a>
   <h1>Suite 1600, full floor</h1>
   <p class="sub">The Oppenheimer Tower · 10880 Wilshire Blvd, Los Angeles · floor 16 of 24 · built 1969</p>
   <dl>
@@ -54,7 +63,9 @@
   <button type="button" data-mode="walk" aria-pressed="false">Walk inside</button>
   <label><input type="checkbox" id="band"> Daylight zone</label>
   <button type="button" class="act" id="walls" aria-pressed="false">Remove walls</button>
+  <button type="button" class="act" id="apts" aria-pressed="false">Apartment layout</button>
 </div>
+<div id="apt-sum" class="panel" hidden></div>
 <form id="cmd" class="panel"><input id="cmd-in" type="text" autocomplete="off" placeholder="Type a command: remove all the walls" aria-label="Command"></form>
 <div id="dip"></div>
 <div id="loading">Loading the scan…</div>
@@ -68,9 +79,25 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
 const loadingEl = $('loading');
+// opened from Atlas's 3-D model of the building (?building=<CoStar id>): offer the way back to it
+if (/^\d+$/.test(Q.get('building') || '')) { $('back').href = `/#/los-angeles/commercial/${Q.get('building')}`; $('back').hidden = false; }
 const fail = (msg) => { loadingEl.textContent = msg; throw new Error(msg); };
 if (location.protocol === 'file:') fail('Open this through the local server (run start.command, or "python3 -m http.server 8123" in this folder, then visit http://localhost:8123).');
 
+// The baked scan (data/ and pano/) is git-ignored and made on the author's machine. Without it, say so and offer
+// Matterport's own hosted tour of the same scan, so the floor can still be walked.
+const SCAN = /^[A-Za-z0-9]{11}$/.test(Q.get('scan') || '') ? Q.get('scan') : 'cEvQ8q5GKZd';   // Suite 1600
+{
+  const probe = await fetch('data/scene.json').catch(() => null);
+  if (!probe || !probe.ok || !/json/.test(probe.headers.get('content-type') || '')) {
+    const back = $('back').hidden ? '' : `<a class="fb-back" href="${$('back').href}">Back to the building</a>`;
+    loadingEl.innerHTML = `<div class="fallback"><h2>This floor's walkthrough files are not on this computer</h2>
+      <p>The walkthrough is drawn from a baked copy of the scan (the <code>data</code> and <code>pano</code> folders next
+        to this page), which is not in git. Until they are copied here, walk the same floor in Matterport's tour.</p>
+      <p><a class="fb-tour" href="https://my.matterport.com/show/?m=${SCAN}&play=1&qs=1">Open the Matterport tour of this floor</a>${back}</p></div>`;
+    throw new Error('walkthrough data missing');
+  }
+}
 const bin = async (name, Type) => new Type(await (await fetch(`data/${name}`)).arrayBuffer());
 const [S, pos, uv, idx, dropFlags] = await Promise.all([fetch('data/scene.json').then((r) => r.json()), bin('pos.bin', Float32Array), bin('uv.bin', Float32Array), bin('idx.bin', Uint32Array), bin('drop.bin', Uint8Array)]);
 $('s-area').textContent = S.stats.areaSf.toLocaleString('en-US') + ' sq ft';
@@ -413,6 +440,7 @@ let sayTimer = 0;
 function say(text) { $('hint').textContent = text; clearTimeout(sayTimer); sayTimer = setTimeout(() => setUi(mode), 2600); }
 async function setWalls(down) {
   if (dropping || busy || down === removed) return;
+  if (!down && aptsOn) await setApts(false);
   if (mode === 'walk' || mode === 'shell') { await leaveWalk('doll'); }
   dropping = true; removed = down; setUi(mode);
   $('walls').setAttribute('aria-pressed', String(down)); $('walls').textContent = down ? 'Bring walls back' : 'Remove walls';
@@ -430,13 +458,83 @@ async function setWalls(down) {
 $('walls').addEventListener('click', () => setWalls(!removed));
 $('cmd').addEventListener('submit', (e) => {
   e.preventDefault(); const t = $('cmd-in').value.toLowerCase().trim(); $('cmd-in').value = ''; if (!t) return;
+  if (/apartment|layout|units?\b/.test(t)) { /(hide|remove|off|clear|close)/.test(t) ? setApts(false) : setApts(true); return; }
   const wall = /wall|partition|interior/.test(t);
   if (wall && /(bring|put|restore|add|raise|show|back|undo)/.test(t)) { removed ? setWalls(false) : say('The walls are already up.'); }
   else if (wall && /(remove|drop|clear|hide|delete|lower|take|get rid|strip|empty)/.test(t)) { removed ? say('The walls are already down.') : setWalls(true); }
   else if (/empty|shell/.test(t)) setWalls(true);
   else if (/doll/.test(t)) setMode('doll'); else if (/plan|top/.test(t)) setMode('plan'); else if (/walk|inside/.test(t)) setMode('walk');
-  else say('Try: "remove all the walls", "bring the walls back", "floor plan", "walk inside".');
+  else say('Try: "remove all the walls", "show apartments", "bring the walls back", "floor plan", "walk inside".');
 });
+
+// ---------- apartment layout: the agent's new walls, in the same scan metres as the shell ----------
+// data/layout.json (written by the conversion agent): walls [{a:[x,y], b:[x,y], kind}], units [{type, area_sf, polygon, label_at}],
+// structure {columns [{x,y,confidence}], exits [{x,y,kind,confidence}]}, summary. Scan (x, y) lands on world (x, -y), like SH.pieces.
+const LAY = await fetch('data/layout.json').then((r) => (r.ok && /json/.test(r.headers.get('content-type') || '') ? r.json() : null)).catch(() => null);
+let aptsOn = false;
+const aptGroup = new THREE.Group(); aptGroup.visible = false; scene.add(aptGroup);
+const aptRise = new THREE.Group(); aptRise.position.y = SH.z0; aptGroup.add(aptRise);   // scaled up from the floor as the walls rise
+const aptMat = (hex, op) => new THREE.ShaderMaterial({
+  uniforms: { uColor: { value: new THREE.Color(hex) }, uOpacity: { value: op }, uFade: { value: 1 } }, transparent: true, side: THREE.DoubleSide,
+  vertexShader: `varying vec3 vN; void main(){ vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform vec3 uColor; uniform float uOpacity, uFade; varying vec3 vN; void main(){ float l = 0.78 + 0.22 * abs(dot(vN, normalize(vec3(0.55, 0.6, 0.83)))); gl_FragColor = vec4(uColor * l, uOpacity * uFade); }`,
+});
+const aptMats = [];
+const labelSprite = (lines, color) => {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160; const c = cv.getContext('2d');
+  c.fillStyle = 'rgba(20,23,28,.82)'; c.beginPath(); c.roundRect(4, 4, 504, 152, 26); c.fill();
+  c.textAlign = 'center'; c.fillStyle = color; c.font = '600 58px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'; c.fillText(lines[0], 256, 72);
+  c.fillStyle = '#c5ced8'; c.font = '44px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'; c.fillText(lines[1] || '', 256, 130);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, opacity: 0 }); aptMats.push(m);
+  const sp = new THREE.Sprite(m); sp.scale.set(3.2, 1.0, 1); sp.renderOrder = 6; return sp;
+};
+if (LAY) {
+  const H = SH.z1 - SH.z0;
+  const wallMat = aptMat(0x2fb3a5, 0.92), corridorMat = aptMat(0x7fc8ff, 0.92), colMat = aptMat(0xe5484d, 0.55);
+  aptMats.push(wallMat, corridorMat, colMat);
+  for (const w of LAY.walls || []) {
+    const ax = w.a[0], az = -w.a[1], bx2 = w.b[0], bz = -w.b[1], L = Math.hypot(bx2 - ax, bz - az); if (L < 0.05) continue;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(L, H, 0.14), w.kind === 'corridor' ? corridorMat : wallMat);
+    m.position.set((ax + bx2) / 2, H / 2, (az + bz) / 2); m.rotation.y = Math.atan2(-(bz - az), bx2 - ax); aptRise.add(m);   // box length runs from a to b
+  }
+  const tint = { studio: 0x7fc8ff, '1br': 0x2fb3a5, '2br': 0xffb02e, '3br': 0xc58bf2 };
+  for (const u of LAY.units || []) {
+    if (u.polygon && u.polygon.length > 2) {
+      const mat = new THREE.MeshBasicMaterial({ color: tint[String(u.type).toLowerCase()] || 0x9aa6b4, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+      mat.userData.max = 0.28; aptMats.push(mat);
+      const f = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(u.polygon.map(([x, y]) => new THREE.Vector2(x, y)))), mat);
+      f.rotation.x = -Math.PI / 2; f.position.y = S.floorY + 0.03; f.renderOrder = 2; aptGroup.add(f);   // shape (x, y) lands on world (x, -y)
+    }
+    const at = u.label_at || (u.polygon && [u.polygon.reduce((a, p) => a + p[0], 0) / u.polygon.length, u.polygon.reduce((a, p) => a + p[1], 0) / u.polygon.length]);
+    if (!at) continue;
+    const sp = labelSprite([String(u.type || 'Unit').toUpperCase(), u.area_sf ? `${Math.round(u.area_sf).toLocaleString('en-US')} sq ft` : ''], '#e9edf2');
+    sp.position.set(at[0], SH.z1 + 0.7, -at[1]); aptGroup.add(sp);
+  }
+  const st = LAY.structure || {};
+  for (const c of st.columns || []) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.45, H, 0.45), colMat); m.position.set(c.x, H / 2, -c.y); aptRise.add(m); }
+  for (const e of st.exits || []) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }); mat.userData.max = 0.9; aptMats.push(mat);
+    const r = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.55, 40).rotateX(-Math.PI / 2), mat); r.position.set(e.x, S.floorY + 0.05, -e.y); r.renderOrder = 3; aptGroup.add(r);
+    const sp = labelSprite(['EXIT', /assum/i.test(`${e.confidence || ''} ${e.kind || ''}`) ? 'assumed' : (e.kind || '')], '#3ddc84'); sp.scale.set(1.9, 0.6, 1); sp.position.set(e.x, SH.z1 + 0.4, -e.y); aptGroup.add(sp);
+  }
+  const sm = LAY.summary || {};
+  $('apt-sum').innerHTML = `<div><b>${sm.units ?? (LAY.units || []).length}</b> apartments${sm.rentable_sf ? ` · <b>${Math.round(sm.rentable_sf).toLocaleString('en-US')}</b> sq ft` : ''}</div>`
+    + (sm.monthly_rent_usd ? `<div>About <b>$${Math.round(sm.monthly_rent_usd).toLocaleString('en-US')}</b> a month in rent</div>` : '')
+    + `<div class="note">Rough draft by the layout agent. Red: possible columns (low confidence). Green: exits${(st.exits || []).some((e) => /assum/i.test(e.confidence || '')) ? ', assumed' : ''}.</div>`;
+} else { $('apts').disabled = true; $('apts').title = 'No apartment layout for this floor yet'; }
+function aptFade(q) { aptRise.scale.y = Math.max(0.001, q); for (const m of aptMats) { if (m.uniforms) m.uniforms.uFade.value = Math.min(1, q * 1.5); else m.opacity = (m.userData.max ?? 1) * THREE.MathUtils.smoothstep(q, 0.4, 1); } }
+async function setApts(on) {
+  if (!LAY) { say('No apartment layout has been made for this floor yet.'); return; }
+  if (on === aptsOn || dropping) return;
+  if (on && !removed) await setWalls(true);
+  if (on && !removed) return;   // the office walls could not come down (another move was running)
+  aptsOn = on; $('apts').setAttribute('aria-pressed', String(on)); $('apts').textContent = on ? 'Hide apartments' : 'Apartment layout';
+  aptGroup.visible = true; $('apt-sum').hidden = !on; if (on) $('legend').hidden = true;
+  await tween(on ? 1600 : 700, (e) => aptFade(on ? e : 1 - e));
+  aptGroup.visible = on;
+}
+$('apts').addEventListener('click', () => setApts(!aptsOn));
 
 // ---------- picking ----------
 const ray = new THREE.Raycaster(); ray.firstHitOnly = true; const ndc = new THREE.Vector2();
@@ -547,7 +645,7 @@ renderer.setAnimationLoop((now) => {
   renderer.render(scene, camera);
 });
 setUi('doll'); orbit.enabled = true; loadingEl.remove();
-window.__app = { panos, setMode, goTo, enterWalk, enterShell, setWalls, camera, look: (y, p) => { yaw = y; pitch = p; applyLook(); drawMini(); }, state: () => ({ mode, busy, removed, dropping, cur: cur && cur.i, hd: hiFor === cur && !!hi, yaw, pitch }) };
+window.__app = { panos, setMode, goTo, enterWalk, enterShell, setWalls, setApts, camera, look: (y, p) => { yaw = y; pitch = p; applyLook(); drawMini(); }, state: () => ({ mode, busy, removed, dropping, cur: cur && cur.i, hd: hiFor === cur && !!hi, yaw, pitch }) };
 window.__U = U; window.__ready = true;
 </script>
 </body></html>

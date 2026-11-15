@@ -18,4 +18,6 @@ export const fetchDetail = (kind, id) => getJson(`/data/${kind === 'home' ? 'hom
 export const fetchTwin = (kind, id) => getJson(`/api/twin?kind=${kind}&id=${id}`);
 export const fetchScan = (scanId) => getJson(`/api/scan?id=${encodeURIComponent(scanId)}`);
 export const fetchStatus = () => getJson('/api/status');
+// office-to-housing screen for one building (pipeline/conversion.py); null when it has not been screened
+export const fetchConversion = (id) => getJson(`/data/conversion/property/${id}.json`).catch(() => null);
 export const obliqueUrl = (kind, id, direction) => `/api/oblique?kind=${kind}&id=${id}&direction=${direction}`;
