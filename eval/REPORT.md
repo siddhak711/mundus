@@ -78,7 +78,7 @@ truth were not touched after the freeze.
 |---|---|---|
 | `get_space` was cut off at 24,000 characters, so agents opened rooms one at a time and ran out of tool calls | Agent-facing `get_space`, `get_room` and `get_place` return compact views: every room on one line with its photo count, counts of rooms with and without photos, a scan count per place | Tool calls per run 40 to 29 |
 | The interior subagent had no tool that lists a place's scans and kept inventing one | It gets `get_place`; `get_space` with a place id says what to call | R5 0 to 5 of 6, A10 4 to 6 of 6 |
-| A third of `put_claim` calls were rejected for predicates the vocabulary lacks (`market.listing_count`) | An unlisted predicate in a known namespace is accepted as free-form | `put_claim` rejections 28% to 5% |
+| A third of `put_claim` calls were rejected for predicates the vocabulary lacks (`market.listing_count`) | An unlisted predicate in a known namespace is accepted as free-form | `put_claim` rejections 30% to 6% |
 | Wrong column names in SQL | The error lists the table's columns | No measurable change: about 16% of `query_market` calls still fail |
 | Captions name things that are not in the photo | Prompt: check the photo before describing contents; defurnished views are generated | P12 unchanged at 0 of 6 |
 
@@ -119,7 +119,7 @@ Three of these 17 are answers the grader accepted that failed only a code check 
 - I checked one of the three visual references (P13) against its photographs. P11 and P12 were read for
   plausibility only.
 - Wall-clock times come from 6 overlapping runs.
-- Grader and reference cost was not recorded. Agent cost across the four runs was $53.45.
+- Grader and reference cost was not recorded. Agent cost across the four full runs was $53.45; smoke and diagnostic runs (about 25 more) are not included.
 - The world was ingested in the eval session with all 1,250 captions from Claude Haiku 5.5. The deployed VM holds the
   same 15 places with 463 older Gemini captions, and runs none of iterations 2 or 3 until it is updated.
 - One grader fix was made after the freeze and before the first full run (`4c437c9`): a claim stating that data is
