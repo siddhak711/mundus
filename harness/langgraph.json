@@ -1,0 +1,1 @@
+{"dependencies": ["."], "graphs": {"mundus": "./mundus_harness/graph.py:make_graph"}, "env": "../.env"}
