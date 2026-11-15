@@ -99,6 +99,7 @@ def grade_code(task: dict[str, Any], truth: dict[str, Any], run: dict[str, Any])
 
 
 SOFT = {"citation_coverage", "budget"}
+_NEGATED = re.compile(r"\b(no|not|none|cannot|can't|unknown|lacks?|without|absent|unavailable|does not|do not|isn't|aren't)\b", re.I)
 
 
 def common_checks(task: dict[str, Any], run: dict[str, Any]) -> list[dict[str, Any]]:
@@ -117,7 +118,10 @@ def common_checks(task: dict[str, Any], run: dict[str, Any]) -> list[dict[str, A
     out.append({"check": "evidence_types", "ok": need <= have, "detail": f"need {sorted(need)}, cited {sorted(have)}"})
     pats = [p.lower() for p in task.get("forbidden_claim_patterns") or []]
     if pats:
-        bad = [c["statement"] for c in run.get("claims") or [] if any(p in c.get("statement", "").lower() for p in pats)]
+        # A claim that says the data lacks something ("there is no structural data on beams") is correct behaviour,
+        # not an invention: only statements that assert the forbidden thing count.
+        bad = [c["statement"] for c in run.get("claims") or []
+               if any(p in c.get("statement", "").lower() for p in pats) and not _NEGATED.search(c.get("statement", ""))]
         out.append({"check": "no_invented_claims", "ok": not bad, "detail": f"{len(bad)} forbidden claims written"})
     m = run.get("metrics") or {}
     out.append({"check": "budget", "ok": (m.get("model_calls") or 0) < 60, "detail": f"{m.get('model_calls')} model calls"})

@@ -172,3 +172,12 @@ def test_report_summary():
     assert s["combos"]["cold"]["mean_tokens_total"] == 1110 and s["combos"]["cold"]["mean_cost_usd"] is None
     assert s["tasks"]["R1"]["warm"] == {"pass": 1, "runs": 1, "mean_tokens": 110, "flaky": False}
     assert s["tasks"]["R1"]["cold"]["flaky"] and s["combos"]["cold"]["tool_error_rate"] == 0.0
+
+
+def test_negative_statements_are_not_inventions():
+    task = {"forbidden_claim_patterns": ["collapse", "beam"], "expect_refusal": True}
+    def chk(stmt):
+        run = {"answer": "x", "citations": [], "claims": [{"statement": stmt}], "metrics": {}}
+        return next(c for c in graders.common_checks(task, run) if c["check"] == "no_invented_claims")["ok"]
+    assert chk("There is no structural data (steel beams, columns, load, damage or collapse risk).")
+    assert not chk("Beam failure puts room 3 at risk of collapse.")
