@@ -18,6 +18,24 @@ frontend (separate)  ──REST──►  backend/   World API: ingestion, SQLit
 | `shared/predicates.yaml` | The claim predicate vocabulary, read by both backend and harness | |
 | `scripts/` | `verify.sh` (lint and tests for all three), `deploy/` (VM setup) | |
 
+## Built with
+
+**deepagents** · **LangGraph** · **CoStar data** · **Matterport** · **Vexcel** · **Claude (Anthropic)**
+
+| Part | What it comes from | Built with |
+|---|---|---|
+| Map of LA offices | Every commercial property in the CoStar kit (location, year built, size, floors, vacancy), screened against LA's Adaptive Reuse Ordinance 188,793 | CoStar data, OpenStreetMap, Leaflet |
+| Outside of the building | Vexcel surface heights, aerial photo, structure footprints, parcel and trees; floors coloured by CoStar availability and tenancies; facade walls are drawn, not data | Vexcel, CoStar data, three.js |
+| Office as scanned | Matterport 360° photos (walk) and MatterPak mesh (dollhouse); building facts from CoStar | Matterport, CoStar data, three.js |
+| Empty floor | Derived from the Matterport scan: interior walls dropped, window walls baked from the photos, columns and core found in the mesh | Matterport, three.js |
+| Homes | Floor-16 layout study (`scripts/apartment_study_v4.py`) fitted to the scan's shell; CC0 finishes, drawn furniture | Matterport, Poly Haven, three.js |
+| Compliance | LA Ordinance 188,793 and the 2025 California Building Code, measured on the layout (`docs/floor16-research.md`) | public code |
+| Cost-benefit | Rents fitted to CoStar apartment listings within 2 km; costs from AECOM 2024 and LA Planning | CoStar data, public reports |
+| Structure | Columns detected in the Matterport mesh, hidden ones inferred from the grid | Matterport |
+| Agents and Ask Atlas | Orchestrator plus layout, compliance and cost subagents (`harness/`), on Claude Sonnet 5.5 and Haiku 5.5; the World API serves CoStar records and Matterport photos captioned by Claude; traces in LangSmith | deepagents, LangGraph, Claude, LangSmith |
+
+The walkthrough's review page (`web/walkthrough/review.html`, after Submit) ends with the same table.
+
 ## Run it locally
 
 Keys go in `.env` at the repository root (copy `.env.example`). Nothing licensed is ever committed: `data/` and `.env`

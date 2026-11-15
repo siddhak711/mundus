@@ -91,6 +91,22 @@ const open = [
 ].filter(Boolean);
 
 const mix = Object.entries(L.summary.unit_mix || {}).map(([k, v]) => `${v} × ${k}`).join(' · ');
+// What each part of the product is built on. The six named tags are the hackathon's "Built with" set; everything else is
+// listed as it is. Keep this honest: say where a number is measured, derived, assumed or drawn.
+const TAG = { costar: 'CoStar data', matterport: 'Matterport', vexcel: 'Vexcel', deepagents: 'deepagents', langgraph: 'LangGraph', claude: 'Claude (Anthropic)' };
+const tags = (...ks) => `<span class="tags">${ks.map((k) => (TAG[k] ? `<span class="tag ${k}">${TAG[k]}</span>` : `<span class="tag other">${esc(k)}</span>`)).join('')}</span>`;
+const BUILT = [
+  ['Map', 'Which LA offices could become homes', "Every commercial property in the CoStar kit: location, year built, size, floors, vacancy. Screened against LA's Adaptive Reuse Ordinance 188,793.", tags('costar', 'OpenStreetMap', 'Leaflet')],
+  ['Outside of the building', '3-D model of the tower and its block', 'Vexcel surface heights, aerial photo (the roofs), structure footprints, parcel, and trees found in the height model. Floors coloured by CoStar availability and tenancies. Facade walls are drawn, not data.', tags('vexcel', 'costar', 'three.js')],
+  ['1 · Office as scanned', 'Dollhouse and walk inside', `Matterport scan ${SCAN}: the 360° photos for the walk, the MatterPak mesh for the dollhouse. Listed size and building facts from CoStar, ceiling height from Matterport.`, tags('matterport', 'costar', 'three.js')],
+  ['2 · Empty floor', 'Interior walls removed', 'Derived from the same Matterport scan: interior walls found in the mesh and dropped, window walls baked from the nearest 360° photos, columns and core found in the mesh. Ceiling tiles and carpet are drawn.', tags('matterport', 'three.js')],
+  ['3 · Homes', 'The apartments in 3-D', "Layout from the floor-16 study (scripts/apartment_study_v4.py), fitted to the scan's outer wall, core and columns. Finishes are CC0 textures; furniture is drawn.", tags('matterport', 'Poly Haven (CC0)', 'three.js')],
+  ['Compliance', 'Code checks on every home', 'Measured on the layout against LA Ordinance 188,793 and the 2025 California Building Code (room sizes, daylight, exits, accessibility). Public sources, cited in docs/floor16-research.md.', tags('LA Ordinance 188,793', 'CA Building Code')],
+  ['Cost-benefit', 'Rent, cost and yield', 'Rents fitted to CoStar apartment listings (167 one-bed floor plans in 38 buildings within 2 km). Build cost, purchase price, linkage fee and cap rate from AECOM 2024, LA Planning and market reports.', tags('costar', 'AECOM 2024', 'LA Planning')],
+  ['Structure', 'Columns, drains, loads', `Columns detected in the Matterport mesh (${(L.columns || []).filter((c) => c.kind !== 'hidden').length}) plus hidden ones inferred from the column grid (${(L.columns || []).filter((c) => c.kind === 'hidden').length}). Beams and slab depth are not in the scan.`, tags('matterport')],
+  ['Agents and chat', 'Sidebar agents, Ask Atlas', 'The conversion agent is an orchestrator with layout, compliance and cost subagents on deepagents, run by LangGraph, on Claude Sonnet 5.5 and Haiku 5.5. On this page the agent cards replay the saved study; the chat calls the live agent when it is running. Ask Atlas reads the World API: CoStar records and Matterport photos captioned by Claude.', tags('deepagents', 'langgraph', 'claude', 'costar', 'matterport', 'LangSmith')],
+];
+
 $('main').innerHTML = `
 <section class="hero">
   <p class="eyebrow">Conversion review · submitted by the agents</p>
@@ -160,6 +176,15 @@ $('main').innerHTML = `
   <p class="lede">What the architect should check first.</p>
   <ul class="list">${open.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>
   <p class="small muted" style="margin-top:14px">Source: ${esc(L.source)}. Scan ${esc(SCAN)} (Matterport). Building facts: CoStar.</p>
+</section>
+
+<section class="card built" id="built-with">
+  <h2>Built with</h2>
+  <p class="lede">Where every part of this came from.</p>
+  <div class="built-key">${tags('costar', 'matterport', 'vexcel', 'deepagents', 'langgraph', 'claude')}</div>
+  <table><thead><tr><th>Part</th><th>What it comes from</th><th>Built with</th></tr></thead><tbody>
+  ${BUILT.map(([part, what, src, t]) => `<tr><td><b>${esc(part)}</b><span class="small muted">${esc(what)}</span></td><td class="src">${esc(src)}</td><td>${t}</td></tr>`).join('')}
+  </tbody></table>
 </section>`;
 
 if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
