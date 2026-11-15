@@ -46,6 +46,17 @@
   .units-table{max-height:420px;overflow:auto}
   .list{display:grid;gap:8px} .list li{padding-left:18px;position:relative} .list li::before{content:"";position:absolute;left:4px;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--warn)}
   .muted{color:var(--muted)} .small{font-size:12.5px}
+  /* built with: one colour per source, a dot and a soft fill, so a row reads at a glance */
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 7px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+  .tag::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+  .tag.costar{background:#e8eefc;color:#1d4fd7} .tag.matterport{background:#f3e8fb;color:#7b3fb3} .tag.vexcel{background:#e2f4ee;color:#16795a}
+  .tag.deepagents{background:#fdf0dc;color:#9a5b00} .tag.langgraph{background:#fde7de;color:#b23a0a} .tag.claude{background:#f6ece5;color:#8f4a26}
+  .tag.other{background:var(--wash);color:var(--muted)}
+  .built-key{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 16px}
+  .built td:first-child{white-space:nowrap} .built td b{display:block} .built td .small{display:block;margin-top:2px}
+  .built .src{font-size:12.5px;color:var(--muted)}
+  @media (max-width:760px){.built thead{display:none} .built tr{display:grid;gap:4px;padding:10px 0;border-bottom:1px solid var(--rule)} .built td{border:0;padding:0}}
   .error{max-width:640px;margin:80px auto;padding:24px;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
   @media (max-width:980px){.kpis{grid-template-columns:repeat(3,1fr)} .grid2{grid-template-columns:1fr}}
   @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)} main{padding:18px 16px 48px} .top{padding:0 16px} .bar{grid-template-columns:110px 1fr 74px}}
