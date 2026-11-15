@@ -1,0 +1,15 @@
+# Harness combinations to compare. Each combination is run on every task, 3 times, interleaved.
+# memory: cold  -> the claims store is emptied before every run
+# memory: warm  -> the claims store is restored from the snapshot built by `mundus-eval seed` before every run
+# env: environment overrides applied when the agent for this combination is built
+runs_per_task: 3
+combos:
+  - name: cold-sonnet-haiku
+    memory: cold
+    env: {ORCH_MODEL: "anthropic:claude-sonnet-5-5", WORKER_MODEL: "anthropic:claude-haiku-5-5"}
+  - name: warm-sonnet-haiku
+    memory: warm
+    env: {ORCH_MODEL: "anthropic:claude-sonnet-5-5", WORKER_MODEL: "anthropic:claude-haiku-5-5"}
+  - name: cold-all-haiku
+    memory: cold
+    env: {ORCH_MODEL: "anthropic:claude-haiku-5-5", WORKER_MODEL: "anthropic:claude-haiku-5-5"}

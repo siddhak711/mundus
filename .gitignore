@@ -1,7 +1,21 @@
-node_modules
-.env
-*.log
-__pycache__/
-raw/
+# data, keys and caches never enter git (public repository, licensed data)
 data/
+**/data/
+.env
+.env.*
+!.env.example
+*.db
+*.db-wal
+*.db-shm
+kit/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+node_modules/
+.langgraph_api/
+*.log
+raw/
 cache/
