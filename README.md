@@ -139,7 +139,7 @@ sources that describe the same address.
 3. Install and build the index, then start the server:
 
 ```bash
-pip install requests shapely pillow numpy scipy tifffile imagecodecs
+pip install requests shapely pillow numpy scipy opencv-python-headless tifffile imagecodecs
 python pipeline/build_index.py
 python server.py
 ```
@@ -180,8 +180,20 @@ python pipeline/build_index.py raw/costar
 python pipeline/conversion.py
 ```
 
-Then open http://localhost:5190/city/, or follow "LA office to housing" in the top bar. `conversion.py` writes
-`data/conversion/los-angeles.json` and one floor file per office building in the City of LA.
+Optional, once: build every candidate's 3-D model ahead of time, so even a first open is instant (about 1.5 s
+saved per building; already built models are skipped). Models built before trees were added are rebuilt, so run it
+again after pulling:
+
+```bash
+python -m pipeline.prewarm
+```
+
+Then open http://localhost:5190/#/los-angeles/office-to-housing (the old /city/ address redirects there), or follow
+"LA office to housing" in the top bar. The map is a view inside Atlas's page, so opening a building never loads a new
+page: the map stays up while the 3-D model is drawn behind it, then zooms away as the model fades in. `conversion.py` writes
+`data/conversion/los-angeles.json` and one floor file per office building in the City of LA. The page also starts
+loading a building's model in the background when the pointer rests on it, when it is focused, or when a search
+narrows to three buildings or fewer, so the click only has to draw it.
 
 | Dot | Meaning |
 |---|---|
@@ -212,8 +224,11 @@ Then open http://localhost:5190/city/, or follow "LA office to housing" in the t
   and 35 ft of its edge, and how deep the deepest point is. The 30 ft share then replaces the floor-size guess in the fit
   score. Suite scans are recorded but not measured: their edges are mostly corridor walls. Needs the Matterport keys in
   `.env`. The Oppenheimer Tower's floor 16 measures 67% within 30 ft, deepest point 59 ft.
-- Floors with a baked walkthrough are listed in `pipeline/walkthroughs.json`. The walkthrough links back to the
-  building's 3-D model. The 3-D model needs `VEXCEL_API_KEY` in `.env`.
+- Floors with a baked walkthrough are listed in `pipeline/walkthroughs.json` (and their card facts in
+  `web/walkthrough/floors.json`): Suite 1600 of the Oppenheimer Tower, and the whole-floor scans of the top candidates,
+  3415 Sepulveda Blvd floor 10, The Tower (10940 Wilshire) floor 17 and The Launch at Airport Center floor 3. Bake one
+  with `python -m pipeline.bake <scanId>` (licensed, git-ignored, into `web/walkthrough/floors/<scanId>/`; see
+  `web/walkthrough/README.md`). The walkthrough links back to the building's 3-D model. The 3-D model needs `VEXCEL_API_KEY` in `.env`.
 
 ## What the model does and does not show
 

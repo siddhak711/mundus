@@ -4,10 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Atlas</title>
+  <!-- first in the head, ahead of every stylesheet, so both run before the page is revealed -->
+  <script>/* back from a floor walkthrough: start dark, as the walkthrough was, and let app.js fade to the scene */
+    try { if (sessionStorage.getItem('atlas:fromWalk')) { sessionStorage.removeItem('atlas:fromWalk'); document.documentElement.classList.add('from-walk'); } } catch (e) {}
+    /* a page transition the browser skips (an unsupported case, a fast click) must not surface as an error */
+    for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v = e.viewTransition; if (v) for (const p of [v.ready, v.finished, v.updateCallbackDone]) p?.catch(() => {}); });
+    addEventListener('unhandledrejection', (e) => { if (e.reason?.name === 'InvalidStateError' && /Transition was aborted/.test(e.reason.message)) e.preventDefault(); });</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..110,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/city/city.css">
   <script type="importmap">
     { "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -17,13 +24,14 @@
   </script>
 </head>
 <body>
+  <div class="page-cover" id="page-cover" aria-hidden="true"></div>
   <header class="topbar">
     <a class="wordmark" href="#/">Atlas</a>
     <nav class="cities" aria-label="City">
       <a data-city="houston" href="#/houston">Houston</a>
       <a data-city="los-angeles" href="#/los-angeles">Los Angeles</a>
     </nav>
-    <a class="topbar-link" href="/city/">LA office to housing</a>
+    <a class="topbar-link" href="#/los-angeles/office-to-housing">LA office to housing</a>
     <span class="topbar-note" id="topbar-note"></span>
     <button class="ask-toggle" id="ask-toggle" type="button" aria-expanded="false">Ask Atlas</button>
   </header>
@@ -50,6 +58,29 @@
     <div id="map" class="map" aria-label="Map of properties"></div>
   </main>
 
+  <!-- LA office to housing: every office in the kit, coloured by its conversion screen (web/city/city.js) -->
+  <main id="city" class="city" hidden>
+    <aside class="side" id="c-side">
+      <section id="c-overview">
+        <div class="side-head">
+          <h1>Which offices could become homes?</h1>
+          <p class="lede">Every office building in the City of Los Angeles, screened against the Citywide Adaptive Reuse
+            Ordinance and for how well its floors suit apartments. Pick one to open its 3-D model, floor by floor.</p>
+          <p class="count" id="c-note"></p>
+        </div>
+        <fieldset class="legend" id="c-legend"><legend class="sr-only">Show on the map</legend></fieldset>
+        <div class="list-tools">
+          <input id="c-search" type="search" placeholder="Search by name or address" aria-label="Search buildings">
+          <p class="count" id="c-count"></p>
+        </div>
+        <ol class="list" id="c-list"></ol>
+        <details class="method"><summary>How buildings are screened</summary><div id="c-method"></div></details>
+      </section>
+    </aside>
+    <div class="map" id="c-map" aria-label="Map of Los Angeles office buildings"></div>
+    <p class="c-loading" id="c-loading" hidden>Building the 3-D model…</p>
+  </main>
+
   <main id="twin" class="twin" hidden>
     <aside class="record" id="record"></aside>
     <section class="stage">
@@ -64,6 +95,7 @@
           <button type="button" data-view="stacked" aria-pressed="false">Stacked</button>
           <button type="button" data-view="plan" aria-pressed="false">Plan</button>
         </div>
+        <label class="check"><input type="checkbox" id="layer-vacancy" checked> Vacancy colours</label>
         <label class="check"><input type="checkbox" id="layer-heights"> Height map</label>
         <label class="check"><input type="checkbox" id="layer-footprints"> Footprints</label>
         <div class="timeline" id="timeline" hidden>

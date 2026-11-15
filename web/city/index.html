@@ -4,47 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LA Office to Housing</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..110,400..700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/city/city.css">
-  <script type="importmap">
-    { "imports": { "leaflet": "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet-src.esm.js" } }
-  </script>
+  <!-- The map now lives inside Atlas's page, so opening a building never loads a new page. -->
+  <script>location.replace('/#/los-angeles/office-to-housing');</script>
+  <meta http-equiv="refresh" content="0; url=/#/los-angeles/office-to-housing">
+  <style>html { background: #f1f3f5; }</style>
 </head>
-<body>
-  <header class="topbar">
-    <a class="wordmark" href="/">Atlas</a>
-    <span class="city-title">Los Angeles · office to housing</span>
-    <span class="topbar-note" id="note"></span>
-  </header>
-
-  <main class="city">
-    <aside class="side" id="side">
-      <section id="overview">
-        <div class="side-head">
-          <h1>Which offices could become homes?</h1>
-          <p class="lede">Every office building in the City of Los Angeles, screened against the Citywide Adaptive Reuse
-            Ordinance and for how well its floors suit apartments. Pick one to open its 3-D model, floor by floor.</p>
-        </div>
-        <fieldset class="legend" id="legend">
-          <legend class="sr-only">Show on the map</legend>
-        </fieldset>
-        <div class="list-tools">
-          <input id="search" type="search" placeholder="Search by name or address" aria-label="Search buildings">
-          <p class="count" id="count"></p>
-        </div>
-        <ol class="list" id="list"></ol>
-        <details class="method">
-          <summary>How buildings are screened</summary>
-          <div id="method"></div>
-        </details>
-      </section>
-    </aside>
-    <div class="map" id="map" aria-label="Map of Los Angeles office buildings"></div>
-  </main>
-
-  <script type="module" src="/city/city.js"></script>
-</body>
+<body></body>
 </html>

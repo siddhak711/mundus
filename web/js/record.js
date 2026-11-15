@@ -108,7 +108,7 @@ function floorsPane(d, floors) {
   const spaces = (d.availability?.allSpaces || d.availability?.spaces || []).slice().sort((a, b) => (b.floor || 0) - (a.floor || 0));
 
   return `
-    <p class="legend"><span><i class="key leased"></i>Leased</span><span><i class="key available"></i>Available</span><span><i class="key scanned"></i>Interior scan</span>${floors.walkthroughFloors?.length ? '<span><i class="key walk"></i>Walkthrough: click to go inside</span>' : ''}</p>
+    <p class="legend"><span><i class="key convertible"></i>Convertible now</span><span><i class="key partial"></i>Partly vacant</span><span><i class="key occupied"></i>Leased</span><span><i class="key scanned"></i>Interior scan</span>${floors.walkthroughFloors?.length ? '<span><i class="key walk"></i>Walkthrough: click to go inside</span>' : ''}</p>
     <section id="floor-focus"></section>
     ${spaces.length ? `<section><h2>Available space</h2><table>
       <tr><th>Floor</th><th>Suite</th><th class="num">Size</th><th class="num">Asking</th></tr>

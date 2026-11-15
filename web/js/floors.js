@@ -16,12 +16,29 @@ export function createFloorModel(detail, twin, conversion = null) {
   const scans = twin.scans.filter((s) => s.floor);
   const years = tenancies.map((t) => t.from).filter(Boolean);
 
+  // indexed by floor once: a repaint asks about every floor, and a big tower has hundreds of tenancies
+  const byFloor = (rows) => rows.reduce((m, r) => (m.get(r.floor) || m.set(r.floor, []).get(r.floor)).push(r) && m, new Map());
+  const tenanciesOn = byFloor(tenancies);
+  const availableOn = byFloor(available);
+  const scansOn = byFloor(scans);
+
   function capacity(floor) {
     return detail.floorSf?.[floor] || detail.typicalFloorSf || (detail.sizeSf ? detail.sizeSf / stories : 0);
   }
 
+  // how empty a floor is today: the conversion screen's verdict where the building was screened, otherwise listed space
+  // against the floor's size (half or more listed is 'convertible', any is 'partial')
+  function vacancyOf(floor) {
+    const s = screened.get(floor)?.status;
+    if (s) return s;
+    const listed = (availableOn.get(floor) || []).reduce((n, sp) => n + (sp.fullFloor ? capacity(floor) : sp.sf || 0), 0);
+    const cap = capacity(floor);
+    if (listed && cap && listed / cap >= 0.5) return 'convertible';
+    return listed ? 'partial' : 'leased';
+  }
+
   function at(floor, year = CURRENT_YEAR) {
-    const tenants = tenancies.filter((t) => t.floor === floor && (t.from ?? 0) <= year && (t.to == null || t.to >= year));
+    const tenants = (tenanciesOn.get(floor) || []).filter((t) => (t.from ?? 0) <= year && (t.to == null || t.to >= year));
     const leasedSf = tenants.reduce((sum, t) => sum + (t.sf || 0), 0);
     const cap = capacity(floor);
     const isNow = year >= CURRENT_YEAR;
@@ -30,10 +47,11 @@ export function createFloorModel(detail, twin, conversion = null) {
       tenants,
       leasedSf,
       leasedShare: cap ? Math.min(1, leasedSf / cap) : tenants.length ? 1 : 0,
-      available: isNow ? available.filter((s) => s.floor === floor) : [],
-      scans: isNow ? scans.filter((s) => s.floor === floor) : [],
+      available: isNow ? availableOn.get(floor) || [] : [],
+      scans: isNow ? scansOn.get(floor) || [] : [],
       walkthrough: isNow ? walkthrough(floor) : null,
       conversion: isNow ? screened.get(floor) || null : null,
+      vacancy: isNow ? vacancyOf(floor) : null,
     };
   }
 

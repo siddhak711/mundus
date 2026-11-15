@@ -1,38 +1,48 @@
-/* LA office-to-housing view. Builds on /styles.css (tokens, top bar, Leaflet tweaks). */
+/* LA office-to-housing view, inside Atlas's page. Every rule is scoped to .city so nothing leaks into Atlas's views. */
 :root { --strong: #0e8a5f; --possible: #d99a00; --review: #7a4fd0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.city-title { font-weight: 600; font-stretch: 90%; }
 .city { display: grid; grid-template-columns: 420px 1fr; height: calc(100vh - var(--bar)); }
-.side { background: var(--surface); border-right: 1px solid var(--rule); overflow-y: auto; min-height: 0; }
-.side-head { padding: 18px 20px 14px; display: grid; gap: 6px; }
-.side-head h1 { font-size: 20px; font-weight: 650; font-stretch: 88%; line-height: 1.2; }
-.lede { color: var(--muted); }
-.facts { font-size: 13px; }
-pre { background: var(--wash); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 12px; }
+.city .side { background: var(--surface); border-right: 1px solid var(--rule); overflow-y: auto; min-height: 0; }
+.city .side-head { padding: 18px 20px 14px; display: grid; gap: 6px; }
+.city .side-head h1 { font-size: 20px; font-weight: 650; font-stretch: 88%; line-height: 1.2; }
+.city .lede { color: var(--muted); }
+.city pre { background: var(--wash); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 12px; }
+.city .map { min-height: 0; }
 
-.legend { border: 0; margin: 0; padding: 0 20px 10px; display: grid; gap: 4px; }
-.legend-row { display: grid; grid-template-columns: auto 12px 1fr; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
-.legend-row i, .row i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
-.legend-row small { display: block; color: var(--muted); font-size: 12px; }
+.city .legend { border: 0; margin: 0; padding: 0 20px 10px; display: grid; gap: 4px; }
+.city .legend-row { display: grid; grid-template-columns: auto 12px 1fr; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
+.city .legend-row i, .city .row i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.city .legend-row small { display: block; color: var(--muted); font-size: 12px; }
 
-.list-tools { padding: 8px 20px 8px; border-top: 1px solid var(--rule); display: grid; gap: 6px; position: sticky; top: 0; background: var(--surface); z-index: 1; }
-.list-tools input { width: 100%; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; }
-.count { color: var(--muted); font-size: 12.5px; }
-.row { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: start; padding: 10px 20px; border-bottom: 1px solid var(--rule); color: inherit; text-decoration: none; }
-.row:hover { background: var(--wash); }
-.row i { margin-top: 4px; }
-.row small { display: block; color: var(--muted); font-size: 12.5px; }
-.score { font-weight: 650; font-size: 15px; min-width: 2ch; text-align: right; }
-.tag { font-style: normal; font-size: 11px; font-weight: 600; color: #fff; background: var(--ink); border-radius: 4px; padding: 1px 5px; vertical-align: 1px; }
-.method { padding: 14px 20px 24px; color: var(--muted); font-size: 13px; }
-.method summary { cursor: pointer; color: var(--ink); font-weight: 600; }
-.method p, .method ul { margin-top: 8px; }
-.method ul { list-style: disc; padding-left: 18px; }
+.city .list-tools { padding: 8px 20px; border-top: 1px solid var(--rule); display: grid; gap: 6px; position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.city .list-tools input { width: 100%; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; }
+.city .count { color: var(--muted); font-size: 12.5px; }
+.city .row { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: start; padding: 10px 20px; border-bottom: 1px solid var(--rule); color: inherit; text-decoration: none; }
+.city .row:hover { background: var(--wash); }
+.city .row i { margin-top: 4px; }
+.city .row small { display: block; color: var(--muted); font-size: 12.5px; }
+.city .score { font-weight: 650; font-size: 15px; min-width: 2ch; text-align: right; }
+.city .tag { font-style: normal; font-size: 11px; font-weight: 600; color: #fff; background: var(--ink); border-radius: 4px; padding: 1px 5px; vertical-align: 1px; }
+.city .method { padding: 14px 20px 24px; color: var(--muted); font-size: 13px; }
+.city .method summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+.city .method p, .city .method ul { margin-top: 8px; }
+.city .method ul { list-style: disc; padding-left: 18px; }
+
+/* Opening a building: the map zooms into it and fades while the 3-D view, already drawn behind, fades in over it.
+   Both views are on the same page, so there is never a blank page in between. */
+/* the 3-D view opens at the map's scale and position, so a plain cross-fade is seamless: no zoom on top of it */
+.city.is-leaving { transition: opacity 350ms cubic-bezier(.4, 0, .2, 1); opacity: 0; pointer-events: none; }
+.twin.is-entering { position: fixed; left: 0; right: 0; top: var(--bar); bottom: 0; z-index: 5; opacity: 0; pointer-events: none; }
+.twin.is-entering.is-in { opacity: 1; transition: opacity 350ms cubic-bezier(.2, 0, 0, 1); }
+.city .is-opening { cursor: progress; }
+.city { position: relative; }
+.city .c-loading { position: absolute; left: calc(420px + 50% - 210px); top: 18px; transform: translateX(-50%); z-index: 500; margin: 0; padding: 7px 14px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; box-shadow: 0 2px 10px rgba(23, 33, 43, .2); }
+@media (prefers-reduced-motion: reduce) {
+  .city.is-leaving, .twin.is-entering.is-in { transition: none; transform: none; }
+}
 
 @media (max-width: 760px) {
-  body { overflow: auto; height: auto; }
   .city { grid-template-columns: 1fr; grid-template-rows: 45vh auto; height: auto; }
   .city .map { display: block; grid-row: 1; height: 45vh; }
-  .side { grid-row: 2; overflow: visible; border-right: 0; }
-  .city-title, .topbar-note { display: none; }
+  .city .side { grid-row: 2; overflow: visible; border-right: 0; }
 }

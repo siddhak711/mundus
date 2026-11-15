@@ -87,6 +87,7 @@ td.num, th.num { text-align: right; padding-right: 0; }
 .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
 .key.leased { background: var(--leased); } .key.available { background: var(--available); } .key.scanned { background: var(--scanned); }
 .key.walk { background: #1f6bff; }
+.key.convertible { background: #16a06e; } .key.partial { background: #f2a900; } .key.occupied { background: #e4e7ea; box-shadow: inset 0 0 0 1px #c3c9cf; }
 .legend { display: flex; gap: 16px; color: var(--muted); font-size: 13px; }
 .primary { background: var(--ink); color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 600; cursor: pointer; }
 .quiet { background: none; border: 1px solid var(--rule); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
@@ -97,14 +98,15 @@ td.num, th.num { text-align: right; padding-right: 0; }
 .scan-card input[type="range"] { width: 100%; accent-color: var(--scanned); }
 
 /* stage */
-.stage { position: relative; min-width: 0; background: #dfe7ee; }
+/* the sky: drawn by CSS behind a transparent canvas, so it is there before the first frame and never flashes white */
+.stage { position: relative; min-width: 0; background: linear-gradient(180deg, #7fb2e5 0%, #b9d6f0 45%, #e9f1f7 78%, #f3efe6 100%); }
 #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .stage-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.pin { position: absolute; transform: translate(12px, -50%); background: var(--surface); border: 1px solid var(--scanned); color: var(--scanned); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; pointer-events: auto; cursor: pointer; }
+.pin { position: absolute; left: 0; top: 0; will-change: transform; transform: translate(calc(var(--x, 0px) + 12px), calc(var(--y, 0px) - 50%)); background: var(--surface); border: 1px solid var(--scanned); color: var(--scanned); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; pointer-events: auto; cursor: pointer; }
 .pin::before { content: ""; position: absolute; left: -12px; top: 50%; width: 12px; border-top: 1px solid var(--scanned); }
 .pin.is-height { border-color: var(--ink); color: var(--ink); cursor: default; pointer-events: none; }
 .pin.is-height::before { border-color: var(--ink); }
-.pin.is-walk { z-index: 2; transform: translate(44px, -50%); background: #1f6bff; border-color: #1f6bff; color: #fff; padding: 4px 10px; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+.pin.is-walk { z-index: 2; transform: translate(calc(var(--x, 0px) + 44px), calc(var(--y, 0px) - 50%)); background: #1f6bff; border-color: #1f6bff; color: #fff; padding: 4px 10px; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
 .pin.is-walk::before { left: -44px; width: 44px; border-color: #1f6bff; }   /* stands clear of a scan pin on the floor below */
 
 /* conversion tab and the floor walkthrough link */
@@ -125,7 +127,7 @@ td.num, th.num { text-align: right; padding-right: 0; }
 .conv-parts b { text-align: right; }
 .stage-status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 20px; max-width: 360px; text-align: center; }
 .stage-status strong { display: block; font-size: 15px; margin-bottom: 2px; }
-.floor-tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; font-size: 13px; max-width: 280px; box-shadow: 0 2px 10px rgba(23, 33, 43, .12); }
+.floor-tip { position: absolute; left: 0; top: 0; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; font-size: 13px; max-width: 280px; box-shadow: 0 2px 10px rgba(23, 33, 43, .12); }
 .floor-tip strong { display: block; }
 .stage-controls { position: absolute; left: 16px; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 12px; }
 .segmented { display: flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
@@ -173,3 +175,23 @@ dialog::backdrop { background: rgba(23, 33, 43, .82); }
   .ask { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* Page to page: the map zooms into the building it was opened from and fades into the 3-D view, instead of a white
+   flash. Cross-document view transitions (Chrome, Edge, Safari 18.2+); other browsers simply navigate. */
+@view-transition { navigation: auto; }
+html { background: var(--wash); }
+::view-transition-old(root) { animation: 420ms cubic-bezier(.4, 0, .2, 1) both atlas-zoom-out; transform-origin: var(--zoom-x, 50%) var(--zoom-y, 50%); }
+::view-transition-new(root) { animation: 460ms cubic-bezier(.2, 0, 0, 1) 60ms both atlas-fade-in; }
+@keyframes atlas-zoom-out { to { opacity: 0; transform: scale(1.6); } }
+@keyframes atlas-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+
+/* Between the 3-D model and a floor walkthrough (which is dark): the page fades to the walkthrough's colour before it
+   opens, and starts in that colour on the way back, fading to the scene once the model is drawn. */
+.page-cover { position: fixed; inset: 0; z-index: 1000; background: #14171c; opacity: 0; pointer-events: none; transition: opacity 520ms cubic-bezier(.4, 0, .2, 1); }
+.page-cover.is-on { opacity: 1; transition-duration: 340ms; }
+html.from-walk, html.from-walk body { background: #14171c; }
+html.from-walk .page-cover { opacity: 1; transition: none; }
+@media (prefers-reduced-motion: reduce) { .page-cover { transition: none; } }

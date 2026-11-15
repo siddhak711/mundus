@@ -1,9 +1,12 @@
-// LA office-to-housing map: every commercial building in the kit, coloured by its conversion screen. A building opens in
-// Atlas's 3-D model, where each floor shows its tenants and vacancy and a walkthrough floor can be entered directly.
+// LA office-to-housing map, a view inside Atlas's page (#/los-angeles/office-to-housing): every commercial building in
+// the kit, coloured by its conversion screen. A building opens in Atlas's 3-D model on the same page, so the map stays
+// up until the model is drawn and the two cross-fade, with no blank page between them.
 import * as L from 'leaflet';
 import { escapeHtml, number } from '/js/format.js';
+import { handoff } from '/js/handoff.js';
+import { onHoverIntent, prefetchProperty } from '/js/prefetch.js';
 
-const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(`c-${id}`);      // ids are prefixed: this view shares a page with Atlas's
 const LA = [[34.05, -118.33], 11];
 const PAGE = 80;
 
@@ -23,7 +26,7 @@ let map, layer;
 const markers = new Map();
 const shownGroups = new Set(GROUPS.filter((g) => g.on).map((g) => g.key));
 let listLimit = PAGE;
-const modelUrl = (id) => `/#/los-angeles/commercial/${id}`;   // Atlas's 3-D model of the building
+const modelUrl = (id) => `#/los-angeles/commercial/${id}`;   // Atlas's 3-D model of the building, same page
 
 // ---- data ---------------------------------------------------------------------
 async function getJson(url) {
@@ -40,7 +43,8 @@ function missingData() {
 
 // ---- map ----------------------------------------------------------------------
 function setUpMap() {
-  map = L.map('map', { preferCanvas: true, zoomControl: true }).setView(...LA);
+  // fractional zoom, so opening a building can fly to exactly the scale of its 3-D plate
+  map = L.map($('map'), { preferCanvas: true, zoomControl: true, zoomSnap: 0.1 }).setView(...LA);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
   layer = L.layerGroup().addTo(map);
 }
@@ -59,10 +63,50 @@ function drawMarkers() {
     });
     m.bindTooltip(`<span class="map-tip">${escapeHtml(b.name)}</span><br>${escapeHtml(data.statusLabels[b.status] || b.status)}`
       + (b.score != null ? ` · fit ${b.score}` : ''), { direction: 'top' });
-    m.on('click', () => { location.href = modelUrl(b.id); });      // every building opens in Atlas's 3-D model
+    m.on('click', () => openBuilding(b));                            // every building opens in Atlas's 3-D model
+    m.on('mouseover', () => prefetchProperty('commercial', b.id));
     layer.addLayer(m);
     markers.set(String(b.id), m);
   }
+}
+
+// Web Mercator ground resolution, metres per screen pixel at a latitude and zoom.
+const metresPerPixel = (lat, zoom) => (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
+
+// The zoom at which the map shows about the width of the building's 3-D plate (pipeline/twin.py site_half_extent),
+// so the map hands over to the 3-D view at the same scale.
+function plateZoom(b) {
+  const extent = 2 * ((b.stories || 1) >= 25 ? 450 : (b.stories || 1) >= 8 ? 320 : 200);
+  const width = $('map').clientWidth || 1000;
+  const zoom = Math.log2((156543.03392 * Math.cos((b.lat * Math.PI) / 180)) / ((extent * 0.92) / width));
+  return Math.round(Math.min(18.5, Math.max(14, zoom)) * 10) / 10;
+}
+
+// Open a building: fly the map into its dot, then hand over to the 3-D model on the same page. The map stays up while
+// the model is built and drawn behind it (app.js, openProperty), then zooms out of view as the model fades in.
+let opening = false;
+function openBuilding(b) {
+  if (opening) return;
+  opening = true;
+  prefetchProperty('commercial', b.id);
+  $('map').classList.add('is-opening');
+  let gone = false;
+  const go = () => {
+    if (gone) return;
+    gone = true;
+    const p = map.latLngToContainerPoint([b.lat, b.lon]);
+    const box = $('map').getBoundingClientRect();
+    const view = document.getElementById('city').getBoundingClientRect();
+    Object.assign(handoff, {
+      from: 'map', zoomX: box.left - view.left + p.x, zoomY: box.top - view.top + p.y,
+      metresPerPixel: metresPerPixel(b.lat, map.getZoom()), mapWidth: box.width, mapHeight: box.height,
+    });
+    location.hash = modelUrl(b.id);
+  };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
+  map.once('moveend', go);
+  map.flyTo([b.lat, b.lon], plateZoom(b), { duration: 0.75, easeLinearity: 0.2 });
+  setTimeout(go, 1100);       // in case the map was already there and no move happens
 }
 
 // ---- overview -----------------------------------------------------------------
@@ -98,7 +142,7 @@ function renderList() {
     const facts = [b.stories && `${b.stories} floors`, b.yearBuilt && `built ${b.yearBuilt}`,
       b.vacancy != null && `${Math.round(b.vacancy * 100)}% available`,
       b.convertibleFloors && `${b.convertibleFloors} convertible ${b.convertibleFloors === 1 ? 'floor' : 'floors'}`].filter(Boolean);
-    return `<li><a class="row" href="${modelUrl(b.id)}">
+    return `<li><a class="row" href="${modelUrl(b.id)}" data-id="${b.id}">
       <i style="background:${g.color}"></i>
       <span><b>${escapeHtml(b.name)}</b>${b.walkthrough ? ' <em class="tag">Walkthrough</em>' : ''}
         <small>${escapeHtml(b.name !== b.address ? b.address : '')}</small>
@@ -138,11 +182,41 @@ async function start() {
   renderList();
   renderMethod();
   drawMarkers();
-  $('search').addEventListener('input', () => { listLimit = PAGE; renderList(); });
+  let searchTimer = 0;
+  $('search').addEventListener('input', () => {
+    listLimit = PAGE;
+    renderList();
+    // a search narrowed to a few buildings is a strong hint: start building their 3-D models now
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      const hits = $('search').value.trim() ? candidates() : [];
+      if (hits.length && hits.length <= 3) hits.forEach((b) => prefetchProperty('commercial', b.id));
+    }, 250);
+  });
+  $('list').addEventListener('click', (event) => {
+    const row = event.target.closest('.row[data-id]');
+    if (!row || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;   // new tab stays a link
+    const b = data.buildings.find((x) => String(x.id) === row.dataset.id);
+    if (!b) return;
+    event.preventDefault();
+    openBuilding(b);
+  });
+  onHoverIntent($('list'), '.row[data-id]', (row) => ['commercial', Number(row.dataset.id)]);
+  // the buildings with a walkthrough are the likeliest first click: warm them once the page is idle
+  (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() =>
+    data.buildings.filter((b) => b.walkthrough).forEach((b) => prefetchProperty('commercial', b.id)));
   $('side').addEventListener('scroll', () => {
     const el = $('side');
     if (el.scrollTop + el.clientHeight > el.scrollHeight - 300) { listLimit += PAGE; renderList(); }
   });
 }
 
-start();
+let started = null;
+/** Show the map view (app.js routes #/los-angeles/office-to-housing here). Built on first use. */
+export async function showConversionMap() {
+  opening = false;
+  if (map) $('map').classList.remove('is-opening');
+  if (!started) started = start();
+  await started;
+  requestAnimationFrame(() => map?.invalidateSize());
+}
