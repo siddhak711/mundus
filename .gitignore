@@ -25,3 +25,5 @@ web/walkthrough/data
 web/walkthrough/pano
 # baked walkthrough floors: Matterport data, licensed (pipeline/bake)
 web/walkthrough/floors/
+public/
+.vercel/

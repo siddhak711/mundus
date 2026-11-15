@@ -6,7 +6,7 @@ import threading
 import requests
 from PIL import Image
 
-from . import config
+from . import config, storage
 
 GRAPH_URL = "https://api.matterport.com/api/models/graph"
 SQFT_PER_M2 = 10.7639
@@ -86,11 +86,10 @@ def assets(model_id):
         lock = _locks.setdefault(model_id, threading.Lock())
     with lock:
         folder = config.CACHE / "scan" / model_id
-        meta_file = folder / "scan.json"
         m = _query(_ASSET_QUERY, model_id)
         photos = [{"url": p["url"], "label": p.get("label") or ""} for p in m["assets"].get("photos") or [] if (p.get("width") or 0) >= 800][:9]
-        if meta_file.exists():
-            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        meta = storage.get_json(f"scan/{model_id}/scan.json")
+        if meta:
             meta["photos"] = photos
             return meta
 
@@ -99,6 +98,7 @@ def assets(model_id):
         if mesh is None:
             raise RuntimeError(f"Matterport model {model_id} has no mesh")
         (folder / "mesh.obj").write_bytes(requests.get(mesh["url"], timeout=300).content)
+        storage.put(f"scan/{model_id}/mesh.obj", folder / "mesh.obj", "text/plain")
 
         plan = next((f for f in m["assets"]["floorplans"]
                      if f["format"] == "png" and set(f["flags"]) == {"photogramy", "alpha"} and f.get("resolution")), None)
@@ -111,17 +111,18 @@ def assets(model_id):
             image.thumbnail((2048, 2048))
             image.save(folder / "plan.webp", quality=88)
             raw.unlink()
+            storage.put(f"scan/{model_id}/plan.webp", folder / "plan.webp", "image/webp")
             # origin is the plan's lower-left corner in model metres; resolution is pixels per metre
             plan_meta = {"x": plan["origin"]["x"], "y": plan["origin"]["y"],
                          "width": width_px / plan["resolution"], "height": height_px / plan["resolution"]}
 
         meta = {
             "id": model_id,
-            "mesh": f"/cache/scan/{model_id}/mesh.obj",
-            "plan": f"/cache/scan/{model_id}/plan.webp" if plan_meta else None,
+            "mesh": storage.url(f"scan/{model_id}/mesh.obj"),
+            "plan": storage.url(f"scan/{model_id}/plan.webp") if plan_meta else None,
             "planRect": plan_meta,
             "capturePoints": [[round(p["position"][k], 2) for k in "xyz"] for p in m.get("panoLocations") or [] if p.get("position")],
         }
-        meta_file.write_text(json.dumps(meta), encoding="utf-8")
+        storage.put_json(f"scan/{model_id}/scan.json", meta)
         meta["photos"] = photos
         return meta

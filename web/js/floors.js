@@ -1,3 +1,4 @@
+import { site } from './api.js';
 // Turns a property's CoStar records into per-floor facts for a given year.
 
 export const CURRENT_YEAR = 2026;
@@ -11,7 +12,7 @@ export function createFloorModel(detail, twin, conversion = null) {
   const screened = new Map((conversion?.floors || []).map((f) => [f.floor, f]));
   const walkthrough = (floor) => {
     const w = screened.get(floor)?.walkthrough;
-    return w ? { ...w, href: `${w.url}?building=${detail.id}&floor=${floor}${w.scanId ? `&scan=${w.scanId}` : ''}` } : null;
+    return w ? { ...w, href: `${site(w.url.replace(/^\//, ''))}?building=${detail.id}&floor=${floor}${w.scanId ? `&scan=${w.scanId}` : ''}` } : null;
   };
   const scans = twin.scans.filter((s) => s.floor);
   const years = tenancies.map((t) => t.from).filter(Boolean);

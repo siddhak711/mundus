@@ -1,0 +1,33 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "rm -rf public && cp -r web public",
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/api/:path*"
+    },
+    {
+      "source": "/cache/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/cache/:path*"
+    },
+    {
+      "source": "/data/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/data/:path*"
+    },
+    {
+      "source": "/walkthrough/floors/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/floors/:path*"
+    },
+    {
+      "source": "/walkthrough/data/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/data/:path*"
+    },
+    {
+      "source": "/walkthrough/pano/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/pano/:path*"
+    }
+  ]
+}

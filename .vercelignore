@@ -1,0 +1,8 @@
+# Vercel serves only the site's own files (web/). Everything licensed or built (the CoStar index, site models,
+# baked walkthrough floors) and every API call is proxied to server.py on the VM: see the rewrites in vercel.json.
+/*
+!/web
+!/vercel.json
+/web/walkthrough/floors
+/web/walkthrough/data
+/web/walkthrough/pano

@@ -10,6 +10,11 @@
 		reverse_proxy 127.0.0.1:2024
 	}
 
+	# Atlas site API (server.py), for the site on GitHub Pages: /atlas/api/*, /atlas/cache/*
+	handle_path /atlas/* {
+		reverse_proxy 127.0.0.1:5190
+	}
+
 	# World API: REST under /v1, MCP under /mcp, image shortcuts, health check and API docs.
 	# Bearer token is checked by the API itself.
 	@world path /v1/* /mcp /mcp/* /healthz /places/* /panos/* /docs /docs/* /redoc /openapi.json

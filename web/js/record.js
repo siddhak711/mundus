@@ -1,5 +1,5 @@
 // The left-hand record for one property: CoStar facts, floor-by-floor leasing, interior scans, aerial facts.
-import { obliqueUrl } from './api.js';
+import { obliqueUrl, site } from './api.js';
 import { compact, escapeHtml as h, money, moneyCompact, number, rate, squareFeet, CITY_NAMES } from './format.js';
 
 function figures(pairs) {
@@ -148,7 +148,7 @@ function conversionPane(c) {
     <section><p><span class="conv-pill ${STATUS_CLASS[c.status] || 'other'}">${h(c.statusLabel)}</span>
       ${fit ? `<b class="conv-fit">Fit ${fit.score} / 100</b>` : ''}</p>
       <p class="sub">Screened against LA's Citywide Adaptive Reuse Ordinance and for how well the floors suit apartments.
-        <a href="/city/">See every LA office on the map</a>.</p></section>
+        <a href="${site('city/')}">See every LA office on the map</a>.</p></section>
     ${open.length ? `<section><h2>Floors with space now</h2><table>
       <tr><th>Floor</th><th>Status</th><th class="num">Available</th></tr>
       ${open.map((f) => `<tr data-floor="${f.floor}"><td>${f.floor}</td><td>${h(FLOOR_STATUS[f.status])}${f.walkthrough ? '<br><span class="sub">Walkthrough</span>' : ''}</td>

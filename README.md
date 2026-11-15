@@ -136,19 +136,31 @@ On a VM set up before the site was added, pull and rerun the same script: every 
 Without SSH (Google Compute Engine): pass `scripts/deploy/vm_boot.sh` as the instance's `startup-script` metadata
 and the keys as `mundus-<KEY>` metadata attributes. It runs the same setup at boot and logs to the serial console.
 
----
+### Atlas on GitHub Pages
 
-# Atlas
+Pages serves this repository's `main` branch; the root `index.html` opens `web/`. Pages is static, so on github.io
+`web/js/config.js` points the site at `server.py` on the VM (`https://<vm-host>/atlas`) for the CoStar index, site
+models, walkthrough floors and the agent. Nothing licensed is in the repository. Set the VM up with
+`scripts/deploy/vm_atlas.sh` (below).
 
-A site-model viewer for every property in the HackPrinceton CoStar kit: 3,346 in Houston and
-1,857 in Los Angeles. Pick a city, pick a property, and Atlas builds a 3-D model of it from three
-sources that describe the same address.
+### Atlas on Vercel
 
-| Source | What it contributes |
-|---|---|
-| CoStar | The property record, tenants by floor since the building opened, space for lease with asking rents, sales, apartment floor plans, home listings |
-| Vexcel | Aerial photo, measured building heights, building footprints, roof facts, angled views, object detection |
-| Matterport | Interior scans shown as cut-open models, with measured area and room types |
+Vercel serves the site's own files (`web/`, about 50 files). Everything else is proxied by the rewrites in
+`vercel.json` to `server.py` on the VM (`https://<vm-host>/atlas`): the CoStar index under `/data/`, site models
+(`/api/twin`, `/cache/`), scans, angled photos, the agent (`/api/agent`) and the baked walkthrough floors. The VM is
+the right home for those: the apartment agent reads the floor files that `server.py` prepares, and a walkthrough
+floor is about 500 MB. Nothing licensed is uploaded to Vercel.
+
+```bash
+bash scripts/deploy/vm_atlas.sh
+```
+
+```bash
+bash scripts/deploy/vercel_deploy.sh
+```
+
+The first runs on the VM (index, conversion screen, walkthrough bakes, `mundus-atlas` service, Caddy route); the
+second from any machine logged in to Vercel.
 
 ## Run it
 
