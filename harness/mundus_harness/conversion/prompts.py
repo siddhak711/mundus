@@ -40,10 +40,10 @@ choose the unit depth and the units along each facade side.
 
 How to work:
 1. Read /skills/layout/SKILL.md and /memories/layout/lessons.md, then call read_floor.
-2. Choose unit_depth_m so units plus a 1.6 m corridor fit before the core: unit_depth_m <= facade_to_core_m.min - 1.6
-   on the sides you use. 6 to 7 m is typical.
+2. The office fit-out is cleared: plan on the open floor between the facade and the core, not on the old offices.
+   Use unit_depth_m "auto" so each unit runs from the facade back to a corridor along the core (5.0 to 10.5 m).
 3. Fill each side with units whose widths add up to no more than its usable length (long sides: full length; short
-   sides: length minus the unit depth at each end). Prefer 1BR and 2BR where windows are; put {"type": "gap", "width_m": ...}
+   sides: length minus the long sides' end-unit depths). Prefer 1BR and 2BR where windows are; put {"type": "gap", "width_m": ...}
    over stretches with no windows (no_window_stretches_along_m) and keep placing units after the gap; never leave
    long stretches of windowed facade empty. Move unit boundaries off column candidates that sit
    within the unit depth from the facade.

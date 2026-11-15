@@ -27,7 +27,7 @@ def font(size):
     return ImageFont.load_default()
 
 
-def render(scan_id, layout_name="layout.json"):
+def render(scan_id, layout_name="layout.json", office=False):
     folder = config.DATA / "conversion" / scan_id
     lay = json.loads((folder / layout_name).read_text(encoding="utf-8"))
     meta = json.loads((folder / "raw" / "plan.json").read_text(encoding="utf-8"))
@@ -37,11 +37,19 @@ def render(scan_id, layout_name="layout.json"):
     else:
         base = Image.open(folder / "raw" / "plan.png").convert("RGB")
         o, r = meta["origin"], meta["resolution"]
-    # mute the office plan so the new layout reads on top of it
-    base = Image.blend(base, Image.new("RGB", base.size, (20, 23, 28)), 0.55)
     H = base.size[1]
     px = lambda p: ((p[0] - o["x"]) * r, H - (p[1] - o["y"]) * r)
     lw = max(4, round(r * 0.18))
+    if office:   # the old office plan, muted, under the new layout
+        base = Image.blend(base, Image.new("RGB", base.size, (20, 23, 28)), 0.55)
+    else:        # the cleared floor the agent plans on: empty slab, facade with its windows, nothing else
+        geo = json.loads((folder / "geometry.json").read_text(encoding="utf-8"))
+        base = Image.new("RGB", base.size, (20, 23, 28))
+        bd = ImageDraw.Draw(base)
+        bd.polygon([px(p) for p in geo["outline"]], fill=(58, 62, 68))
+        bd.line([px(p) for p in geo["outline"] + geo["outline"][:1]], fill=(200, 204, 210), width=lw)
+        for run in geo.get("windows") or []:
+            bd.line([px(p) for p in run], fill=(110, 190, 255), width=lw + 2)
 
     over = Image.new("RGBA", base.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(over)
@@ -110,8 +118,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("scan")
     ap.add_argument("--layout", default="layout.json")
+    ap.add_argument("--office", action="store_true", help="draw over the old office plan instead of the cleared floor")
     a = ap.parse_args()
-    print(render(a.scan, a.layout))
+    print(render(a.scan, a.layout, a.office))
 
 
 if __name__ == "__main__":

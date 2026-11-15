@@ -256,6 +256,8 @@ def floor_summary(scan: str, root: Path | None = None) -> dict[str, Any]:
                       "column_candidates": cols})
     return {
         "scan": scan, "name": g.get("name"), "floor": g.get("floor"), "property": g.get("property"),
+        "cleared": g.get("cleared") or ("The office fit-out is removed; only the facade, the core and the columns "
+                                        "remain. Plan on the open floor between them."),
         "plate_sf": g.get("plate_sf"), "usable_sf_outside_core": g.get("usable_sf_outside_core"),
         "ceiling_height_ft": g.get("ceiling_height_ft"), "daylight": g.get("daylight"),
         "facade_sides": sides,
@@ -278,87 +280,108 @@ def _seg(a, b, kind):
     return {"a": [r2(a[0]), r2(a[1])], "b": [r2(b[0]), r2(b[1])], "kind": kind}
 
 
-def draft_ring(scan: str, unit_depth_m: float, sides: dict[str, list[dict[str, Any]]], corridor_m: float = 1.6,
+MAX_UNIT_DEPTH_M = 10.5     # about DAYLIGHT_FT: deeper than this, the back of the unit is too far from a window
+MIN_UNIT_DEPTH_M = 5.0
+
+
+def draft_ring(scan: str, unit_depth_m: float | str, sides: dict[str, list[dict[str, Any]]], corridor_m: float = 1.6,
                root: Path | None = None) -> dict[str, Any]:
-    """Draw a ring of units along the facade. `sides` maps a facade side name to its units in order, each
-    {"type": "studio|1BR|2BR|3BR", "width_m": float}. Returns a layout (contract shape) without checks."""
+    """Draw a ring of units along the facade on the cleared floor. `sides` maps a facade side name to its units in
+    order, each {"type": "studio|1BR|2BR|3BR"|"gap", "width_m": float, optional "depth_m": float}.
+    unit_depth_m is a number, or "auto": each unit then runs from the facade back to a corridor along the core
+    (core distance under the unit minus corridor_m), between 5.0 and 10.5 m deep. Returns a layout without checks."""
     f = Floor(scan, root)
     all_sides = {s["name"]: s for s in f.sides()}
-    long_depth = {n: (unit_depth_m if sides.get(n) else 0.0) for n in all_sides}
+    auto = isinstance(unit_depth_m, str)
     units, walls, problems = [], [], []
+    end_depth: dict[str, dict[str, float]] = {}
     k = 0
-    for name, specs in sides.items():
+
+    def depth_for(s, t, w, spec):
+        if spec.get("depth_m"):
+            return float(spec["depth_m"])
+        if not auto:
+            return float(unit_depth_m)
+        cl = f.clearance(s, t, t + w)
+        room = (min(cl) if cl else MAX_UNIT_DEPTH_M + corridor_m) - corridor_m
+        return float(np.clip(np.floor(room * 4) / 4, MIN_UNIT_DEPTH_M, MAX_UNIT_DEPTH_M))
+
+    order = sorted(sides, key=lambda n: (not all_sides.get(n, {}).get("full", False), n))
+    for name in order:
+        specs = sides[name]
         if name not in all_sides:
             raise ValueError(f"unknown side {name!r}; sides are {sorted(all_sides)}")
         s = all_sides[name]
-        if s["full"]:
-            t0, t1 = 0.0, s["length_m"]
-        else:   # fit between the long sides' units
-            ends = [o for o in all_sides.values() if o["full"]]
-            t0, t1 = 0.0, s["length_m"]
-            starts = [o for o in ends if np.allclose(o["b"], s["a"], atol=0.6) or np.allclose(o["a"], s["a"], atol=0.6)]
-            stops = [o for o in ends if np.allclose(o["a"], s["b"], atol=0.6) or np.allclose(o["b"], s["b"], atol=0.6)]
-            t0 = max([long_depth[o["name"]] for o in starts] + [0.0])
-            t1 = s["length_m"] - max([long_depth[o["name"]] for o in stops] + [0.0])
+        t0, t1 = 0.0, s["length_m"]
+        if not s["full"]:     # fit between the long sides' units at each corner
+            for o in (o for o in all_sides.values() if o["full"]):
+                ed = end_depth.get(o["name"], {})
+                for end, pt in (("a", o["a"]), ("b", o["b"])):
+                    if np.allclose(pt, s["a"], atol=0.6):
+                        t0 = max(t0, ed.get(end, 0.0))
+                    if np.allclose(pt, s["b"], atol=0.6):
+                        t1 = min(t1, s["length_m"] - ed.get(end, 0.0))
         avail = t1 - t0
         total = sum(float(u["width_m"]) for u in specs)
         if total > avail + 0.05:
             raise ValueError(f"side {name}: unit widths add up to {total:.1f} m but only {avail:.1f} m is available "
                              f"(from {t0:.1f} to {t1:.1f} m along the side)")
-        # centre the run when no gaps are given; with explicit gaps, start at the side's usable start
         t = t0 + (0.0 if any(u.get("type") == "gap" for u in specs) else (avail - total) / 2)
         if avail - total > 0.5:
             problems.append(f"side {name}: {avail - total:.1f} m of facade left unassigned (amenity or storage)")
-        run_start = t
         a_, u_, n_ = s["a"], s["u"], s["n"]
+        ends = {"a": 0.0, "b": 0.0}
+        prev_d = 0.0
         for spec in specs:
             typ = spec["type"]
-            if typ == "gap":                     # facade left unassigned here: amenity, storage, no windows
-                g = float(spec["width_m"])
-                if units and units[-1]["side"] == name and t > run_start:
-                    walls.append(_seg(a_ + u_ * t, a_ + u_ * t + n_ * unit_depth_m, "demising"))
-                    walls.append(_seg(a_ + u_ * run_start + n_ * unit_depth_m, a_ + u_ * t + n_ * unit_depth_m, "corridor"))
-                t += g
-                run_start = t
+            w = float(spec["width_m"])
+            if typ == "gap":
+                if prev_d:
+                    walls.append(_seg(a_ + u_ * t, a_ + u_ * t + n_ * prev_d, "demising"))
+                prev_d = 0.0
+                t += w
                 continue
             if typ not in TYPE_BEDROOMS:
                 raise ValueError(f"unit type {typ!r} must be one of {list(TYPE_BEDROOMS) + ['gap']}")
-            w = float(spec["width_m"])
+            d = depth_for(s, t, w, spec)
             k += 1
             p0, p1 = a_ + u_ * t, a_ + u_ * (t + w)
-            poly = [p0, p1, p1 + n_ * unit_depth_m, p0 + n_ * unit_depth_m]
+            poly = [p0, p1, p1 + n_ * d, p0 + n_ * d]
             nb = TYPE_BEDROOMS[typ]
             bedrooms = []
             if nb:
                 need = nb * BEDROOM_W_M + LIVING_MIN_W_M
                 if w + 1e-6 < need:
                     problems.append(f"U{k} ({typ}) is {w:.1f} m wide; {nb} bedroom(s) plus living need {need:.1f} m of facade")
-                bd = min(BEDROOM_D_M, unit_depth_m - 1.0)
+                bd = min(BEDROOM_D_M, d - 1.0)
                 for i in range(nb):
                     b0, b1 = a_ + u_ * (t + i * BEDROOM_W_M), a_ + u_ * (t + (i + 1) * BEDROOM_W_M)
                     bedrooms.append([[r2(c) for c in q] for q in (b0, b1, b1 + n_ * bd, b0 + n_ * bd)])
                     walls.append(_seg(b1, b1 + n_ * bd, "interior"))
                 walls.append(_seg(a_ + u_ * t + n_ * bd, a_ + u_ * (t + nb * BEDROOM_W_M) + n_ * bd, "interior"))
-            centre = (p0 + p1) / 2 + n_ * unit_depth_m / 2
-            entry = (p0 + p1) / 2 + n_ * unit_depth_m
+            if abs(t - t0) < 0.05 or (t < 0.05):
+                ends["a"] = d
+            if abs(t + w - s["length_m"]) < 0.6 or abs(t + w - t1) < 0.05 and s["full"]:
+                ends["b"] = d
+            centre = (p0 + p1) / 2 + n_ * d / 2
+            entry = (p0 + p1) / 2 + n_ * d
             units.append({"id": f"U{k}", "type": typ, "bedrooms": nb, "side": name,
-                          "area_sf": round(w * unit_depth_m * SF_PER_M2),
-                          "width_m": r2(w), "depth_m": r2(unit_depth_m),
+                          "area_sf": round(w * d * SF_PER_M2), "width_m": r2(w), "depth_m": r2(d),
                           "polygon": [[r2(c) for c in q] for q in poly], "label_at": [r2(centre[0]), r2(centre[1])],
                           "entry": [r2(entry[0]), r2(entry[1])], "bedroom_polygons": bedrooms})
-            walls.append(_seg(p0, p0 + n_ * unit_depth_m, "demising"))
+            walls.append(_seg(p0, p0 + n_ * max(d, prev_d), "demising"))
+            walls.append(_seg(p0 + n_ * d, p1 + n_ * d, "corridor"))
+            cl = f.clearance(s, t, t + w)
+            if cl and min(cl) < d + max(corridor_m, MIN_CORRIDOR_M) - 0.05:
+                problems.append(f"U{k}: the core is {min(cl):.1f} m from the facade here; {d:.1f} m deep plus a "
+                                f"{corridor_m:.1f} m corridor needs {d + corridor_m:.1f} m")
+            prev_d = d
             t += w
-        if t > run_start + 0.01:
-            walls.append(_seg(a_ + u_ * t, a_ + u_ * t + n_ * unit_depth_m, "demising"))
-            walls.append(_seg(a_ + u_ * run_start + n_ * unit_depth_m, a_ + u_ * t + n_ * unit_depth_m, "corridor"))
-        side_units = [x for x in units if x["side"] == name]
-        if side_units:
-            cl = f.clearance(s, t0, t)
-            if cl and min(cl) < unit_depth_m + max(corridor_m, MIN_CORRIDOR_M):
-                problems.append(f"side {name}: the core is {min(cl):.1f} m from the facade in places; units {unit_depth_m:.1f} m "
-                                f"deep plus a {corridor_m:.1f} m corridor need {unit_depth_m + corridor_m:.1f} m")
-    return {"scan": scan, "floor": f.geo.get("floor"), "unit_depth_m": r2(unit_depth_m), "corridor_m": r2(corridor_m),
-            "walls": walls, "units": units, "draft_problems": problems}
+        if prev_d:
+            walls.append(_seg(a_ + u_ * t, a_ + u_ * t + n_ * prev_d, "demising"))
+        end_depth[name] = ends
+    return {"scan": scan, "floor": f.geo.get("floor"), "unit_depth_m": unit_depth_m if auto else r2(unit_depth_m),
+            "corridor_m": r2(corridor_m), "walls": walls, "units": units, "draft_problems": problems}
 
 
 # ---------- checking ----------

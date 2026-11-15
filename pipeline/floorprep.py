@@ -196,7 +196,7 @@ def find_core(mask, plate, grid):
     toilets behind closed doors)."""
     scanned = ndimage.binary_closing(mask, structure=disk(0.4))
     unscanned = plate & ~scanned
-    unscanned = ndimage.binary_opening(unscanned, structure=disk(0.6))
+    unscanned = ndimage.binary_opening(unscanned, structure=disk(1.5))   # drop slivers seen into through doors and glass
     inner = ndimage.binary_erosion(plate, structure=disk(2.0))           # the core does not touch the facade
     labels, n = ndimage.label(unscanned)
     blocks, core_px = [], np.zeros_like(plate)
@@ -207,7 +207,27 @@ def find_core(mask, plate, grid):
             continue
         core_px |= comp
         cs, _ = cv2.findContours(comp.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        blocks.append({"polygon": grid.polygon_m(max(cs, key=cv2.contourArea), 0.25), "area_m2": round(float(area), 1)})
+        blocks.append({"polygon": grid.polygon_m(max(cs, key=cv2.contourArea), 0.75), "area_m2": round(float(area), 1),
+                       "source": "unscanned region inside the floor"})
+    return blocks, core_px
+
+
+def core_from_shell(shell_path, grid, plate):
+    """Use the walkthrough bake's core blocks (shell.json: core = list of polygons in scan metres) when available,
+    so the agent plans on exactly the cleared floor the viewer shows."""
+    sh = json.loads(open(shell_path, encoding="utf-8").read())
+    blocks, core_px = [], np.zeros_like(plate)
+    for blk in sh.get("core") or []:
+        poly = blk.get("polygon", blk) if isinstance(blk, dict) else blk
+        pts = np.array([[float(p[0]), float(p[1])] for p in poly])
+        if len(pts) < 3:
+            continue
+        c, r = grid.to_px(pts[:, 0], pts[:, 1])
+        m = np.zeros(plate.shape, np.uint8)
+        cv2.fillPoly(m, [np.stack([c, r], 1).round().astype(np.int32)], 1)
+        core_px |= m.astype(bool)
+        blocks.append({"polygon": [[round(float(a), 2), round(float(b), 2)] for a, b in pts],
+                       "area_m2": round(float(m.sum() / RES ** 2), 1), "source": "walkthrough bake (shell.json)"})
     return blocks, core_px
 
 
@@ -319,7 +339,7 @@ def overlay(scan_id, meta, grid, geo, struct):
     base.save(folder / "overlay.png")
 
 
-def run(scan_id, property_id=None, floor=None):
+def run(scan_id, property_id=None, floor=None, shell=None):
     model, meta = fetch(scan_id)
     folder = out_dir(scan_id)
     grid, mask = plan_mask_on_grid(meta, folder / "raw" / "plan.png")
@@ -335,7 +355,7 @@ def run(scan_id, property_id=None, floor=None):
     contours, _ = cv2.findContours(plate.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     outline = grid.polygon_m(max(contours, key=cv2.contourArea), 0.3)
     windows, window_px, window_share, perimeter_m = find_windows(mask, plate, grid)
-    core, core_px = find_core(mask, plate, grid)
+    core, core_px = core_from_shell(shell, grid, plate) if shell else find_core(mask, plate, grid)
     columns = find_columns(mask, plate, core_px, slices, grid)
     stairs = find_stairs(V, floor_z, ceiling, grid)
     exits = assumed_exits(core)
@@ -356,6 +376,9 @@ def run(scan_id, property_id=None, floor=None):
                      "share_within_25ft": round(float((depth * FT_PER_M <= 25).mean()), 3),
                      "share_within_30ft": round(float((depth * FT_PER_M <= 30).mean()), 3),
                      "note": "Distance to the nearest detected window, not just to the facade."},
+        "cleared": ("The office fit-out is removed: interior walls, offices, meeting rooms, the old corridors and all "
+                    "furniture are gone. What remains is the facade (with its windows), the core and the columns. "
+                    "Everything between the facade and the core is open floor to plan on."),
         "ceiling_height_m": round(ceiling, 2) if ceiling else None,
         "ceiling_height_ft": round(ceiling * FT_PER_M, 1) if ceiling else None,
         "floor_z": round(floor_z, 2),
@@ -387,8 +410,9 @@ def main():
     ap.add_argument("scan")
     ap.add_argument("--property", type=int)
     ap.add_argument("--floor", type=int)
+    ap.add_argument("--shell", help="the walkthrough bake's shell.json, to use its core outline")
     a = ap.parse_args()
-    geo, struct = run(a.scan, a.property, a.floor)
+    geo, struct = run(a.scan, a.property, a.floor, a.shell)
     print(f"{geo['name']}: plate {geo['plate_sf']} sf, windows on {geo['window_share_of_facade']:.0%} of facade, "
           f"deepest point {geo['daylight']['deepest_ft_from_window']} ft from a window, ceiling {geo['ceiling_height_ft']} ft")
     print(f"core blocks {len(struct['core'])}, columns {len(struct['columns'])} {struct['column_grid']}, "

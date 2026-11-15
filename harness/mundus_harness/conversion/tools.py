@@ -72,15 +72,17 @@ def build_tools(root: Path | None = None) -> dict[str, Any]:
         return _dump(s)
 
     @tool
-    def draft_layout(scan: str, unit_depth_m: float, sides: dict[str, list[dict[str, Any]]], corridor_m: float = 1.6) -> str:
+    def draft_layout(scan: str, unit_depth_m: float | str, sides: dict[str, list[dict[str, Any]]], corridor_m: float = 1.6) -> str:
         """Draw apartments along the facade and check them. `sides` maps a facade side name (north, south, east,
         west) to its units in order along the side, e.g. {"north": [{"type": "1BR", "width_m": 7.0}, ...]}.
         Types: studio, 1BR, 2BR, 3BR, or "gap" to leave that much facade unassigned (no windows, amenity) and
-        continue with more units after it. Positions start at the side's usable start. Every unit is unit_depth_m deep from the facade; the corridor runs behind
-        them. Bedrooms are drawn against the facade, 3.2 m wide each, so a 1BR needs at least 6.2 m of facade and a
+        continue with more units after it. Positions start at the side's usable start. The office fit-out is
+        cleared, so units may run from the facade back toward the core: unit_depth_m "auto" makes each unit as deep
+        as the floor allows (core distance minus the corridor, 5.0 to 10.5 m); a number fixes the depth for all; a
+        unit's own "depth_m" overrides both. The corridor runs behind the units, along the core. Bedrooms are drawn against the facade, 3.2 m wide each, so a 1BR needs at least 6.2 m of facade and a
         2BR 9.4 m. Returns a draft id, the check counts and every unit that does not pass, with the reason."""
         try:
-            layout = geo.draft_ring(scan, float(unit_depth_m), sides, float(corridor_m), root)
+            layout = geo.draft_ring(scan, unit_depth_m if isinstance(unit_depth_m, str) else float(unit_depth_m), sides, float(corridor_m), root)
         except ValueError as e:
             return _dump({"error": str(e)})
         d = _drafts(scan, root)
