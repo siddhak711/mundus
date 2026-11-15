@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..110,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script>/* a page transition the browser skips (an unsupported case, a fast click) must not surface as an error */
+for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { e.viewTransition?.ready.catch(() => {}); e.viewTransition?.finished.catch(() => {}); });</script>
   <link rel="stylesheet" href="/styles.css">
   <script type="importmap">
     { "imports": {
@@ -64,6 +66,7 @@
           <button type="button" data-view="stacked" aria-pressed="false">Stacked</button>
           <button type="button" data-view="plan" aria-pressed="false">Plan</button>
         </div>
+        <label class="check"><input type="checkbox" id="layer-vacancy"> Vacancy colours</label>
         <label class="check"><input type="checkbox" id="layer-heights"> Height map</label>
         <label class="check"><input type="checkbox" id="layer-footprints"> Footprints</label>
         <div class="timeline" id="timeline" hidden>

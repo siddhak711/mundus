@@ -145,7 +145,9 @@ async function openProperty(city, kind, id) {
   tip.hidden = true;
   el('record').innerHTML = '';
   el('topbar-note').textContent = '';
-  showStatus('Building the site model', ' Fetching the aerial photo, height model and scans. This takes a few seconds the first time.');
+  // Usually the model is already cached or prefetched and opens at once: only say it is loading if it takes a while,
+  // so a quick open is not interrupted by a box that flashes up and away.
+  const slowNotice = setTimeout(() => { if (current?.id === id && !current.floors) showStatus('Building the site model', ' Fetching the aerial photo, height model and scans. This takes a few seconds the first time.'); }, 600);
 
   const viewer = new Viewer({
     canvas: freshCanvas(),
@@ -197,8 +199,10 @@ async function openProperty(city, kind, id) {
     el('timeline-year').min = session.floors.firstYear;
     setYear(CURRENT_YEAR);
     el('layer-heights').checked = el('layer-footprints').checked = false;
+    viewer.setVacancy(el('layer-vacancy').checked);
     setView('model');
     controls.hidden = false;
+    clearTimeout(slowNotice);
     showStatus('');
     el('topbar-note').textContent = `${CITY_NAMES[city]}, ${detail.type}`;
     document.title = `${detail.name} | Atlas`;
@@ -231,6 +235,7 @@ controls.addEventListener('click', (event) => {
   if (view) setView(view.dataset.view);
 });
 el('layer-heights').addEventListener('change', (e) => current?.viewer.setLayer('heights', e.target.checked));
+el('layer-vacancy').addEventListener('change', (e) => { current?.viewer.setVacancy(e.target.checked); if (current) repaint(); });
 el('layer-footprints').addEventListener('change', (e) => current?.viewer.setLayer('footprints', e.target.checked));
 el('timeline-year').addEventListener('input', (e) => setYear(Number(e.target.value)));
 el('timeline-play').addEventListener('click', togglePlay);

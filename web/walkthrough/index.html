@@ -26,12 +26,17 @@
   #dip{position:fixed;inset:0;background:#14171c;opacity:0;pointer-events:none;transition:opacity .18s}
   .card .back{display:inline-block;margin:0 0 8px;color:#ffb02e;text-decoration:none;font-size:13px} .card .back:hover{text-decoration:underline}
   .card{z-index:2} /* above the loading cover, so the way back works while the scan loads or if it fails */
+  @view-transition{navigation:auto} /* fades in from the building's 3-D model, and back (web/styles.css has the same) */
+  ::view-transition-new(root){animation:420ms cubic-bezier(.2,0,0,1) both wt-in} @keyframes wt-in{from{opacity:0}}
+  @media (prefers-reduced-motion:reduce){::view-transition-new(root),::view-transition-old(root){animation:none}}
   .fallback{max-width:520px;padding:24px;text-align:left;color:#c5ced8} .fallback h2{font-size:18px;color:#e9edf2;margin:0 0 10px}
   .fallback code{color:#e9edf2} .fallback p{margin:0 0 14px}
   .fallback a{display:inline-block;margin:4px 10px 0 0;padding:9px 14px;border-radius:999px;text-decoration:none;font-weight:600}
   .fb-tour{background:#ffb02e;color:#14171c} .fb-back{border:1px solid #3a4350;color:#e9edf2}
   #loading{position:fixed;inset:0;display:grid;place-items:center;background:#14171c;font-size:15px;color:#9aa6b4;text-align:center}
 </style>
+<script>/* a page transition the browser skips (an unsupported case, a fast click) must not surface as an error */
+for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { e.viewTransition?.ready.catch(() => {}); e.viewTransition?.finished.catch(() => {}); });</script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js", "three-mesh-bvh": "./vendor/three-mesh-bvh.module.js" } }</script>
 </head><body>
 <canvas id="c"></canvas>

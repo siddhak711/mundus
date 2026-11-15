@@ -60,12 +60,36 @@ function drawMarkers() {
     });
     m.bindTooltip(`<span class="map-tip">${escapeHtml(b.name)}</span><br>${escapeHtml(data.statusLabels[b.status] || b.status)}`
       + (b.score != null ? ` · fit ${b.score}` : ''), { direction: 'top' });
-    m.on('click', () => { location.href = modelUrl(b.id); });      // every building opens in Atlas's 3-D model
+    m.on('click', () => openBuilding(b));                            // every building opens in Atlas's 3-D model
     m.on('mouseover', () => prefetchProperty('commercial', b.id));
     layer.addLayer(m);
     markers.set(String(b.id), m);
   }
 }
+
+// Open a building: fly the map into its dot, then hand over to the 3-D model, zooming from that point.
+let opening = false;
+function openBuilding(b) {
+  if (opening) return;
+  opening = true;
+  prefetchProperty('commercial', b.id);
+  let gone = false;
+  const go = () => {
+    if (gone) return;
+    gone = true;
+    const p = map.latLngToContainerPoint([b.lat, b.lon]);
+    const box = $('map').getBoundingClientRect();
+    // the page transition zooms out of the map around this point (styles.css, ::view-transition-old)
+    document.documentElement.style.setProperty('--zoom-x', `${box.left + p.x}px`);
+    document.documentElement.style.setProperty('--zoom-y', `${box.top + p.y}px`);
+    location.href = modelUrl(b.id);
+  };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
+  map.once('moveend', go);
+  map.flyTo([b.lat, b.lon], Math.max(map.getZoom(), 17), { duration: 0.65, easeLinearity: 0.2 });
+  setTimeout(go, 1100);       // in case the map was already there and no move happens
+}
+addEventListener('pageshow', () => { opening = false; });          // coming back with the browser's back button
 
 // ---- overview -----------------------------------------------------------------
 function renderLegend() {
@@ -150,6 +174,14 @@ async function start() {
       const hits = $('search').value.trim() ? candidates() : [];
       if (hits.length && hits.length <= 3) hits.forEach((b) => prefetchProperty('commercial', b.id));
     }, 250);
+  });
+  $('list').addEventListener('click', (event) => {
+    const row = event.target.closest('.row[data-id]');
+    if (!row || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;   // new tab stays a link
+    const b = data.buildings.find((x) => String(x.id) === row.dataset.id);
+    if (!b) return;
+    event.preventDefault();
+    openBuilding(b);
   });
   onHoverIntent($('list'), '.row[data-id]', (row) => ['commercial', Number(row.dataset.id)]);
   // the buildings with a walkthrough are the likeliest first click: warm them once the page is idle

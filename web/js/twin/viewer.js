@@ -1,11 +1,11 @@
-// Owns the three.js scene for one property: city terrain, the building's floors, and an optional interior scan.
+// Owns the three.js scene for one property: a model of the block on a plate under the sky, the building's floors,
+// and an optional interior scan.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createTerrain, createFootprints } from './terrain.js';
+import { createBlocks, createFootprints, createPlate, createTerrain } from './terrain.js';
 import { createBuilding } from './building.js';
 import { loadScanModel } from './scan.js';
 
-const SKY = '#dfe7ee';
 const REVEAL_SECONDS = 3.2;
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clamp01 = (t) => Math.min(1, Math.max(0, t));
@@ -19,13 +19,14 @@ export class Viewer {
     this.onFloorMove = onFloorMove;     // same floor, pointer moved: only the tooltip follows
     this.onFloorClick = onFloorClick;
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    // transparent: the sky is the stage's CSS gradient behind the canvas, so it is there before the first frame
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    this.renderer.setClearColor(0x000000, 0);
     // 1.5x is sharp on a retina screen at about half the pixels of 2x: the terrain shader runs per pixel
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     this.renderer.autoClear = false;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(SKY);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0xb9c2cc, 1.9));
     const sun = new THREE.DirectionalLight(0xffffff, 1.6);
     sun.position.set(0.45, 0.8, 0.5);
@@ -64,13 +65,13 @@ export class Viewer {
   async load(twin) {
     const heights = new Float32Array(await (await fetch(twin.heights)).arrayBuffer());
     this.extent = twin.extent;
-    this.terrain = createTerrain({
-      extent: twin.extent, grid: twin.grid, heights, orthoUrl: twin.ortho, sky: SKY,
-      anisotropy: this.renderer.capabilities.getMaxAnisotropy(),
-    });
+    this.twin = twin;
+    this.heightsData = heights;                       // the detailed surface model, drawn only as the Height map layer
+    this.plate = createPlate({ extent: twin.extent, orthoUrl: twin.ortho, anisotropy: this.renderer.capabilities.getMaxAnisotropy() });
+    this.blocks = createBlocks({ neighbours: twin.neighbours, extent: twin.extent, plate: this.plate });
     this.footprints = createFootprints(twin.neighbours);
     this.building = createBuilding(twin.building);
-    this.scene.add(this.terrain.mesh, this.footprints, this.building.group);
+    this.scene.add(this.plate.group, this.blocks.mesh, this.footprints, this.building.group);
 
     this.controls.minDistance = twin.extent * 0.04;
     this.controls.maxDistance = twin.extent * 3;
@@ -81,16 +82,18 @@ export class Viewer {
 
     // Upload the aerial photo and compile every shader now, not on the first frame that needs them: otherwise both
     // land in the middle of the opening animation as a visible stall.
-    await this.terrain.ready;
-    this.renderer.initTexture(this.terrain.uniforms.uMap.value);
+    await this.plate.ready;
+    this.renderer.initTexture(this.plate.map);
     this.building.setBuilt(1);                       // floors start hidden; show them so their material compiles too
+    this.building.update();
     this.footprints.visible = true;
     this.renderer.compile(this.scene, this.camera);
     this.building.setBuilt(0);
+    this.building.update();
     this.footprints.visible = this.layers.footprints;
 
     if (reducedMotion()) {
-      this.terrain.uniforms.uGrow.value = 1;
+      this.plate.uniforms.uGrow.value = 1;
       this.building.setBuilt(1);
       this.placeCamera(this.cameraFor('model'));
       this.controls.enabled = true;
@@ -132,14 +135,28 @@ export class Viewer {
 
   setView(view) {
     this.view = view;
-    this.building.setSpread(view === 'stacked' ? 2.4 : 1);
-    this.building.setShell(view === 'model' ? 0.16 : 0);
+    this.building.setLayout(view);
     this.flyTo(this.cameraFor(view));
   }
 
   setLayer(name, on) {
     this.layers[name] = on;
     if (name === 'footprints') this.footprints.visible = on;
+    if (name === 'heights') {
+      // the detailed surface model (trees, every roof) replaces the clean blocks while this layer is on
+      if (on && !this.terrain) {
+        this.terrain = createTerrain({ extent: this.twin.extent, grid: this.twin.grid, heights: this.heightsData,
+          orthoUrl: this.twin.ortho, sky: '#dfe7ee', anisotropy: this.renderer.capabilities.getMaxAnisotropy() });
+        this.terrain.uniforms.uGrow.value = 1;
+        this.scene.add(this.terrain.mesh);
+      }
+      if (this.terrain) this.terrain.mesh.visible = on;
+      this.blocks.mesh.visible = !on;
+      this.plate.group.children[0].visible = !on;     // the flat ground under the photo
+    }
+  }
+
+  setVacancy(on) { this.building?.setVacancy(on);
   }
 
   // ---- floors --------------------------------------------------------------
@@ -263,7 +280,7 @@ export class Viewer {
     this.camera.position.lerpVectors(this.reveal.from.position, this.reveal.to.position, move);
     this.controls.target.lerpVectors(this.reveal.from.target, this.reveal.to.target, move);
     this.camera.lookAt(this.controls.target);
-    this.terrain.uniforms.uGrow.value = easeInOut(clamp01((t - 0.1) / 0.45));
+    this.plate.uniforms.uGrow.value = easeInOut(clamp01((t - 0.1) / 0.45));     // the neighbours rise
     this.building.setBuilt(clamp01((t - 0.5) / 0.45));
     if (t >= 1) {
       this.reveal = null;
@@ -274,7 +291,7 @@ export class Viewer {
   frame(now) {
     if (!this.running) return;
     requestAnimationFrame(this.frame);
-    if (!this.terrain) return;
+    if (!this.plate) return;
 
     if (this.reveal) this.stepReveal(now);
     if (this.flight) {
@@ -285,10 +302,16 @@ export class Viewer {
     }
     if (!this.reveal) this.controls.update();
 
-    const u = this.terrain.uniforms;
-    u.uHeightMode.value += ((this.layers.heights ? 1 : 0) - u.uHeightMode.value) * 0.12;
-    u.uDim.value += ((this.scan ? 1 : 0) - u.uDim.value) * 0.1;
-    this.footprints.scale.y = Math.max(u.uGrow.value, 0.001);
+    const dimTarget = this.scan ? 1 : 0;
+    const dim = this.plate.uniforms.uDim;
+    dim.value += (dimTarget - dim.value) * 0.1;
+    this.building.dim.value = dim.value;
+    if (this.terrain) {
+      const t = this.terrain.uniforms;
+      t.uHeightMode.value += ((this.layers.heights ? 1 : 0) - t.uHeightMode.value) * 0.12;
+      t.uDim.value = dim.value;
+    }
+    this.footprints.scale.y = Math.max(this.plate.uniforms.uGrow.value, 0.001);
     this.building.update();
 
     if (this.scan) {
@@ -310,6 +333,8 @@ export class Viewer {
     this.resizeObserver.disconnect();
     this.hideScan();
     this.terrain?.dispose();
+    this.plate?.dispose();
+    this.blocks?.dispose();
     this.building?.dispose();
     this.controls.dispose();
     this.renderer.dispose();
