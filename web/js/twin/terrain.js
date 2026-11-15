@@ -167,15 +167,27 @@ export function createPlate({ extent, orthoUrl, anisotropy }) {
     ...Array(2).fill(new THREE.MeshLambertMaterial({ color: 0x46525f })),   // +z, -z
   ]);
   base.position.y = -depth / 2 - 0.05;
+  // a low wall all round the plate, like the raised edge of a model tray: slate sides, light tops
+  const wallHeight = extent * 0.016;
+  const wallThick = extent * 0.012;
+  const side = new THREE.MeshLambertMaterial({ color: 0x4a5664 });
+  const top = new THREE.MeshLambertMaterial({ color: 0xeef2f5 });
+  const wallMaterials = [side, side, top, side, side, side];          // box faces: +x, -x, +y (top), -y, +z, -z
   const h = extent / 2;
-  const rimPoints = [[-h, -h], [h, -h], [h, h], [-h, h], [-h, -h]].map(([x, z]) => new THREE.Vector3(x, 0.15, z));
-  const rim = new THREE.Line(new THREE.BufferGeometry().setFromPoints(rimPoints), new THREE.LineBasicMaterial({ color: 0xf4f7fa }));
-  const lowerRim = new THREE.Line(new THREE.BufferGeometry().setFromPoints(rimPoints.map((p) => p.clone().setY(-depth))),
-    new THREE.LineBasicMaterial({ color: 0x1d242c }));
-  group.add(ground, base, rim, lowerRim);
+  const tall = wallHeight + depth;
+  const walls = [
+    [extent, wallThick, 0, h - wallThick / 2], [extent, wallThick, 0, -(h - wallThick / 2)],
+    [wallThick, extent - 2 * wallThick, h - wallThick / 2, 0], [wallThick, extent - 2 * wallThick, -(h - wallThick / 2), 0],
+  ].map(([w, d, x, z]) => {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(w, tall, d), wallMaterials);
+    wall.position.set(x, (wallHeight - depth) / 2, z);
+    return wall;
+  });
+  group.add(ground, base, ...walls);
 
   return {
     group, uniforms, ready, map,
+    inset: wallThick,                 // the neighbours are cut to fit inside the wall
     dispose() {
       map.dispose();
       group.traverse((o) => { o.geometry?.dispose(); [].concat(o.material || []).forEach((m) => m.dispose()); });
@@ -185,7 +197,7 @@ export function createPlate({ extent, orthoUrl, anisotropy }) {
 
 /** Neighbouring buildings as clean extruded blocks, cut to the plate. One merged mesh: one draw call. */
 export function createBlocks({ neighbours, extent, plate }) {
-  const h = extent / 2 - 0.5;
+  const h = extent / 2 - plate.inset - 0.5;
   const clamp = (v) => Math.max(-h, Math.min(h, v));
   const parts = [];
   for (const { ring, height } of neighbours) {

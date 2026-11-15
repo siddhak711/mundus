@@ -70,7 +70,7 @@ export class Viewer {
     this.plate = createPlate({ extent: twin.extent, orthoUrl: twin.ortho, anisotropy: this.renderer.capabilities.getMaxAnisotropy() });
     this.blocks = createBlocks({ neighbours: twin.neighbours, extent: twin.extent, plate: this.plate });
     this.footprints = createFootprints(twin.neighbours);
-    this.building = createBuilding(twin.building);
+    this.building = createBuilding(twin.building, this.plate);    // same look as the neighbours, cut into floors
     this.scene.add(this.plate.group, this.blocks.mesh, this.footprints, this.building.group);
 
     this.controls.minDistance = twin.extent * 0.04;
@@ -102,6 +102,11 @@ export class Viewer {
       this.reveal = { start: performance.now(), from: this.cameraFor('plan'), to: this.cameraFor('model') };
     }
     this.resize();
+  }
+
+  /** Start the opening fly-in over, so it plays when the view becomes visible rather than while it was hidden. */
+  restartReveal() {
+    if (this.reveal) this.reveal.start = performance.now();
   }
 
   // ---- camera --------------------------------------------------------------

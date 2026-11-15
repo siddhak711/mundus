@@ -187,7 +187,9 @@ saved per building; already built models are skipped):
 python -m pipeline.prewarm
 ```
 
-Then open http://localhost:5190/city/, or follow "LA office to housing" in the top bar. `conversion.py` writes
+Then open http://localhost:5190/#/los-angeles/office-to-housing (the old /city/ address redirects there), or follow
+"LA office to housing" in the top bar. The map is a view inside Atlas's page, so opening a building never loads a new
+page: the map stays up while the 3-D model is drawn behind it, then zooms away as the model fades in. `conversion.py` writes
 `data/conversion/los-angeles.json` and one floor file per office building in the City of LA. The page also starts
 loading a building's model in the background when the pointer rests on it, when it is focused, or when a search
 narrows to three buildings or fewer, so the click only has to draw it.

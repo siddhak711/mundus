@@ -1,10 +1,12 @@
-// LA office-to-housing map: every commercial building in the kit, coloured by its conversion screen. A building opens in
-// Atlas's 3-D model, where each floor shows its tenants and vacancy and a walkthrough floor can be entered directly.
+// LA office-to-housing map, a view inside Atlas's page (#/los-angeles/office-to-housing): every commercial building in
+// the kit, coloured by its conversion screen. A building opens in Atlas's 3-D model on the same page, so the map stays
+// up until the model is drawn and the two cross-fade, with no blank page between them.
 import * as L from 'leaflet';
 import { escapeHtml, number } from '/js/format.js';
+import { handoff } from '/js/handoff.js';
 import { onHoverIntent, prefetchProperty } from '/js/prefetch.js';
 
-const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(`c-${id}`);      // ids are prefixed: this view shares a page with Atlas's
 const LA = [[34.05, -118.33], 11];
 const PAGE = 80;
 
@@ -24,7 +26,7 @@ let map, layer;
 const markers = new Map();
 const shownGroups = new Set(GROUPS.filter((g) => g.on).map((g) => g.key));
 let listLimit = PAGE;
-const modelUrl = (id) => `/#/los-angeles/commercial/${id}`;   // Atlas's 3-D model of the building
+const modelUrl = (id) => `#/los-angeles/commercial/${id}`;   // Atlas's 3-D model of the building, same page
 
 // ---- data ---------------------------------------------------------------------
 async function getJson(url) {
@@ -41,7 +43,7 @@ function missingData() {
 
 // ---- map ----------------------------------------------------------------------
 function setUpMap() {
-  map = L.map('map', { preferCanvas: true, zoomControl: true }).setView(...LA);
+  map = L.map($('map'), { preferCanvas: true, zoomControl: true }).setView(...LA);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
   layer = L.layerGroup().addTo(map);
 }
@@ -67,29 +69,29 @@ function drawMarkers() {
   }
 }
 
-// Open a building: fly the map into its dot, then hand over to the 3-D model, zooming from that point.
+// Open a building: fly the map into its dot, then hand over to the 3-D model on the same page. The map stays up while
+// the model is built and drawn behind it (app.js, openProperty), then zooms out of view as the model fades in.
 let opening = false;
 function openBuilding(b) {
   if (opening) return;
   opening = true;
   prefetchProperty('commercial', b.id);
+  $('map').classList.add('is-opening');
   let gone = false;
   const go = () => {
     if (gone) return;
     gone = true;
     const p = map.latLngToContainerPoint([b.lat, b.lon]);
     const box = $('map').getBoundingClientRect();
-    // the page transition zooms out of the map around this point (styles.css, ::view-transition-old)
-    document.documentElement.style.setProperty('--zoom-x', `${box.left + p.x}px`);
-    document.documentElement.style.setProperty('--zoom-y', `${box.top + p.y}px`);
-    location.href = modelUrl(b.id);
+    const view = document.getElementById('city').getBoundingClientRect();
+    Object.assign(handoff, { from: 'map', zoomX: box.left - view.left + p.x, zoomY: box.top - view.top + p.y });
+    location.hash = modelUrl(b.id);
   };
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
   map.once('moveend', go);
   map.flyTo([b.lat, b.lon], Math.max(map.getZoom(), 17), { duration: 0.65, easeLinearity: 0.2 });
   setTimeout(go, 1100);       // in case the map was already there and no move happens
 }
-addEventListener('pageshow', () => { opening = false; });          // coming back with the browser's back button
 
 // ---- overview -----------------------------------------------------------------
 function renderLegend() {
@@ -193,4 +195,12 @@ async function start() {
   });
 }
 
-start();
+let started = null;
+/** Show the map view (app.js routes #/los-angeles/office-to-housing here). Built on first use. */
+export async function showConversionMap() {
+  opening = false;
+  if (map) $('map').classList.remove('is-opening');
+  if (!started) started = start();
+  await started;
+  requestAnimationFrame(() => map?.invalidateSize());
+}

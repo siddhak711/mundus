@@ -1,6 +1,7 @@
 // Routing and the glue between the record panel, the 3-D viewer and the ask drawer.
 //   #/houston                      city list and map
 //   #/houston/commercial/233899    one property
+//   #/los-angeles/office-to-housing   the office-to-housing map (web/city/city.js)
 import { fetchConversion, fetchDetail, fetchScan, fetchTwin } from './api.js';
 import { showCity, showOnly } from './browse.js';
 import { createFloorModel, CURRENT_YEAR } from './floors.js';
@@ -8,11 +9,14 @@ import { escapeHtml, number, rate, CITY_NAMES } from './format.js';
 import { renderRecord } from './record.js';
 import { setUpAsk } from './ask.js';
 import { Viewer } from './twin/viewer.js';
+import { handoff } from './handoff.js';
+import { showConversionMap } from '/city/city.js';
 
 const DEFAULT_CITY = 'houston';
 const el = (id) => document.getElementById(id);
 const browseView = el('browse');
 const twinView = el('twin');
+const cityView = el('city');
 const status = el('stage-status');
 const controls = el('stage-controls');
 const tip = el('floor-tip');
@@ -137,9 +141,35 @@ function openTour(scan) {
   el('tour').showModal();
 }
 
+// From the office-to-housing map, the map stays on screen while the 3-D view is built and drawn behind it, then the
+// map zooms away and the model fades in: the page is never blank in between. Elsewhere the view simply replaces.
+function revealOverMap() {
+  return new Promise((done) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {           // the model's first frames are on the canvas
+      if (handoffZoom) { cityView.style.setProperty('--zoom-x', `${handoffZoom[0]}px`); cityView.style.setProperty('--zoom-y', `${handoffZoom[1]}px`); }
+      current?.viewer.restartReveal();                                  // the opening fly-in starts as it comes into view
+      cityView.classList.add('is-leaving');
+      twinView.classList.add('is-in');
+      setTimeout(() => {
+        cityView.hidden = true;
+        cityView.classList.remove('is-leaving');
+        el('c-loading').hidden = true;
+        twinView.classList.remove('is-entering', 'is-in');
+        done();
+      }, 640);
+    }));
+  });
+}
+let handoffZoom = null;
+
 async function openProperty(city, kind, id) {
   closeProperty();
+  const fromMap = handoff.from === 'map' && !cityView.hidden;
+  handoffZoom = fromMap ? [handoff.zoomX, handoff.zoomY] : null;
+  handoff.from = null;
   browseView.hidden = true;
+  if (fromMap) twinView.classList.add('is-entering');
+  else cityView.hidden = true;
   twinView.hidden = false;
   controls.hidden = true;
   tip.hidden = true;
@@ -147,7 +177,11 @@ async function openProperty(city, kind, id) {
   el('topbar-note').textContent = '';
   // Usually the model is already cached or prefetched and opens at once: only say it is loading if it takes a while,
   // so a quick open is not interrupted by a box that flashes up and away.
-  const slowNotice = setTimeout(() => { if (current?.id === id && !current.floors) showStatus('Building the site model', ' Fetching the aerial photo, height model and scans. This takes a few seconds the first time.'); }, 600);
+  const slowNotice = setTimeout(() => {
+    if (current?.id !== id || current.ready) return;
+    if (fromMap) el('c-loading').hidden = false;                      // the map is what is on screen
+    else showStatus('Building the site model', ' Fetching the aerial photo, height model and scans. This takes a few seconds the first time.');
+  }, 600);
 
   const viewer = new Viewer({
     canvas: freshCanvas(),
@@ -206,7 +240,16 @@ async function openProperty(city, kind, id) {
     showStatus('');
     el('topbar-note').textContent = `${CITY_NAMES[city]}, ${detail.type}`;
     document.title = `${detail.name} | Atlas`;
+    session.ready = true;
+    if (fromMap) {
+      const back = el('record').querySelector('.back');               // return to the map it was opened from
+      if (back) { back.href = '#/los-angeles/office-to-housing'; back.textContent = 'Back to the office-to-housing map'; }
+      await revealOverMap();
+    }
   } catch (error) {
+    clearTimeout(slowNotice);
+    el('c-loading').hidden = true;
+    if (fromMap) { cityView.hidden = true; twinView.classList.remove('is-entering', 'is-in'); }   // show the error
     if (current === session) showStatus('This property could not be loaded', ` ${error.message}`);
   }
 }
@@ -219,10 +262,20 @@ function route() {
     if (a.dataset.city === knownCity) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
+  if (kind === 'office-to-housing') {
+    closeProperty();
+    twinView.hidden = browseView.hidden = true;
+    twinView.classList.remove('is-entering', 'is-in');
+    cityView.hidden = false;
+    el('topbar-note').textContent = '';
+    document.title = 'LA office to housing | Atlas';
+    return showConversionMap();
+  }
   if (kind && id) return openProperty(knownCity, kind, id);
 
   closeProperty();
   twinView.hidden = true;
+  cityView.hidden = true;
   browseView.hidden = false;
   el('topbar-note').textContent = '';
   document.title = `${CITY_NAMES[knownCity]} | Atlas`;

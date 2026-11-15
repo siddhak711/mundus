@@ -1,8 +1,8 @@
 // The subject building, drawn as one storey-high slab per floor so each floor can be pointed at and pressed.
 //
-// The slabs carry a facade (spandrel band, glass, mullions), so in the Model view they read as one tower. In the
-// Floors and Stacked views they open apart along the same outline. A floor lifts out and glows when hovered or
-// marked; a floor with a walkthrough has a blue spandrel edge; vacancy colours appear only when switched on.
+// The slabs look exactly like the neighbouring buildings, so in the Model view they are the building itself; the
+// Floors and Stacked views cut it apart along its own outline. A floor slides out and warms when hovered or marked; a
+// floor with a walkthrough carries a soft blue; vacancy colours appear only when switched on.
 import * as THREE from 'three';
 
 const LEASED = new THREE.Color('#c2761b');
@@ -12,17 +12,19 @@ const NEUTRAL = new THREE.Color('#e9ecef');
 const VERTEX = /* glsl */ `
   varying vec3 vWorld;
   varying vec3 vNormal;
-  varying float vLevel;      // 0 at the bottom of the storey, 1 at the top
-  uniform float uStorey;
   void main() {
-    vLevel = position.y / uStorey;
     vec4 world = modelMatrix * vec4(position, 1.0);
     vWorld = world.xyz;
     vNormal = normalize(mat3(modelMatrix) * normal);
     gl_Position = projectionMatrix * viewMatrix * world;
   }`;
 
+// The same look as the neighbouring blocks (terrain.js): light walls shaded by compass direction, and the aerial photo
+// on the roof. Cut apart, a floor shows a clean section where it was joined to the next one.
 const FRAGMENT = /* glsl */ `
+  uniform sampler2D uMap;
+  uniform float uExtent;
+  uniform float uIsTop;      // 1 on the top floor, whose upper face is the real roof
   uniform float uHover;      // 0..1, eased
   uniform float uWalk;       // 1 on a floor with a walkthrough
   uniform vec3 uTint;        // vacancy colour
@@ -30,37 +32,29 @@ const FRAGMENT = /* glsl */ `
   uniform float uDim;
   varying vec3 vWorld;
   varying vec3 vNormal;
-  varying float vLevel;
 
   void main() {
     vec3 n = normalize(vNormal);
-    vec3 sun = normalize(vec3(0.45, 0.8, 0.5));
-    float diffuse = 0.62 + 0.38 * max(dot(n, sun), 0.0);
-    vec3 concrete = vec3(0.86, 0.85, 0.82);
     vec3 color;
-    if (abs(n.y) > 0.5) {
-      color = concrete * (n.y > 0.0 ? 0.97 : 0.7);                     // floor plate and roof
+    if (n.y > 0.5) {
+      vec3 photo = texture2D(uMap, vec2(vWorld.x / uExtent + 0.5, -vWorld.z / uExtent + 0.5)).rgb;
+      color = mix(vec3(0.80, 0.81, 0.82), photo, uIsTop);
+    } else if (n.y < -0.5) {
+      color = vec3(0.62, 0.64, 0.66);
     } else {
-      // where the eye is along the wall, to space the mullions every 1.6 m
-      float along = abs(n.x) > abs(n.z) ? vWorld.z : vWorld.x;
-      float mullion = step(fract(along / 1.6), 0.07);
-      float spandrel = step(vLevel, 0.3);
-      // glass: darker low, catching the sky high up, with the facade's compass shading
-      vec3 glass = mix(vec3(0.20, 0.29, 0.38), vec3(0.55, 0.68, 0.80), smoothstep(0.3, 1.0, vLevel));
-      glass = mix(glass, uTint, uTintAmount * 0.75);
-      glass = mix(glass, vec3(1.0, 0.86, 0.52), uHover * 0.6);            // a warm glow on the hovered floor
-      vec3 band = mix(concrete, vec3(0.12, 0.42, 1.0), uWalk * 0.9);   // the walkthrough floor: a blue band all round
-      color = mix(glass, band, max(spandrel, mullion * (1.0 - spandrel) * 0.85));
+      float facing = 0.80 + 0.14 * dot(normalize(n.xz + 1e-4), normalize(vec2(0.45, 0.6)));
+      color = vec3(0.90, 0.91, 0.92) * facing;
+      color = mix(color, uTint * facing, uTintAmount * 0.55);
+      color = mix(color, vec3(0.42, 0.62, 1.0) * facing, uWalk * 0.32);
+      color = mix(color, vec3(1.0, 0.83, 0.52) * facing, uHover * 0.55);
     }
-    color *= diffuse;
-    color += vec3(0.10, 0.07, 0.0) * uHover;
-    color = mix(color, vec3(0.86, 0.88, 0.90), uDim * 0.6);
+    color = mix(color, vec3(0.86, 0.88, 0.90), uDim * 0.72);
     gl_FragColor = vec4(color, 1.0);
   }`;
 
 const ease = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 
-export function createBuilding({ ring, roof, stories }) {
+export function createBuilding({ ring, roof, stories }, plate) {
   const group = new THREE.Group();
   const centre2 = ring.reduce((acc, [x, y]) => [acc[0] + x / ring.length, acc[1] + y / ring.length], [0, 0]);
   const centre = new THREE.Vector3(centre2[0], 0, -centre2[1]);
@@ -75,8 +69,8 @@ export function createBuilding({ ring, roof, stories }) {
   for (let floor = 1; floor <= stories; floor++) {
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        uStorey: { value: storeyHeight }, uHover: { value: 0 }, uWalk: { value: 0 },
-        uTint: { value: NEUTRAL.clone() }, uTintAmount: { value: 0 }, uDim: dim,
+        uMap: plate.uniforms.uMap, uExtent: plate.uniforms.uExtent, uIsTop: { value: floor === stories ? 1 : 0 },
+        uHover: { value: 0 }, uWalk: { value: 0 }, uTint: { value: NEUTRAL.clone() }, uTintAmount: { value: 0 }, uDim: dim,
       },
       vertexShader: VERTEX, fragmentShader: FRAGMENT,
     });
