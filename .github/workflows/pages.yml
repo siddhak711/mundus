@@ -61,7 +61,7 @@ jobs:
           mkdir -p _site/data
           cp -r web/. _site/
           cp -r data/index data/property data/home data/conversion _site/data/
-          printf "export const API_BASE = '%s';\n" "${ATLAS_API%/}" > _site/js/config.js
+          [ -z "$ATLAS_API" ] || printf "export const API_BASE = '%s';\n" "${ATLAS_API%/}" > _site/js/config.js
           touch _site/.nojekyll
           [ -n "$ATLAS_API" ] || echo "::warning::ATLAS_API is not set: browsing works, 3-D models and Ask Atlas do not"
           du -sh _site
