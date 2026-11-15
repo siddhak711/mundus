@@ -19,3 +19,7 @@ node_modules/
 *.log
 raw/
 cache/
+public/
+.vercel/
+.vercel
+.env*

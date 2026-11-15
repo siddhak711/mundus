@@ -1,0 +1,18 @@
+# Upload only what the Atlas site needs. data/ is included on purpose: it is git-ignored (licensed CoStar data)
+# and reaches Vercel only through the CLI upload, never through git.
+/*
+!/api
+!/pipeline
+!/web
+!/data
+!/scripts
+!/server.py
+!/requirements.txt
+!/vercel.json
+/scripts/*
+!/scripts/deploy
+/data/*
+!/data/index
+!/data/property
+!/data/home
+__pycache__

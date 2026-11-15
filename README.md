@@ -109,6 +109,21 @@ The script asks for the keys once, ingests the 15 places, and starts both servic
 Without SSH (Google Compute Engine): pass `scripts/deploy/vm_boot.sh` as the instance's `startup-script` metadata
 and the keys as `mundus-<KEY>` metadata attributes. It runs the same setup at boot and logs to the serial console.
 
+### Atlas on Vercel
+
+The Atlas site (`web/`, `server.py`) also runs on Vercel: the CDN serves `web/` and the CoStar index, `api/index.py`
+runs `server.py`'s handler for `/api/*`, and built site models go to Vercel Blob (`pipeline/storage.py`), because
+function instances share no disk and a response is capped at 4.5 MB (a tall building's aerial photo is about 8 MB).
+The World API and the agent stay on the VM.
+
+```bash
+bash scripts/deploy/vercel_deploy.sh
+```
+
+Project environment variables: `VEXCEL_API_KEY`, `MATTERPORT_API_KEY`, `MATTERPORT_API_TOKEN` (site models),
+`BLOB_READ_WRITE_TOKEN` (set by connecting a public Blob store), and for Ask Atlas `HARNESS_URL`
+(`https://<vm-host>/agent`), `AGENT_TOKEN`, `WORLD_REST_URL` (`https://<vm-host>`) and `WORLD_API_TOKEN`.
+
 ---
 
 # Atlas
