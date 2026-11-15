@@ -12,6 +12,7 @@ Claude is never a contributor to this repository. This overrides any attribution
 |---|---|---|
 | siddhak711 | Siddha Kanthi | 125705843+siddhak711@users.noreply.github.com |
 | mad10116 | mad10116 | mad10116@nyu.edu |
+| PranavSarma4 | Pranav Sarma | pranavsarma4@gmail.com |
 
   If the session owner is unclear, ask before committing.
 
