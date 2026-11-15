@@ -137,17 +137,26 @@ export function setUpSidebar({ LAY, S, SH, SCAN, FLOOR, building, setApts, runCo
   const chatLog = $('chat-log'), form = $('cmd'), input = $('cmd-in');
   function chatLine(cls, text) { const d = document.createElement('div'); d.className = cls; d.textContent = text; chatLog.append(d); chatLog.scrollTop = chatLog.scrollHeight; return d; }
   chatLine('a', 'Ask me about this floor, or tell me what to do: “remove the walls”, “design apartments”, “floor plan”, “walk inside”.');
-  let agentReady = null, threadId = null, busy = false;
-  const status = fetch(`${API}/api/status`).then((r) => (r.ok ? r.json() : { agent: false })).then((j) => { agentReady = !!j.agent; }).catch(() => { agentReady = false; });
+  let threadId = null, busy = false;
+  // Asked before every question, not once at page load: one slow or failed check must not turn the chat off for the visit.
+  const agentUp = () => fetch(`${API}/api/status`).then((r) => (r.ok ? r.json() : { agent: false })).then((j) => !!j.agent).catch(() => false);
 
   // without the live agent, answer from the saved study, and say so
-  function offline(q) {
-    const t = q.toLowerCase(); if (!LAY) return 'The live agent is not running here, and this floor has no saved study to answer from.';
+  function offline(q, why = 'The live agent is not reachable right now.') {
+    const t = q.toLowerCase(); if (!LAY) return `${why} This floor has no saved study to answer from.`;
     const pick = /cost|yield|rent|noi|money|price|budget|profit|worth|return|benefit|fee/.test(t) ? 3 : /code|complian|egress|exit|stair|fire|access|ada|zoning|legal|permit|ordinance/.test(t) ? 1
       : /column|beam|struct|load|earthquake|seismic|slab|drain|plumb|riser/.test(t) ? 2 : 0;
     const a = AG[pick];
-    return `The live agent is not running on this server (open the floor through Atlas, server.py, with the harness up). From the saved study, the ${a.name.toLowerCase()} says:\n`
+    return `${why} From the saved study, the ${a.name.toLowerCase()} says:\n`
       + a.rows.map(([k, v]) => `• ${k}: ${v}`).join('\n');
+  }
+  // The agent on the server knows places, not this page. The first question of a conversation carries the saved study
+  // (what each of the four agents did and found), so it can answer about the floor and the agents themselves.
+  function withStudy(q) {
+    if (!LAY || threadId) return q;
+    const where = FLOOR ? `floor ${FLOOR.floor} of ${FLOOR.building}, ${FLOOR.address}` : `floor scan ${SCAN}`;
+    const study = AG.map((a) => `${a.name} (wrote ${a.file})\nWhat it did:\n${a.steps.map((x) => `- ${x.text}`).join('\n')}\nResult:\n${a.rows.map(([k, v]) => `- ${k}: ${v}`).join('\n')}`).join('\n\n');
+    return `I am on the walkthrough page of an office-to-apartment conversion study for ${where}. Four agents (layout, compliance, structure, cost-benefit) produced the saved study below. Answer from it where it applies, and say so when it does not cover the question.\n\n${study}\n\nQuestion: ${q}`;
   }
   async function* events(response) {
     const reader = response.body.getReader(), dec = new TextDecoder(); let buf = '';
@@ -155,12 +164,12 @@ export function setUpSidebar({ LAY, S, SH, SCAN, FLOOR, building, setApts, runCo
       while ((e = buf.indexOf('\n\n')) >= 0) { const line = buf.slice(0, e).replace(/^data: /, ''); buf = buf.slice(e + 2); if (line) yield JSON.parse(line); } }
   }
   async function ask(q) {
-    await status;
-    if (!agentReady) { chatLine('a', offline(q)); return; }
+    if (!(await agentUp())) { chatLine('a', offline(q)); return; }
     const context = { page: 'walkthrough', scan: SCAN, building: building || FLOOR?.propertyId, floor: FLOOR?.floor, address: FLOOR?.address,
       layout: LAY ? { ...LAY.summary, money: LAY.money, score: LAY.self_score?.total } : null };
     try {
-      const res = await fetch(`${API}/api/agent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, thread_id: threadId, context }) });
+      const res = await fetch(`${API}/api/agent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: withStudy(q), thread_id: threadId, context }) });
+      if (!res.ok) throw new Error(`the server answered ${res.status}`);
       let answered = false;
       for await (const ev of events(res)) {
         if (ev.type === 'thread') threadId = ev.id;
@@ -168,7 +177,7 @@ export function setUpSidebar({ LAY, S, SH, SCAN, FLOOR, building, setApts, runCo
         else if (ev.type === 'text') { chatLine('a', ev.text); answered = true; }
         else if (ev.type === 'error') chatLine('step', ev.message);
       }
-      if (!answered) chatLine('a', offline(q));
+      if (!answered) chatLine('a', offline(q, 'The agent did not return an answer.'));
     } catch (err) { chatLine('step', `The agent could not be reached (${err.message}).`); chatLine('a', offline(q)); }
   }
   async function send() {
