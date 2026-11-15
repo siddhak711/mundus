@@ -1,0 +1,29 @@
+{
+  "note": "One entry per floor with a baked walkthrough (python -m pipeline.bake <scanId>). Facts only: building, address, stories, year built and listed size from the CoStar kit; scan name and ceiling height (median room height) from Matterport. listedSource says where the listed size came from. The baked files themselves are licensed and git-ignored (floors/<scanId>/).",
+  "floors": {
+    "cEvQ8q5GKZd": {
+      "propertyId": 246826, "building": "The Oppenheimer Tower", "address": "10880 Wilshire Blvd, Los Angeles",
+      "floor": 16, "stories": 24, "built": 1969, "suite": "1600", "title": "Suite 1600, full floor",
+      "listedSf": 26711, "listedSource": "Matterport scan name (no CoStar listing for this suite)",
+      "ceilingM": 2.66, "scanName": "10880 Wilshire - Suite 1600 - 26,711 SF", "legacyData": true
+    },
+    "aYTUWzQVbUs": {
+      "propertyId": 248243, "building": "3415 Sepulveda Blvd", "address": "3415 Sepulveda Blvd, Los Angeles",
+      "floor": 10, "stories": 12, "built": 1982, "suite": "1000", "title": "Suite 1000, full floor",
+      "listedSf": 16015, "listedSource": "CoStar listing, full floor",
+      "ceilingM": 2.69, "scanName": "Suite 1000"
+    },
+    "6Z3p5m9AcFQ": {
+      "propertyId": 246836, "building": "The Tower", "address": "10940 Wilshire Blvd, Los Angeles",
+      "floor": 17, "stories": 24, "built": 1988, "suite": "1700", "title": "Suite 1700, full floor",
+      "listedSf": 13241, "listedSource": "Matterport scan name (no CoStar listing for this suite)",
+      "ceilingM": 2.7, "scanName": "The Tower - Suite 1700 - 13,241 SF"
+    },
+    "WhqAmKQ3YYP": {
+      "propertyId": 249530, "building": "The Launch at Airport Center", "address": "5901 Century Blvd, Los Angeles",
+      "floor": 3, "stories": 15, "built": 1968, "suite": "300", "title": "Suite 300, full floor",
+      "listedSf": 21080, "listedSource": "CoStar listing, full floor",
+      "ceilingM": 2.59, "scanName": "Suite 300"
+    }
+  }
+}
