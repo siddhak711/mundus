@@ -191,17 +191,27 @@ def floor_summary(scan: str, root: Path | None = None) -> dict[str, Any]:
             t, d = float(rel @ s["u"]), float(rel @ s["n"])
             if -0.5 <= t <= s["length_m"] + 0.5 and 0 <= d <= 12:
                 cols.append({"along_m": r2(t), "from_facade_m": r2(d)})
-        win = 0
-        for t in np.arange(0.25, s["length_m"], 0.5):
+        ts = np.arange(0.25, s["length_m"], 0.5)
+        flags = []
+        for t in ts:
             p = s["a"] + s["u"] * t + s["n"] * 0.05
             c, r = f.to_px(*p)
             rr, cc = int(r), int(c)
-            if 0 <= rr < f.h and 0 <= cc < f.w and f.window[max(0, rr - 3):rr + 4, max(0, cc - 3):cc + 4].any():
-                win += 1
+            flags.append(bool(0 <= rr < f.h and 0 <= cc < f.w and f.window[max(0, rr - 3):rr + 4, max(0, cc - 3):cc + 4].any()))
+        win = sum(flags)
+        gaps, start = [], None
+        for t, fl in zip(list(ts) + [s["length_m"] + 1], flags + [True]):
+            if not fl and start is None:
+                start = t
+            elif fl and start is not None:
+                if t - start >= 1.0:
+                    gaps.append([r2(start - 0.25), r2(min(t - 0.25, s["length_m"]))])
+                start = None
         sides.append({"side": s["name"], "length_m": r2(s["length_m"]), "length_ft": round(s["length_m"] * FT_PER_M),
                       "runs_full_length": s["full"],
                       "facade_to_core_m": {"min": r2(min(cl)), "p10": r2(np.percentile(cl, 10)), "median": r2(np.median(cl))} if cl else None,
-                      "window_share": round(win / max(1, len(np.arange(0.25, s["length_m"], 0.5))), 2),
+                      "window_share": round(win / max(1, len(ts)), 2),
+                      "no_window_stretches_along_m": gaps,
                       "column_candidates": cols})
     return {
         "scan": scan, "name": g.get("name"), "floor": g.get("floor"), "property": g.get("property"),
@@ -245,8 +255,6 @@ def draft_ring(scan: str, unit_depth_m: float, sides: dict[str, list[dict[str, A
         else:   # fit between the long sides' units
             ends = [o for o in all_sides.values() if o["full"]]
             t0, t1 = 0.0, s["length_m"]
-            for o in ends:
-                da = abs(float((o["a"] - s["a"]) @ o["n"])) if False else None  # noqa: F841 (kept simple below)
             starts = [o for o in ends if np.allclose(o["b"], s["a"], atol=0.6) or np.allclose(o["a"], s["a"], atol=0.6)]
             stops = [o for o in ends if np.allclose(o["a"], s["b"], atol=0.6) or np.allclose(o["b"], s["b"], atol=0.6)]
             t0 = max([long_depth[o["name"]] for o in starts] + [0.0])
