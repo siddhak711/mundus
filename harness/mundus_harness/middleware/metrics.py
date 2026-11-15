@@ -1,6 +1,7 @@
 """Records model calls, tokens, tool calls and latency per agent, and emits a metrics event when a run ends."""
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from typing import Any
@@ -127,6 +128,10 @@ class MetricsMiddleware(AgentMiddleware):
         events.emit("metrics", **summary)
         return None
 
+
+    # LangGraph Server runs graphs in an event loop and refuses blocking calls there: do the HTTP and file work in a thread
+    async def aafter_agent(self, state, runtime):
+        return await asyncio.to_thread(self.after_agent, state, runtime)
 
 def summarize(run_id: str) -> dict[str, Any]:
     rec = runctx.record(run_id)

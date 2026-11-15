@@ -222,3 +222,33 @@ def test_budget_warns_on_last_call_and_attaches_claims():
     assert "Model call limits exceeded" in out.content and "[claim:ab12] Three tenants." in out.content
     other = Req(tool_call={"name": "get_claims", "args": {}, "id": "t2"})
     assert root._attach(other, msg) is msg
+
+
+async def test_tool_events_name_the_calling_agent(cfg):
+    wt = await load_world_tools(cfg)
+    orch, worker = cold_scripts(cfg)
+    agent = build_agent(cfg, wt, orch_model=orch, worker_model=worker)
+    ev = await _run(agent, "Who is the largest tenant at Fixture Tower?", "run-tools")
+    tools = [(e["agent"], e["name"]) for _, e in ev if e["type"] == "tool"]
+    assert ("orchestrator", "task") in tools and ("market-analyst", "get_place") in tools
+    assert tools.count(("market-analyst", "put_claim")) == 3
+    task = next(e for _, e in ev if e["type"] == "tool" and e["name"] == "task")
+    assert task["args"]["subagent_type"] == "market-analyst"
+    # a tool event marks a call starting, not an action finishing: time to first action is still recorded once
+    assert next(e for _, e in ev if e["type"] == "metrics")["time_to_first_action_ms"] is not None
+
+
+async def test_memory_file_is_read_only_with_private_claims(cfg):
+    import dataclasses
+    wt = await load_world_tools(cfg)
+    mem = cfg.data_dir / "memory" / "AGENTS.md"
+    for private in (True, False):
+        c = dataclasses.replace(cfg, claim_scope_run=private)
+        orch = ScriptedModel(script=[
+            AIMessage(content="", tool_calls=[tool_call("edit_file", {"file_path": "/memory/AGENTS.md",
+                                                                      "old_string": "# Lessons", "new_string": "# Leaked"})]),
+            AIMessage(content="done")], calls=[])
+        agent = build_agent(c, wt, orch_model=orch, worker_model=ScriptedModel(script=[], calls=[]))
+        await _run(agent, "Note something", f"run-mem-{private}")
+        assert ("Leaked" in mem.read_text()) is (not private)
+        mem.write_text("# Lessons learned by Mundus agents\n", encoding="utf-8")

@@ -14,7 +14,8 @@ def emit(event_type: str, agent: str = "orchestrator", **payload: Any) -> dict[s
     rec = runctx.record(rid)
     with runctx.lock():
         rec["events"].append(ev)
-        if rec["first_action"] is None and event_type not in ("route", "metrics", "answer"):
+        # a tool event fires when a call starts; first action stays "first tool result", as MetricsMiddleware records it
+        if rec["first_action"] is None and event_type not in ("route", "metrics", "answer", "tool"):
             import time
             rec["first_action"] = time.time()
     try:

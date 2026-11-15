@@ -24,4 +24,8 @@ _load_env()
 VEXCEL_API_KEY = os.environ.get("VEXCEL_API_KEY", "")
 MATTERPORT_API_KEY = os.environ.get("MATTERPORT_API_KEY", "")
 MATTERPORT_API_TOKEN = os.environ.get("MATTERPORT_API_TOKEN", "")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+# Ask Atlas talks to the Mundus deep agent (harness/, LangGraph Server) and reads claim text from the World API.
+HARNESS_URL = os.environ.get("HARNESS_URL", "http://127.0.0.1:2024").rstrip("/")
+AGENT_TOKEN = os.environ.get("AGENT_TOKEN", "")            # only when the agent server sits behind the VM's Caddy
+WORLD_REST_URL = os.environ.get("WORLD_REST_URL", "http://127.0.0.1:8000").rstrip("/")
+WORLD_API_TOKEN = os.environ.get("WORLD_API_TOKEN", "")
