@@ -156,7 +156,7 @@ def test_truth_from_world_api():
     with httpx.Client(base_url="http://world", transport=httpx.MockTransport(handler)) as c:
         truth = build_truth(tasks, c)
     assert truth["R1"] == {"tenancies": 752} and truth["R2"]["asking_price"] == 752
-    assert truth["R3"] == {"rooms": 752, "largest_m2": 752}
+    assert truth["R3"] == {"space_name": 752, "largest_m2": 752}
     assert _dig({"attributes": {"pool.detected": True}}, "attributes.pool.detected") is True
 
 

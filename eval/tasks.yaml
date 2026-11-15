@@ -40,14 +40,14 @@ tasks:
   - id: R3
     group: retrieval
     grader: code
-    question: "In the Suite A Warehouse scan at 1601 Perrino Pl, how many rooms were measured, and what is the floor area of the largest one in square metres?"
+    question: "At 1601 Perrino Pl, which scanned space contains the largest single measured room, and what is that room's floor area in square metres?"
     place_ids: ["place:costar:755901"]
     required_evidence_types: [room]
     truth:
-      rooms: {kind: sql, sql: "SELECT count(*) FROM room r JOIN space s ON s.space_id=r.space_id WHERE s.place_id='place:costar:755901' AND s.name='Suite A Warehouse' AND lower(coalesce(r.label,''))!='void'"}
-      largest_m2: {kind: sql, sql: "SELECT max(r.area_m2) FROM room r JOIN space s ON s.space_id=r.space_id WHERE s.place_id='place:costar:755901' AND s.name='Suite A Warehouse'"}
+      space_name: {kind: sql, sql: "SELECT s.name FROM room r JOIN space s ON s.space_id=r.space_id WHERE s.place_id='place:costar:755901' AND r.area_m2 IS NOT NULL ORDER BY r.area_m2 DESC LIMIT 1"}
+      largest_m2: {kind: sql, sql: "SELECT max(r.area_m2) FROM room r JOIN space s ON s.space_id=r.space_id WHERE s.place_id='place:costar:755901'"}
     checks:
-      - {type: number, key: rooms, tolerance: 0}
+      - {type: contains, key: space_name}
       - {type: number, key: largest_m2, tolerance: 0.02}
 
   - id: R4
