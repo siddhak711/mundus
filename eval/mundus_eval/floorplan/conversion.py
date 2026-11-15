@@ -23,9 +23,11 @@ from mundus_eval.floorplan.floor import FLOOR16_HIDDEN, HIDDEN_SIZE, Column, Flo
 from mundus_eval.floorplan.layout import M2SF
 from mundus_eval.floorplan.rubric import MONEY
 
-PROFILE = "conversion-v1"   # v1: exit route judged by the unit's outline over walkable (>= 0.8 m) open floor. Change => new name, rescore
+PROFILE = "conversion-v2"   # v2 (frozen): 0.9 m passage, door reach 0.5 m, unscanned facade = unknown, bedroom-column > 0.1 m2. Change => new name, rescore
 WALL_T = 0.15            # wall thickness used to test walls against columns
 WINDOW_TOL = 0.5         # a bedroom edge within this of a detected window segment counts as on the glass
+BED_COL_TOL = 0.10       # m2 of a column inside a bedroom that counts (a few cm graze is within the column guess)
+DOOR_REACH = 0.5         # a door may open across up to this much leftover floor (same as the agent's checker)
 
 CRITERIA = [  # name, max
     ("Walls clear of detected columns", 15),
@@ -59,7 +61,22 @@ def load_conversion_floor(folder: Path, hidden: bool = True) -> Floor:
     f.windows = [LineString(w) for w in g.get("windows") or []]          # type: ignore[attr-defined]
     f.exits = [(e["x"], e["y"]) for e in s.get("exits") or []]           # type: ignore[attr-defined]
     f.plate = Polygon(g["outline"])                                       # type: ignore[attr-defined]
+    f.unscanned = _unscanned(folder)                                      # type: ignore[attr-defined]
     return f
+
+
+def _unscanned(folder: Path) -> Any:
+    """Facade the scanner never saw (offices it did not enter), as geometry. Scan coverage is data, so this reuses the
+    agent package's derivation of it; the checks themselves stay independent."""
+    try:
+        from mundus_harness.conversion.geometry import Floor as AgentFloor
+        af = AgentFloor(folder.name, folder.parent)
+        mask = af.unscanned_facade()
+    except Exception:  # noqa: BLE001
+        return Polygon()
+    rr, cc = np.nonzero(mask)
+    pts = [Point(*af.to_m(c, r)).buffer(1.0 / af.res) for r, c in zip(rr, cc, strict=True)]
+    return unary_union(pts).buffer(0.1) if pts else Polygon()
 
 
 def final_draft(run_data: Path, scan: str) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -90,9 +107,9 @@ def _corridor(units: list[dict[str, Any]], corridor_m: float) -> Any:
 
 
 def _open_floor(floor: Floor, units_geom: Any) -> Any:
-    """Open floor a person can walk: slivers narrower than 0.8 m between units are removed (opening by 0.4 m)."""
+    """Open floor a person can walk: gaps narrower than 0.9 m (36 in, the minimum corridor) are removed."""
     plate = getattr(floor, "plate", floor.outline)
-    free = plate.difference(units_geom).difference(floor.core).buffer(-0.4).buffer(0.4)
+    free = plate.difference(units_geom).difference(floor.core).buffer(-0.45).buffer(0.45)     # 36 in minimum corridor
     return unary_union([free] + [Point(e).buffer(1.5) for e in getattr(floor, "exits", [])])
 
 
@@ -148,17 +165,26 @@ def grade_conversion(floor: Floor, draft: dict[str, Any], final: dict[str, Any] 
         for i, b in enumerate(u.get("bedroom_polygons") or []):
             n_beds += 1
             bp = Polygon(b)
-            over = [c.id for c in floor.columns if bp.intersection(c.square).area > C.OVERLAP_TOL]
+            over = [c.id for c in floor.columns if bp.intersection(c.square).area > BED_COL_TOL]
             bed_hits += bool(over)
             row("bedroom_column", f"{u['id']}/bed{i + 1}", not over, ",".join(over))
     # bedrooms on windows
     win = unary_union(getattr(floor, "windows", []) or [LineString()]).buffer(WINDOW_TOL)
-    unit_glass_ok = 0
+    unseen = getattr(floor, "unscanned", Polygon()).buffer(WINDOW_TOL)
+    unit_glass_ok = 0.0
     for u in units:
         beds = [Polygon(b) for b in u.get("bedroom_polygons") or []]
-        ok = all(b.exterior.intersection(win).length >= 1.0 for b in beds)
-        unit_glass_ok += ok
-        row("bedroom_window", u["id"], ok, None, f"{len(beds)} bedrooms", is_hard=not ok)
+        seen = [b.exterior.intersection(win).length >= 1.0 for b in beds]
+        maybe = [not s_ and not unseen.is_empty and b.exterior.intersection(unseen).length >= 1.0 for b, s_ in zip(beds, seen, strict=True)]
+        if all(seen):
+            unit_glass_ok += 1
+            row("bedroom_window", u["id"], True, None, f"{len(beds)} bedrooms")
+        elif all(s_ or m_ for s_, m_ in zip(seen, maybe, strict=True)):
+            unit_glass_ok += 0.5            # unknown: the facade there was never scanned
+            rows.append({"rule": "bedroom_window", "subject": u["id"], "status": "unknown", "value": None,
+                         "detail": "bedroom faces facade the scan never saw"})
+        else:
+            row("bedroom_window", u["id"], False, None, "a bedroom has no window", is_hard=True)
     # inside the plate, clear of core and of each other
     plate = getattr(floor, "plate", floor.outline)
     clean = 0
@@ -186,7 +212,7 @@ def grade_conversion(floor: Floor, draft: dict[str, Any], final: dict[str, Any] 
         # that reaches an exit; sealed if no such wall exists
         ring = polys[u["id"]].exterior
         reach = [p for p in pieces if any(p.buffer(0.01).contains(e) for e in exits)]
-        sealed = all(ring.intersection(p.buffer(0.1)).length < 1.0 for p in reach)
+        sealed = all(ring.intersection(p.buffer(DOOR_REACH)).length < 1.0 for p in reach)
         total = t + inside
         if sealed:
             ok, detail = False, "entry opens onto floor with no route to an exit (only through other units)"
@@ -227,7 +253,7 @@ def grade_conversion(floor: Floor, draft: dict[str, Any], final: dict[str, Any] 
         "Walls clear of detected columns": (15 * sum(col_ok[c.id] for c in det) / max(1, len(det)), f"{sum(col_ok[c.id] for c in det)}/{len(det)}"),
         "Walls clear of hidden columns": (10 * sum(col_ok[c.id] for c in hid) / max(1, len(hid)), f"{sum(col_ok[c.id] for c in hid)}/{len(hid)}"),
         "Bedrooms clear of columns": (10 * (1 - bed_hits / max(1, n_beds)), f"{bed_hits}/{n_beds} bedrooms hit a column"),
-        "Bedrooms on windows": (15 * unit_glass_ok / n, f"{unit_glass_ok}/{n} units"),
+        "Bedrooms on windows": (15 * unit_glass_ok / n, f"{unit_glass_ok:g}/{n} units (unscanned facade counts half)"),
         "Units inside the plate, clear of core and each other": (10 * clean / n, f"{clean}/{n} units"),
         "Unit size vs market": (size, f"average {avg:.0f} sf; {small} one-beds/studios under 450 sf"),
         "Exit travel": (10 * travel_ok / n, f"{travel_ok}/{n} within 76.2 m; worst {worst:.1f} m"),

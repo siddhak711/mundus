@@ -424,8 +424,8 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
     all_units = np.zeros_like(f.plate)
     for um in unit_masks:
         all_units |= um
-    # open floor a person can walk: gaps narrower than 0.8 m between units, core and facade are not a route
-    open_floor = ndimage.binary_opening(f.plate & ~f.core & ~all_units, structure=f.disk(0.4))
+    # open floor a person can walk: gaps narrower than 0.9 m (36 in, the minimum corridor) are not a route
+    open_floor = ndimage.binary_opening(f.plate & ~f.core & ~all_units, structure=f.disk(0.45))   # 36 in corridor
     walk_open = f.walk_distance_m(open_floor)
     ceiling = f.geo.get("ceiling_height_ft")
     exits_assumed = all((e.get("confidence") == "assumed") for e in f.struct.get("exits") or [])
@@ -493,7 +493,7 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
             seen = "touches a window" if touches else ("faces unscanned facade" if maybe else "NO window")
             bed_notes.append(f"bedroom {i}: {bsf:.0f} sf, {seen}, narrowest {dims[0] * FT_PER_M:.1f} ft")
             col_m2 = float((bm & f.columns).sum() / f.res ** 2)
-            if col_m2 > 0.02:
+            if col_m2 > 0.10:      # a real intrusion; a few cm graze is within the column guess
                 col_notes.append(f"bedroom {i} overlaps a column candidate by {col_m2:.2f} m2")
         put("bedroom_windows", bed_status, "; ".join(bed_notes) or "no bedrooms",
             "Every bedroom has an exterior window (CBC 1204/1205, unconfirmed); bedroom at least 70 sf and 7 ft wide (CBC 1208)")
@@ -512,7 +512,7 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
                 f"{ft:.0f} ft from the unit's farthest point to the nearest exit" + (" (exits assumed at the core)" if exits_assumed else ""),
                 f"Exit access travel at most {MAX_TRAVEL_FT} ft, sprinklered R-2 (CBC Table 1017.2, unconfirmed)")
         else:
-            put("exit_travel", "fail", "no route to an exit except through other apartments or gaps under 0.8 m: "
+            put("exit_travel", "fail", "no route to an exit except through other apartments or gaps under 0.9 m: "
                 "open the unit onto the corridor", f"Exit access travel at most {MAX_TRAVEL_FT} ft, sprinklered R-2 (CBC Table 1017.2, unconfirmed)")
         if ceiling:
             put("ceiling_height", "pass" if ceiling >= MIN_CEILING_FT else "fail", f"{ceiling} ft as scanned, before new ceilings",
