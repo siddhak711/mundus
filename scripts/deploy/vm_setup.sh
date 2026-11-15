@@ -54,7 +54,7 @@ export UV_VENV_CLEAR=1   # a rerun replaces the environments instead of stopping
 (cd harness && uv venv -q --python 3.12 .venv && uv pip install -q -e ".[serve]")
 (cd eval    && uv venv -q --python 3.12 .venv && uv pip install -q -e .)
 # the Atlas site (server.py, pipeline/) has no pyproject: its packages are listed in the README
-uv venv -q --python 3.12 .venv && uv pip install -q -p .venv requests shapely pillow numpy tifffile imagecodecs
+uv venv -q --python 3.12 .venv && uv pip install -q -p .venv requests shapely pillow numpy scipy tifffile imagecodecs
 
 echo "== ingestion (15 places; resumable: rerun this script if it stops)"
 set -a; . ./.env; set +a
@@ -65,7 +65,9 @@ echo "== site index (every property in the kit, for the Atlas site)"
 KIT="$WORLD_DATA_DIR/kit"
 if [ -f "$KIT/schemas/enums.json" ] && .venv/bin/python pipeline/build_index.py "$KIT"; then
   echo "site index built"
-  .venv/bin/python pipeline/conversion.py   # office-to-housing screen for the /city/ view
+  # daylight depth measured from the walkthrough buildings' Matterport scans, then the office-to-housing screen
+  .venv/bin/python -m pipeline.daylight --walkthroughs || echo "WARNING: daylight not measured; the screen uses floor size instead"
+  .venv/bin/python pipeline/conversion.py
 else
   echo "WARNING: site index not built from $KIT. The site will show no properties until"
   echo "         .venv/bin/python pipeline/build_index.py <kit folder>  succeeds."

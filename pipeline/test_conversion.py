@@ -147,6 +147,35 @@ class Score(unittest.TestCase):
         self.assertEqual(cv.assess(b, (), YEAR)["status"], "possible")
 
 
+DAYLIGHT = {
+    "plate": {"floor": 3, "name": "Suite 300", "within30ft": 0.67, "deepestFt": 58.6},
+    "scans": [
+        {"floor": 3, "name": "Suite 300", "scannedSf": 18000, "fullFloor": True, "within30ft": 0.67, "deepestFt": 58.6},
+        {"floor": 2, "name": "Suite 210", "scannedSf": 2400, "fullFloor": False, "within30ft": None, "deepestFt": None},
+        {"scanId": "x", "error": "no floor plan image"},
+    ],
+}
+
+
+class Daylight(unittest.TestCase):
+    def test_measured_plate_replaces_the_size_guess(self):
+        b = office()
+        self.assertEqual(cv.fit_score(b)["parts"][1]["points"], 30)          # 20,000 sq ft: guessed small
+        b["daylight"] = DAYLIGHT
+        fit = cv.fit_score(b)
+        self.assertEqual(fit["parts"][1]["points"], 10)                      # 67% within 30 ft
+        self.assertIn("measured on the floor 3 scan", fit["parts"][1]["note"])
+        self.assertTrue(fit["plateMeasured"])
+
+    def test_floors_carry_their_scans(self):
+        b = office()
+        b["daylight"] = DAYLIGHT
+        by = {r["floor"]: r for r in cv.floors(b, (), YEAR)}
+        self.assertTrue(by[3]["scans"][0]["fullFloor"])
+        self.assertFalse(by[2]["scans"][0]["fullFloor"])
+        self.assertNotIn("scans", by[1])
+
+
 class Main(unittest.TestCase):
     def test_writes_index_and_details(self):
         with tempfile.TemporaryDirectory() as tmp:

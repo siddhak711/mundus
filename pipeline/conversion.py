@@ -147,6 +147,10 @@ def floors(b, walkthroughs=(), year=CURRENT_YEAR):
     spaces = b.get("spaces") or []
     tenants = current_tenants(b.get("tenancies"), year)
     walk = {w["floor"]: w for w in walkthroughs}
+    scans = {}
+    for s in (b.get("daylight") or {}).get("scans") or []:
+        if s.get("floor") and not s.get("error"):
+            scans.setdefault(s["floor"], []).append(s)
     out = []
     for n in range(1, stories + 1):
         sf, size_source = floor_size(b, n)
@@ -174,6 +178,9 @@ def floors(b, walkthroughs=(), year=CURRENT_YEAR):
                         "rate": s.get("rate"), "use": s.get("use")} for s in listed],
             "tenants": [{"name": t.get("tenant"), "sf": t.get("sf"), "suite": t.get("suite"), "to": t.get("to")} for t in here],
         }
+        if n in scans:
+            row["scans"] = [{k: s.get(k) for k in ("name", "scannedSf", "fullFloor", "within30ft", "deepestFt", "beyond30ftSf")}
+                            for s in scans[n]]
         if n in walk:
             row["walkthrough"] = {"url": walk[n]["url"], "suite": walk[n].get("suite")}
         out.append(row)
@@ -186,7 +193,13 @@ def fit_score(b):
     vacancy = ((b.get("availableSf") or 0) / size) if size else None
     v_pts = round(50 * min((vacancy or 0) / FULL_VACANCY_POINTS, 1.0))
     plate = b.get("typicalFloorSf") or ((size / b["stories"]) if size and b.get("stories") else None)
-    if plate is None:
+    measured = ((b.get("daylight") or {}).get("plate")) or None
+    if measured and measured.get("within30ft") is not None:
+        share = measured["within30ft"]
+        p_pts = 30 if share >= 0.85 else 20 if share >= 0.70 else 10 if share >= 0.55 else 0
+        p_note = (f"measured on the floor {measured['floor']} scan: {round(100 * share)}% of the floor plate is within "
+                  f"30 ft of a window; the deepest point is {round(measured['deepestFt'])} ft from one")
+    elif plate is None:
         p_pts, p_note = 10, "floor plate size unknown"
     elif plate <= 20000:
         p_pts, p_note = 30, "small floor plate: most of each floor is near a window"
@@ -202,6 +215,7 @@ def fit_score(b):
         "score": v_pts + p_pts + c_pts,
         "vacancy": round(vacancy, 3) if vacancy is not None else None,
         "plateSf": round(plate) if plate else None,
+        "plateMeasured": bool(measured and measured.get("within30ft") is not None),
         "parts": [
             {"name": "Vacancy", "points": v_pts, "of": 50,
              "note": f"{round(100 * vacancy)}% of the building is listed as available" if vacancy is not None else "building size unknown"},
@@ -270,7 +284,7 @@ def from_atlas(item, detail):
         "stories": detail.get("stories"), "yearBuilt": detail.get("yearBuilt"), "sizeSf": detail.get("sizeSf"),
         "typicalFloorSf": detail.get("typicalFloorSf"), "floorSf": detail.get("floorSf") or {},
         "zoning": detail.get("zoning"), "tenancies": detail.get("tenancies") or [],
-        "spaces": spaces, "availableSf": total or 0, "photo": item.get("photo"),
+        "spaces": spaces, "availableSf": total or 0, "photo": item.get("photo"), "daylight": None,
     }
 
 
@@ -282,7 +296,11 @@ def load_atlas(data=DATA):
     for item in json.loads(index_path.read_text(encoding="utf-8")):
         detail_path = data / "property" / f"{item['id']}.json"
         if item.get("kind") == "commercial" and detail_path.exists():
-            out.append(from_atlas(item, json.loads(detail_path.read_text(encoding="utf-8"))))
+            record = from_atlas(item, json.loads(detail_path.read_text(encoding="utf-8")))
+            daylight_path = data / "daylight" / f"{item['id']}.json"       # pipeline/daylight.py, where it was run
+            if daylight_path.exists():
+                record["daylight"] = json.loads(daylight_path.read_text(encoding="utf-8"))
+            out.append(record)
     return out
 
 
@@ -310,7 +328,8 @@ def write(buildings, out=DATA / "conversion", year=CURRENT_YEAR):
         })
         if "floors" in result:
             keep = ("id", "name", "address", "lat", "lon", "stories", "yearBuilt", "sizeSf", "buildingClass", "typicalFloorSf", "zoning", "photo")
-            record = {**result, **{k: b.get(k) for k in keep}}
+            record = {**result, **{k: b.get(k) for k in keep},
+                      "daylightPlate": (b.get("daylight") or {}).get("plate")}
             (out / "property" / f"{b['id']}.json").write_text(json.dumps(record), encoding="utf-8")
     summary = {"city": CITY, "generated": date.today().isoformat(), "year": year, "source": "CoStar hackathon kit",
                "statusLabels": STATUS_LABELS, "sources": SOURCES, "counts": counts, "buildings": rows}

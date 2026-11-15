@@ -147,9 +147,33 @@ function floorRowHtml(f, maxSf, rowH) {
       aria-label="Floor ${f.floor}: ${s.label}${f.vacantSf ? `, ${number(f.vacantSf)} sq ft available` : ''}">
     <span class="fl-num">${showText || f.floor % 5 === 0 || f.floor === 1 ? f.floor : ''}</span>
     <span class="fl-track is-${f.status}" style="width:${width}%"><span class="fl-fill" style="width:${fill}%;background:${s.color}"></span>
-      ${f.walkthrough ? '<span class="fl-walk" title="Walkthrough available">◉</span>' : ''}</span>
+      <span class="fl-marks">${f.scans ? '<span title="Matterport scan">◇</span>' : ''}${f.walkthrough ? '<span title="Walkthrough available">◉</span>' : ''}</span></span>
     <span class="fl-val">${showText && f.vacantSf ? compact(f.vacantSf) : ''}</span>
   </button>`;
+}
+
+function scansHtml(f) {
+  if (!f.scans) return '';
+  const items = f.scans.map((sc) => {
+    const what = sc.fullFloor
+      ? `whole floor: ${pct(sc.within30ft)} within 30 ft of a window, deepest point ${Math.round(sc.deepestFt)} ft`
+      : `${number(sc.scannedSf)} sq ft suite (a suite's edges are mostly corridor walls, so daylight is not measured)`;
+    return `<li>${escapeHtml(sc.name)}: ${what}</li>`;
+  }).join('');
+  return `<h4>Scanned</h4><ul>${items}</ul>`;
+}
+
+function daylightHtml(r) {
+  const d = r.daylightPlate;
+  if (!d) return '';
+  const [w, h] = d.plateFt || [];
+  return `<div class="daylight">
+    <h3>Daylight, measured on floor ${d.floor}</h3>
+    <div class="dl-bars">${[25, 30, 35].map((ft) => `<div><span>${ft} ft</span><span class="bar"><span style="width:${(d[`within${ft}ft`] || 0) * 100}%"></span></span><b>${pct(d[`within${ft}ft`])}</b></div>`).join('')}</div>
+    <p class="sub">Share of the floor plate within that distance of a window. Plate about ${number(d.plateSf)} sq ft${w ? `, ${w} × ${h} ft` : ''};
+      the deepest point is ${Math.round(d.deepestFt)} ft from a window and ${number(d.beyond30ftSf)} sq ft (core and interior rooms) lies beyond 30 ft.
+      Measured from the Matterport floor plan of ${escapeHtml(d.name)}; distances are to the outer edge of the scanned floor, not to individual windows.</p>
+  </div>`;
 }
 
 function floorDetailHtml(r, f) {
@@ -170,6 +194,7 @@ function floorDetailHtml(r, f) {
     <p>${size} · ${f.vacantSf ? `${number(f.vacantSf)} sq ft available (${pct(f.vacantShare)})` : 'nothing listed'}</p>
     <h4>Listed space</h4>${spaces}
     <h4>Current tenants</h4>${tenants}
+    ${scansHtml(f)}
     ${walk}
   </div>`;
 }
@@ -202,7 +227,7 @@ function renderBuilding() {
         <div class="stack-side" id="floor-detail">${floorDetailHtml(r, r.floors.find((f) => f.floor === selected.floor))}</div>
       </div>
       <div class="fl-legend">${Object.entries(FLOOR_STATUS).map(([k, s]) => `<span><i class="key-${k}" style="background:${s.color}"></i>${s.label}</span>`).join('')}
-        <span><b class="fl-walk-key">◉</b>Walkthrough</span></div>
+        ${r.floors.some((f) => f.scans) ? '<span><b class="fl-walk-key">◇</b>Scanned</span>' : ''}<span><b class="fl-walk-key">◉</b>Walkthrough</span></div>
       ${r.unplacedVacantSf ? `<p class="sub">${number(r.unplacedVacantSf)} sq ft is listed without a floor and is not shown above.</p>` : ''}
     </section>
     <section class="block">
@@ -213,6 +238,7 @@ function renderBuilding() {
       <h2>Fit for apartments</h2>
       <ul class="parts">${fit.parts.map((p) => `<li><span>${escapeHtml(p.name)}<small>${escapeHtml(p.note)}</small></span>
         <span class="bar"><span style="width:${(p.points / p.of) * 100}%"></span></span><b>${p.points}/${p.of}</b></li>`).join('')}</ul>
+      ${daylightHtml(r)}
     </section>` : ''}
     <p class="links"><a href="/#/los-angeles/commercial/${r.id}">Open the 3-D site model in Atlas</a></p>`;
   $('stack').querySelectorAll('.floor').forEach((btn) => btn.addEventListener('click', () => {

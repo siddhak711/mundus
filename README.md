@@ -139,7 +139,7 @@ sources that describe the same address.
 3. Install and build the index, then start the server:
 
 ```bash
-pip install requests shapely pillow numpy tifffile imagecodecs
+pip install requests shapely pillow numpy scipy tifffile imagecodecs
 python pipeline/build_index.py
 python server.py
 ```
@@ -200,6 +200,16 @@ Then open http://localhost:5190/city/, or follow "LA office to housing" in the t
 - "Inside the City of LA" is judged from the postal place name. CoStar writes "Los Angeles" for some addresses on the
   city line (8228 Sunset Blvd borders West Hollywood), so check those by hand.
 - The kit holds 98 Los Angeles office buildings, not every office in the city.
+- Daylight is measured where a building has a Matterport scan of a whole floor:
+
+  ```bash
+  python -m pipeline.daylight --walkthroughs
+  ```
+
+  This reads each scan's top-down floor plan, outlines the floor plate and measures how much of it lies within 25, 30
+  and 35 ft of its edge, and how deep the deepest point is. The 30 ft share then replaces the floor-size guess in the fit
+  score. Suite scans are recorded but not measured: their edges are mostly corridor walls. Needs the Matterport keys in
+  `.env`. The Oppenheimer Tower's floor 16 measures 67% within 30 ft, deepest point 59 ft.
 - Floors with a baked walkthrough are listed in `pipeline/walkthroughs.json`. Opened from the city view, the
   walkthrough links back to its building's floors.
 

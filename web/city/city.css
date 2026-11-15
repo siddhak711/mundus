@@ -46,7 +46,14 @@ pre { background: var(--wash); padding: 10px; border-radius: 6px; overflow-x: au
 .fl-track.is-leased { background: #9aa5b1; }
 .fl-track.is-no_data { background: repeating-linear-gradient(135deg, #eef1f3 0 4px, #e0e4e8 4px 8px); }
 .fl-fill { position: absolute; inset: 0 auto 0 0; display: block; }
-.fl-walk { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--ink); line-height: 1; }
+.fl-marks { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); display: flex; gap: 3px; font-size: 11px; color: var(--ink); line-height: 1; }
+.daylight { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--rule); display: grid; gap: 8px; }
+.daylight h3 { font-size: 14px; font-weight: 650; }
+.dl-bars { display: grid; gap: 4px; }
+.dl-bars div { display: grid; grid-template-columns: 44px 1fr 40px; gap: 8px; align-items: center; font-size: 13px; }
+.dl-bars .bar { height: 8px; background: #e3e7eb; border-radius: 4px; overflow: hidden; }
+.dl-bars .bar span { display: block; height: 100%; background: #e0a100; }
+.dl-bars b { text-align: right; }
 .fl-val { font-size: 11px; color: var(--muted); }
 .floor:hover .fl-track { box-shadow: inset 0 0 0 1px var(--muted); }
 .floor.is-sel .fl-track { box-shadow: inset 0 0 0 2px var(--ink); }
