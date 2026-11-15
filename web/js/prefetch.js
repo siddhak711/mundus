@@ -5,7 +5,7 @@
 // them early makes the server build and cache the model, and puts the files in the browser cache (server.py sends
 // /data/ and /cache/ with max-age), so the click only has to draw.
 
-import { api, site } from './api.js';
+import { api, data } from './api.js';
 
 const started = new Set();
 const queue = [];
@@ -17,8 +17,8 @@ const quietly = (url) => fetch(url, low).then((r) => (r.ok ? r : null)).catch(()
 
 async function warm(kind, id) {
   await Promise.all([
-    quietly(site(`data/${kind === 'home' ? 'home' : 'property'}/${id}.json`)),
-    kind === 'commercial' ? quietly(site(`data/conversion/property/${id}.json`)) : null,
+    quietly(data(`data/${kind === 'home' ? 'home' : 'property'}/${id}.json`)),
+    kind === 'commercial' ? quietly(data(`data/conversion/property/${id}.json`)) : null,
     quietly(api(`/api/twin?kind=${kind}&id=${id}`)).then(async (r) => {
       const twin = r && (await r.json().catch(() => null));
       if (twin?.heights) await Promise.all([quietly(api(twin.heights)), quietly(api(twin.ortho))]);

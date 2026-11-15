@@ -151,6 +151,8 @@ for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v
   <div id="loading">Loading the scan…</div>
 </main>
 <script type="module">
+import { API_BASE } from '../js/config.js';
+const API = API_BASE.replace(/\/$/, '');   // '' when server.py serves this page; the VM when on GitHub Pages
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/controls/OrbitControls.js';
 import { computeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
@@ -176,7 +178,7 @@ const FLOOR = FLOORS[SCAN] || null;
 const BUILDING = /^\d+$/.test(Q.get('building') || '') ? Q.get('building') : FLOOR?.propertyId ? String(FLOOR.propertyId) : null;
 $('back').href = BUILDING ? `../#/los-angeles/commercial/${BUILDING}` : '../#/los-angeles/office-to-housing';
 $('back').textContent = FLOOR?.building || (BUILDING ? 'This building' : 'Buildings');
-fetch('/api/status').then((r) => r.ok && /json/.test(r.headers.get('content-type') || '')).catch(() => false)
+fetch(`${API}/api/status`).then((r) => r.ok && /json/.test(r.headers.get('content-type') || '')).catch(() => false)
   .then((atlas) => { if (!atlas) { $('crumbs').hidden = true; $('crumbs-off').hidden = false; } });
 {
   const pick = $('floor-pick'), ids = Object.keys(FLOORS);
@@ -196,7 +198,7 @@ if (FLOOR) {
 // Every baked file comes from one base path: floors/<scan>/ (python -m pipeline.bake <scan>), or, for Suite 1600, the
 // original data/ and pano/ folders next to this page (Pranava's local copy) when it has not been re-baked there.
 const isJson = (r) => r && r.ok && /json/.test(r.headers.get('content-type') || '');
-let BASE = `floors/${SCAN}/`;
+let BASE = API ? `${API}/walkthrough/floors/${SCAN}/` : `floors/${SCAN}/`;
 let probe = await fetch(`${BASE}data/scene.json`).catch(() => null);
 if (!isJson(probe) && (FLOOR?.legacyData || SCAN === 'cEvQ8q5GKZd')) {
   BASE = '';
@@ -245,7 +247,7 @@ const panos = S.panos.map((p, i) => {
   return { i, id: p.id, label: p.label, pos: new THREE.Vector3(p.p[0], p.p[2], -p.p[1]), M: new THREE.Matrix3().setFromMatrix4(m), lo: null, loP: null, used: 0 };
 });
 const FACE_ORDER = [2, 4, 0, 5, 1, 3];   // cube +x,-x,+y,-y,+z,-z  <-  scan faces (0 up, 1-4 sides turning right, 5 down)
-const loadImg = (url) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('missing ' + url)); im.src = url; });
+const loadImg = (url) => new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => rej(new Error('missing ' + url)); im.src = url; });
 async function loadCube(p, res) {
   const imgs = await Promise.all(FACE_ORDER.map((f) => loadImg(panoFile(`${res}/${p.id}_${f}.jpg`))));
   const t = new THREE.CubeTexture(imgs);

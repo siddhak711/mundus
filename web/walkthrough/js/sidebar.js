@@ -1,3 +1,6 @@
+import { API_BASE } from '../../js/config.js';
+
+const API = API_BASE.replace(/\/$/, '');
 // The walkthrough sidebar: the four agents (layout, compliance, structure, cost-benefit) working through the floor, the
 // files they produce, Submit for review, and the chat at the bottom.
 //
@@ -135,7 +138,7 @@ export function setUpSidebar({ LAY, S, SH, SCAN, FLOOR, building, setApts, runCo
   function chatLine(cls, text) { const d = document.createElement('div'); d.className = cls; d.textContent = text; chatLog.append(d); chatLog.scrollTop = chatLog.scrollHeight; return d; }
   chatLine('a', 'Ask me about this floor, or tell me what to do: “remove the walls”, “design apartments”, “floor plan”, “walk inside”.');
   let agentReady = null, threadId = null, busy = false;
-  const status = fetch('/api/status').then((r) => (r.ok ? r.json() : { agent: false })).then((j) => { agentReady = !!j.agent; }).catch(() => { agentReady = false; });
+  const status = fetch(`${API}/api/status`).then((r) => (r.ok ? r.json() : { agent: false })).then((j) => { agentReady = !!j.agent; }).catch(() => { agentReady = false; });
 
   // without the live agent, answer from the saved study, and say so
   function offline(q) {
@@ -157,7 +160,7 @@ export function setUpSidebar({ LAY, S, SH, SCAN, FLOOR, building, setApts, runCo
     const context = { page: 'walkthrough', scan: SCAN, building: building || FLOOR?.propertyId, floor: FLOOR?.floor, address: FLOOR?.address,
       layout: LAY ? { ...LAY.summary, money: LAY.money, score: LAY.self_score?.total } : null };
     try {
-      const res = await fetch('/api/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, thread_id: threadId, context }) });
+      const res = await fetch(`${API}/api/agent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, thread_id: threadId, context }) });
       let answered = false;
       for await (const ev of events(res)) {
         if (ev.type === 'thread') threadId = ev.id;
