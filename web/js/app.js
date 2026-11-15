@@ -130,10 +130,31 @@ function setView(view) {
 }
 
 // Into the floor walkthrough (web/walkthrough/), which links back to this property.
-function openWalkthrough(floor) {
+// Into the floor's walkthrough: the floors open, the camera flies up to that floor, the page fades to the walkthrough's
+// dark, then the walkthrough opens (it fades in from the same dark).
+async function openWalkthrough(floor) {
   const walk = current?.floors.walkthrough(floor);
-  if (walk) location.href = walk.href;
+  if (!walk || current.leaving) return;
+  const session = current;
+  session.leaving = true;
+  tip.hidden = true;
+  controls.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === 'floors')));
+  await session.viewer.flyToFloor(floor);
+  if (current !== session) return;
+  pageCover.classList.add('is-on');
+  await new Promise((r) => setTimeout(r, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 340));
+  location.href = walk.href;
 }
+
+// Coming back from a walkthrough, the page starts dark (inline script in index.html) and fades to the scene once the
+// model is drawn, so there is never a light frame between the two.
+const pageCover = el('page-cover');
+function liftPageCover() {
+  if (!document.documentElement.classList.contains('from-walk')) return;
+  requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('from-walk')));
+}
+setTimeout(liftPageCover, 8000);                      // never leave the page covered if the model fails to load
+addEventListener('pageshow', (e) => { if (e.persisted) { pageCover.classList.remove('is-on'); if (current) current.leaving = false; } });
 
 function openTour(scan) {
   el('tour').querySelector('iframe').src = `${scan.tourUrl}&play=1&qs=1&brand=0`;
@@ -155,7 +176,7 @@ function revealOverMap() {
         el('c-loading').hidden = true;
         twinView.classList.remove('is-entering', 'is-in');
         done();
-      }, 640);
+      }, 420);
     }));
   });
 }
@@ -164,6 +185,7 @@ let handoffZoom = null;
 async function openProperty(city, kind, id) {
   closeProperty();
   const fromMap = handoff.from === 'map' && !cityView.hidden;
+  const mapScale = fromMap ? handoff.metresPerPixel : null;
   handoffZoom = fromMap ? [handoff.zoomX, handoff.zoomY] : null;
   handoff.from = null;
   browseView.hidden = true;
@@ -215,7 +237,7 @@ async function openProperty(city, kind, id) {
         onFloorFocus: (floor) => { session.marked = new Set([floor]); repaint(); session.record.focusFloor(session.floors.at(floor)); },
       },
     });
-    await viewer.load(twin);
+    await viewer.load(twin, { metresPerPixel: mapScale });     // from the map: open at the map's scale
     if (current !== session) return;
 
     const heightFt = Math.round(twin.building.top * 3.28084);
@@ -240,6 +262,7 @@ async function openProperty(city, kind, id) {
     el('topbar-note').textContent = `${CITY_NAMES[city]}, ${detail.type}`;
     document.title = `${detail.name} | Atlas`;
     session.ready = true;
+    liftPageCover();
     if (fromMap) {
       const back = el('record').querySelector('.back');               // return to the map it was opened from
       if (back) { back.href = '#/los-angeles/office-to-housing'; back.textContent = 'Back to the office-to-housing map'; }
@@ -247,6 +270,7 @@ async function openProperty(city, kind, id) {
     }
   } catch (error) {
     clearTimeout(slowNotice);
+    liftPageCover();
     el('c-loading').hidden = true;
     if (fromMap) { cityView.hidden = true; twinView.classList.remove('is-entering', 'is-in'); }   // show the error
     if (current === session) showStatus('This property could not be loaded', ` ${error.message}`);
@@ -261,6 +285,7 @@ function route() {
     if (a.dataset.city === knownCity) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
+  if (!(kind && id)) liftPageCover();             // a route that is not a property: nothing to wait for
   if (kind === 'office-to-housing') {
     closeProperty();
     twinView.hidden = browseView.hidden = true;

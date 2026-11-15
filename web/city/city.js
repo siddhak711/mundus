@@ -43,7 +43,8 @@ function missingData() {
 
 // ---- map ----------------------------------------------------------------------
 function setUpMap() {
-  map = L.map($('map'), { preferCanvas: true, zoomControl: true }).setView(...LA);
+  // fractional zoom, so opening a building can fly to exactly the scale of its 3-D plate
+  map = L.map($('map'), { preferCanvas: true, zoomControl: true, zoomSnap: 0.1 }).setView(...LA);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
   layer = L.layerGroup().addTo(map);
 }
@@ -69,6 +70,18 @@ function drawMarkers() {
   }
 }
 
+// Web Mercator ground resolution, metres per screen pixel at a latitude and zoom.
+const metresPerPixel = (lat, zoom) => (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
+
+// The zoom at which the map shows about the width of the building's 3-D plate (pipeline/twin.py site_half_extent),
+// so the map hands over to the 3-D view at the same scale.
+function plateZoom(b) {
+  const extent = 2 * ((b.stories || 1) >= 25 ? 450 : (b.stories || 1) >= 8 ? 320 : 200);
+  const width = $('map').clientWidth || 1000;
+  const zoom = Math.log2((156543.03392 * Math.cos((b.lat * Math.PI) / 180)) / ((extent * 0.92) / width));
+  return Math.round(Math.min(18.5, Math.max(14, zoom)) * 10) / 10;
+}
+
 // Open a building: fly the map into its dot, then hand over to the 3-D model on the same page. The map stays up while
 // the model is built and drawn behind it (app.js, openProperty), then zooms out of view as the model fades in.
 let opening = false;
@@ -84,12 +97,15 @@ function openBuilding(b) {
     const p = map.latLngToContainerPoint([b.lat, b.lon]);
     const box = $('map').getBoundingClientRect();
     const view = document.getElementById('city').getBoundingClientRect();
-    Object.assign(handoff, { from: 'map', zoomX: box.left - view.left + p.x, zoomY: box.top - view.top + p.y });
+    Object.assign(handoff, {
+      from: 'map', zoomX: box.left - view.left + p.x, zoomY: box.top - view.top + p.y,
+      metresPerPixel: metresPerPixel(b.lat, map.getZoom()), mapWidth: box.width, mapHeight: box.height,
+    });
     location.hash = modelUrl(b.id);
   };
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
   map.once('moveend', go);
-  map.flyTo([b.lat, b.lon], Math.max(map.getZoom(), 17), { duration: 0.65, easeLinearity: 0.2 });
+  map.flyTo([b.lat, b.lon], plateZoom(b), { duration: 0.75, easeLinearity: 0.2 });
   setTimeout(go, 1100);       // in case the map was already there and no move happens
 }
 

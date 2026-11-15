@@ -4,11 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Atlas</title>
+  <!-- first in the head, ahead of every stylesheet, so both run before the page is revealed -->
+  <script>/* back from a floor walkthrough: start dark, as the walkthrough was, and let app.js fade to the scene */
+    try { if (sessionStorage.getItem('atlas:fromWalk')) { sessionStorage.removeItem('atlas:fromWalk'); document.documentElement.classList.add('from-walk'); } } catch (e) {}
+    /* a page transition the browser skips (an unsupported case, a fast click) must not surface as an error */
+    for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v = e.viewTransition; if (v) for (const p of [v.ready, v.finished, v.updateCallbackDone]) p?.catch(() => {}); });
+    addEventListener('unhandledrejection', (e) => { if (e.reason?.name === 'InvalidStateError' && /Transition was aborted/.test(e.reason.message)) e.preventDefault(); });</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..110,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<script>/* a page transition the browser skips (an unsupported case, a fast click) must not surface as an error */
-for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { e.viewTransition?.ready.catch(() => {}); e.viewTransition?.finished.catch(() => {}); });</script>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/city/city.css">
   <script type="importmap">
@@ -20,6 +24,7 @@ for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { e.viewT
   </script>
 </head>
 <body>
+  <div class="page-cover" id="page-cover" aria-hidden="true"></div>
   <header class="topbar">
     <a class="wordmark" href="#/">Atlas</a>
     <nav class="cities" aria-label="City">

@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createBlocks, createFootprints, createPlate, createTerrain } from './terrain.js';
+import * as terrainModule from './terrain.js';      // createTrees, when this terrain.js has it
 import { createBuilding } from './building.js';
 import { loadScanModel } from './scan.js';
 
@@ -10,6 +11,25 @@ const REVEAL_SECONDS = 3.2;
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clamp01 = (t) => Math.min(1, Math.max(0, t));
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const IDLE_MS = 8000;          // no input for this long: the camera starts a slow drift round the building
+const DRIFT_SPEED = 0.35;      // OrbitControls autoRotateSpeed at full drift
+
+// Camera interpolation around a moving target: the target slides, the distance eases and the viewing direction turns
+// on a sphere, so a move arcs over the scene instead of cutting straight through it.
+const scratchQ = new THREE.Quaternion();
+const identityQ = new THREE.Quaternion();
+function orbitLerp(camera, controls, from, to, k) {
+  const target = new THREE.Vector3().lerpVectors(from.target, to.target, k);
+  const a = new THREE.Vector3().subVectors(from.position, from.target);
+  const b = new THREE.Vector3().subVectors(to.position, to.target);
+  const da = a.length() || 1, db = b.length() || 1;
+  a.divideScalar(da); b.divideScalar(db);
+  scratchQ.setFromUnitVectors(a, b);
+  const dir = a.applyQuaternion(identityQ.clone().slerp(scratchQ, k));
+  camera.position.copy(target).addScaledVector(dir, da + (db - da) * k);
+  controls.target.copy(target);
+  camera.lookAt(target);
+}
 
 export class Viewer {
   constructor({ canvas, labelLayer, onFloorHover, onFloorMove, onFloorClick }) {
@@ -55,6 +75,12 @@ export class Viewer {
     canvas.addEventListener('pointerleave', () => this.setHover(0));
     canvas.addEventListener('pointerdown', (e) => { this.pressAt = [e.clientX, e.clientY]; });
     canvas.addEventListener('pointerup', (e) => this.handlePointerUp(e));
+    // any input stops the idle drift at once and restarts its clock
+    this.lastInput = performance.now();
+    this.drift = 0;
+    this.onInput = () => { this.lastInput = performance.now(); this.drift = 0; this.controls.autoRotate = false; };
+    for (const type of ['pointerdown', 'pointermove', 'wheel']) canvas.addEventListener(type, this.onInput, { passive: true });
+    addEventListener('keydown', this.onInput);
 
     this.running = true;
     this.frame = this.frame.bind(this);
@@ -62,13 +88,19 @@ export class Viewer {
   }
 
   // ---- loading -------------------------------------------------------------
-  async load(twin) {
+  /** opts.metresPerPixel: the map's scale when the building was opened from it; the opening view then matches it. */
+  async load(twin, opts = {}) {
     const heights = new Float32Array(await (await fetch(twin.heights)).arrayBuffer());
     this.extent = twin.extent;
     this.twin = twin;
     this.heightsData = heights;                       // the detailed surface model, drawn only as the Height map layer
     this.plate = createPlate({ extent: twin.extent, orthoUrl: twin.ortho, anisotropy: this.renderer.capabilities.getMaxAnisotropy() });
     this.blocks = createBlocks({ neighbours: twin.neighbours, extent: twin.extent, plate: this.plate });
+    // the street trees, from the surface model (twin version 2); an older cached model simply has none
+    if (twin.trees && typeof terrainModule.createTrees === 'function') {
+      this.trees = terrainModule.createTrees({ url: twin.trees, count: twin.treeCount || 0, extent: twin.extent, plate: this.plate });
+      this.scene.add(this.trees.mesh);
+    }
     this.footprints = createFootprints(twin.neighbours);
     this.building = createBuilding(twin.building, this.plate);    // same look as the neighbours, cut into floors
     this.scene.add(this.plate.group, this.blocks.mesh, this.footprints, this.building.group);
@@ -77,12 +109,15 @@ export class Viewer {
     this.controls.maxDistance = twin.extent * 3;
     this.view = 'model';
     this.resize();
-    this.placeCamera(this.cameraFor('plan'));          // where the opening animation starts, while the photo loads
+    // Where the opening animation starts. From the map: straight down, north up, centred on the dot and at the map's
+    // scale, so the cross-fade lines the aerial photo up with the map. Otherwise the usual plan view.
+    this.startView = opts.metresPerPixel ? this.cameraForScale(opts.metresPerPixel) : this.cameraFor('plan');
+    this.placeCamera(this.startView);
     this.controls.enabled = false;
 
     // Upload the aerial photo and compile every shader now, not on the first frame that needs them: otherwise both
     // land in the middle of the opening animation as a visible stall.
-    await this.plate.ready;
+    await Promise.all([this.plate.ready, this.trees?.ready]);
     this.renderer.initTexture(this.plate.map);
     this.building.setBuilt(1);                       // floors start hidden; show them so their material compiles too
     this.building.update();
@@ -99,7 +134,7 @@ export class Viewer {
       this.controls.enabled = true;
     } else {
       this.controls.enabled = false;
-      this.reveal = { start: performance.now(), from: this.cameraFor('plan'), to: this.cameraFor('model') };
+      this.reveal = { start: performance.now(), from: this.startView, to: this.cameraFor('model') };
     }
     this.resize();
   }
@@ -130,12 +165,49 @@ export class Viewer {
     this.camera.lookAt(target);
   }
 
-  flyTo(destination, milliseconds = 1100) {
-    if (reducedMotion()) return this.placeCamera(destination);
-    this.flight = {
-      start: performance.now(), milliseconds,
-      fromPosition: this.camera.position.clone(), fromTarget: this.controls.target.clone(), ...destination,
-    };
+  /** Straight down over the property's point (the map dot), north up, showing metresPerPixel at this canvas width. */
+  cameraForScale(metresPerPixel) {
+    const width = (this.rect?.width || this.canvas.clientWidth || 1000) * metresPerPixel;
+    const halfFov = THREE.MathUtils.degToRad(this.camera.fov / 2);
+    const height = width / (2 * Math.tan(halfFov) * (this.camera.aspect || 1.5));
+    return { position: new THREE.Vector3(0, height, height * 0.001), target: new THREE.Vector3(0, 0, 0) };
+  }
+
+  /**
+   * Fly the camera to a view, arcing around the target. destination is { position, target } or a function returning
+   * one each frame (for a target that is itself moving). The duration follows the distance unless given.
+   * Resolves when the camera arrives.
+   */
+  flyTo(destination, milliseconds) {
+    const resolveDest = typeof destination === 'function' ? destination : () => destination;
+    if (reducedMotion()) { this.placeCamera(resolveDest()); return Promise.resolve(); }
+    const first = resolveDest();
+    const travel = first.position.distanceTo(this.camera.position) + first.target.distanceTo(this.controls.target);
+    const ms = milliseconds ?? Math.min(1600, Math.max(700, 700 + 900 * (travel / (this.extent || 600))));
+    this.flight?.done?.();                                      // a newer flight replaces an unfinished one
+    return new Promise((done) => {
+      this.flight = {
+        start: performance.now(), milliseconds: ms, destination: resolveDest, done,
+        from: { position: this.camera.position.clone(), target: this.controls.target.clone() },
+      };
+    });
+  }
+
+  /** Open the floors and fly up close to one, facing it from the side the camera is already on. */
+  flyToFloor(floor) {
+    this.view = 'floors';
+    this.building.setLayout('floors');
+    const c = this.building.centre;
+    const side = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).setY(0);
+    if (side.lengthSq() < 1) side.set(-0.6, 0, 0.8);
+    side.normalize();
+    const span = Math.max(40, Math.min(this.extent * 0.22, 140));
+    // the floor keeps moving while the floors open: aim at where it is on every frame
+    return this.flyTo(() => {
+      const y = this.building.floorMid(floor);
+      const target = new THREE.Vector3(c.x, y, c.z);
+      return { target, position: target.clone().addScaledVector(side, span).add(new THREE.Vector3(0, span * 0.18, 0)) };
+    }, 1500);
   }
 
   setView(view) {
@@ -157,6 +229,7 @@ export class Viewer {
       }
       if (this.terrain) this.terrain.mesh.visible = on;
       this.blocks.mesh.visible = !on;
+      if (this.trees) this.trees.mesh.visible = !on;   // the surface model has its own trees
       this.plate.group.children[0].visible = !on;     // the flat ground under the photo
     }
   }
@@ -282,15 +355,21 @@ export class Viewer {
   stepReveal(now) {
     const t = clamp01((now - this.reveal.start) / (REVEAL_SECONDS * 1000));
     const move = easeInOut(clamp01((t - 0.08) / 0.8));
-    this.camera.position.lerpVectors(this.reveal.from.position, this.reveal.to.position, move);
-    this.controls.target.lerpVectors(this.reveal.from.target, this.reveal.to.target, move);
-    this.camera.lookAt(this.controls.target);
+    orbitLerp(this.camera, this.controls, this.reveal.from, this.reveal.to, move);   // tilts down from overhead
     this.plate.uniforms.uGrow.value = easeInOut(clamp01((t - 0.1) / 0.45));     // the neighbours rise
     this.building.setBuilt(clamp01((t - 0.5) / 0.45));
     if (t >= 1) {
       this.reveal = null;
       this.controls.enabled = true;
     }
+  }
+
+  // After a while without input the camera drifts slowly round the building, easing in; any input stops it at once.
+  stepDrift(now) {
+    const idle = !this.reveal && !this.flight && !this.scan && !reducedMotion() && now - this.lastInput > IDLE_MS;
+    this.drift += ((idle ? DRIFT_SPEED : 0) - this.drift) * (idle ? 0.01 : 0.2);
+    this.controls.autoRotate = this.drift > 0.002;
+    this.controls.autoRotateSpeed = this.drift;
   }
 
   frame(now) {
@@ -300,12 +379,14 @@ export class Viewer {
 
     if (this.reveal) this.stepReveal(now);
     if (this.flight) {
-      const t = clamp01((now - this.flight.start) / this.flight.milliseconds);
-      this.camera.position.lerpVectors(this.flight.fromPosition, this.flight.position, easeInOut(t));
-      this.controls.target.lerpVectors(this.flight.fromTarget, this.flight.target, easeInOut(t));
-      if (t >= 1) this.flight = null;
+      const f = this.flight;
+      const t = clamp01((now - f.start) / f.milliseconds);
+      orbitLerp(this.camera, this.controls, f.from, f.destination(), easeInOut(t));
+      if (t >= 1) { this.flight = null; f.done(); }
     }
+    this.stepDrift(now);
     if (!this.reveal) this.controls.update();
+    if (this.plate.uniforms.uTime) this.plate.uniforms.uTime.value = now / 1000;   // drifting cloud shadows
 
     const dimTarget = this.scan ? 1 : 0;
     const dim = this.plate.uniforms.uDim;
@@ -337,7 +418,10 @@ export class Viewer {
     this.running = false;
     this.resizeObserver.disconnect();
     this.hideScan();
+    removeEventListener('keydown', this.onInput);
+    this.flight?.done?.();
     this.terrain?.dispose();
+    this.trees?.dispose();
     this.plate?.dispose();
     this.blocks?.dispose();
     this.building?.dispose();

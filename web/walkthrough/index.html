@@ -36,7 +36,8 @@
   #loading{position:fixed;inset:0;display:grid;place-items:center;background:#14171c;font-size:15px;color:#9aa6b4;text-align:center}
 </style>
 <script>/* a page transition the browser skips (an unsupported case, a fast click) must not surface as an error */
-for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { e.viewTransition?.ready.catch(() => {}); e.viewTransition?.finished.catch(() => {}); });</script>
+for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v = e.viewTransition; if (v) for (const p of [v.ready, v.finished, v.updateCallbackDone]) p?.catch(() => {}); });
+    addEventListener('unhandledrejection', (e) => { if (e.reason?.name === 'InvalidStateError' && /Transition was aborted/.test(e.reason.message)) e.preventDefault(); });</script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js", "three-mesh-bvh": "./vendor/three-mesh-bvh.module.js" } }</script>
 </head><body>
 <canvas id="c"></canvas>
@@ -82,6 +83,8 @@ const $ = (id) => document.getElementById(id);
 const loadingEl = $('loading');
 // opened from Atlas's 3-D model of the building (?building=<CoStar id>): offer the way back to it
 if (/^\d+$/.test(Q.get('building') || '')) { $('back').href = `/#/los-angeles/commercial/${Q.get('building')}`; $('back').hidden = false; }
+// going back: tell the building page to start dark, as this page is, and fade to its scene (web/index.html)
+document.addEventListener('click', (e) => { if (e.target.closest('#back, .fb-back')) { try { sessionStorage.setItem('atlas:fromWalk', '1'); } catch (err) {} } }, true);
 const fail = (msg) => { loadingEl.textContent = msg; throw new Error(msg); };
 if (location.protocol === 'file:') fail('Open this through the local server (run start.command, or "python3 -m http.server 8123" in this folder, then visit http://localhost:8123).');
 

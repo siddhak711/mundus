@@ -181,7 +181,8 @@ python pipeline/conversion.py
 ```
 
 Optional, once: build every candidate's 3-D model ahead of time, so even a first open is instant (about 1.5 s
-saved per building; already built models are skipped):
+saved per building; already built models are skipped). Models built before trees were added are rebuilt, so run it
+again after pulling:
 
 ```bash
 python -m pipeline.prewarm
