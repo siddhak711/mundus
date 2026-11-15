@@ -19,6 +19,10 @@ GRID = 450                 # terrain vertices per side sent to the browser
 RASTER = GRID * 2          # working resolution for height sampling
 MAX_SCANS = 16
 METERS_PER_STORY = 3.6
+VERSION = 2                 # bump when the model's contents change: cached models of an older version are rebuilt
+TREE_MIN_M = 2.5            # canopy taller than this, outside every building footprint, counts as a tree
+TREE_CELL_M = 6.0           # one tree per cell of this size at most (the tallest point in it)
+MAX_TREES = 3000
 
 _locks = {}
 _locks_guard = threading.Lock()
@@ -69,6 +73,46 @@ class LocalFrame:
         for part in parts:
             draw.polygon([(x / self.pixel + RASTER / 2, RASTER / 2 - y / self.pixel) for x, y in part.exterior.coords], fill=255)
         return np.array(image) > 0
+
+
+def green_mask(ortho_bytes):
+    """Cells of the aerial photo, at RASTER resolution, that look like vegetation (green dominates red and blue)."""
+    import io
+    rgb = np.asarray(Image.open(io.BytesIO(ortho_bytes)).convert("RGB").resize((RASTER, RASTER), Image.BILINEAR), dtype=np.float32)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    return (g > r * 1.04) & (g > b * 1.04) & (g > 35)
+
+
+def trees_from_surface(surface, built_up, frame, green):
+    """Tree crowns from the surface model: the tallest point in each TREE_CELL_M cell that rises above TREE_MIN_M, is
+    green in the aerial photo, and is clear of every building footprint (a roof missing from the footprint list must not
+    become a tree). Returns float32 rows of (x, y, height) in local metres, tallest first, at most MAX_TREES."""
+    clear = ~_dilate(built_up, max(1, int(round(2.0 / frame.pixel))))
+    canopy = np.where((surface > TREE_MIN_M) & clear & green, surface, 0.0)
+    step = max(1, int(round(TREE_CELL_M / frame.pixel)))
+    rows = []
+    for r0 in range(0, RASTER, step):
+        for c0 in range(0, RASTER, step):
+            block = canopy[r0:r0 + step, c0:c0 + step]
+            k = int(block.argmax())
+            h = float(block.flat[k])
+            if h <= TREE_MIN_M:
+                continue
+            r, c = r0 + k // block.shape[1], c0 + k % block.shape[1]
+            rows.append(((c + 0.5 - RASTER / 2) * frame.pixel, (RASTER / 2 - r - 0.5) * frame.pixel, min(h, 30.0)))
+    rows.sort(key=lambda t: -t[2])
+    return np.array(rows[:MAX_TREES], dtype=np.float32).reshape(-1, 3)
+
+
+def _dilate(mask, steps):
+    """Grow a boolean raster by `steps` cells in every direction."""
+    out = mask.copy()
+    for _ in range(steps):
+        grown = out.copy()
+        grown[1:] |= out[:-1]; grown[:-1] |= out[1:]
+        grown[:, 1:] |= out[:, :-1]; grown[:, :-1] |= out[:, 1:]
+        out = grown
+    return out
 
 
 def _largest(polygon):
@@ -137,7 +181,8 @@ def _build(detail, folder):
         f_scans = [pool.submit(matterport.summary, sid, detail.get("stories")) for sid in scan_ids]
 
         heights = f_heights.result()
-        (folder / "ortho.jpg").write_bytes(f_ortho.result())
+        ortho_bytes = f_ortho.result()
+        (folder / "ortho.jpg").write_bytes(ortho_bytes)
         parcel = f_parcel.result()
         structure_features = f_structures.result()
         scans = []
@@ -176,6 +221,11 @@ def _build(detail, folder):
             # trees overhanging a roof would otherwise poke up as spikes
             resized[footprint_mask] = np.minimum(cells, roof_height)
 
+    # Trees, for the 3-D view's planted canopy: everything tall that is not a building or the subject itself.
+    subject_area = frame.mask(building.buffer(3))
+    trees = trees_from_surface(resized, built_up | subject_area, frame, green_mask(ortho_bytes))
+    trees.tofile(folder / "trees.bin")
+
     # The surface model also contains trees, which read as grey spikes. Where footprints are
     # available, raise only the mapped buildings and leave everything else flat under the photo.
     terrain = np.where(built_up, resized, 0) if neighbours else resized.copy()
@@ -187,7 +237,9 @@ def _build(detail, folder):
     base = f"/cache/twin/{folder.name}"
     stamp = int(time.time())  # the files are served with a long cache lifetime; this busts it on rebuild
     twin = {
+        "version": VERSION,
         "extent": 2 * half, "grid": GRID, "groundElevation": round(ground, 1),
+        "trees": f"{base}/trees.bin?v={stamp}", "treeCount": int(len(trees)),
         "heights": f"{base}/heights.bin?v={stamp}", "ortho": f"{base}/ortho.jpg?v={stamp}",
         "building": {"ring": _ring(building), "top": round(top, 1), "roof": round(roof, 1), "stories": stories,
                      "storiesEstimated": not detail.get("stories")},
@@ -209,6 +261,9 @@ def get(kind, item_id):
         folder = config.CACHE / "twin" / key
         cached = folder / "twin.json"
         if cached.exists():
-            return json.loads(cached.read_text(encoding="utf-8"))
+            twin = json.loads(cached.read_text(encoding="utf-8"))
+            if twin.get("version", 1) >= VERSION:
+                return twin
+            # an older model (no trees): rebuild it
         folder.mkdir(parents=True, exist_ok=True)
         return _build(load_detail(kind, item_id), folder)

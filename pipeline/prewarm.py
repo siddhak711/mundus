@@ -14,6 +14,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from pipeline import config, twin
 
+
+def cached(pid):
+    """True when this building's model is built and current (an older version is rebuilt)."""
+    path = config.CACHE / "twin" / f"commercial-{pid}" / "twin.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("version", 1) >= twin.VERSION
+    except (OSError, ValueError):
+        return False
+
 CANDIDATES = {"strong", "possible", "review"}
 WORKERS = 3     # parallel builds; each makes several Vexcel calls
 
@@ -27,7 +36,7 @@ def targets(everything=False):
 
 def main():
     ids = targets(everything="--all" in sys.argv[1:])
-    todo = [i for i in ids if not (config.CACHE / "twin" / f"commercial-{i}" / "twin.json").exists()]
+    todo = [i for i in ids if not cached(i)]
     print(f"{len(ids)} buildings, {len(ids) - len(todo)} already cached, building {len(todo)}")
     started, done, failed = time.time(), 0, []
     with ThreadPoolExecutor(WORKERS) as pool:
