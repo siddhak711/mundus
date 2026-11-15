@@ -13,7 +13,7 @@ if [ ! -x .venv/bin/python ]; then
   echo "== creating .venv"
   python3 -m venv .venv
 fi
-.venv/bin/python -m pip install -q --disable-pip-version-check requests shapely pillow numpy scipy tifffile imagecodecs
+.venv/bin/python -m pip install -q --disable-pip-version-check requests shapely pillow numpy scipy tifffile imagecodecs matplotlib
 
 if [ ! -f raw/costar/data/commercial-property.jsonl ]; then
   echo "== downloading the CoStar kit"
@@ -51,6 +51,16 @@ fi
 if [ ! -f data/conversion/los-angeles.json ]; then
   echo "== screening LA offices for housing conversion"
   .venv/bin/python pipeline/conversion.py
+fi
+# apartment layout for the floor walkthrough, once its scan (web/walkthrough/data) is linked in
+WD=web/walkthrough/data
+if [ -f "$WD/scene.json" ] && [ -f "$WD/shell.json" ] && [ ! -f "$WD/layout.json" ]; then
+  echo "== drawing the floor 16 apartment layout (about 2 minutes)"
+  if .venv/bin/python scripts/apartment_study_v4.py --data "$WD" --out "$WD/studies/v4" > "$WD/studies-v4.log" 2>&1; then
+    .venv/bin/python scripts/layout_for_viewer.py "$WD/studies/v4/layout-v4.json" "$WD/layout.json"
+  else
+    echo "WARNING: apartment layout failed, see $WD/studies-v4.log; the walkthrough works without it"
+  fi
 fi
 
 URL="http://localhost:$PORT"
