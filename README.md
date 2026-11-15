@@ -138,24 +138,10 @@ and the keys as `mundus-<KEY>` metadata attributes. It runs the same setup at bo
 
 ### Atlas on GitHub Pages
 
-`.github/workflows/pages.yml` publishes the site on every push to `main`. It builds the CoStar index from the kit
-inside the job (nothing licensed is committed) and caches it, so a run after the signed kit link expires still
-publishes. Pages serves static files only, so the site models, scans, angled photos and Ask Atlas come from
-`server.py` on the VM, behind Caddy at `https://<vm-host>/atlas`.
-
-One-time setup:
-
-1. Repository Settings, Pages: set Source to GitHub Actions.
-2. Repository secrets `COSTAR_KIT_URL` and `COSTAR_ZIP_PASSWORD`; repository variable `ATLAS_API` =
-   `https://<vm-host>/atlas`.
-3. On the VM, after `vm_setup.sh`:
-
-```bash
-git pull && bash scripts/deploy/vm_atlas.sh
-```
-
-Without `ATLAS_API` the site still browses (map, records, office-to-housing screen); the 3-D model and Ask Atlas
-need the API. Floor walkthroughs need baked Matterport data that is not published, so they do not work there.
+Pages serves this repository's `main` branch; the root `index.html` opens `web/`. Pages is static, so on github.io
+`web/js/config.js` points the site at `server.py` on the VM (`https://<vm-host>/atlas`) for the CoStar index, site
+models, walkthrough floors and the agent. Nothing licensed is in the repository. Set the VM up with
+`scripts/deploy/vm_atlas.sh` (below).
 
 ### Atlas on Vercel
 
