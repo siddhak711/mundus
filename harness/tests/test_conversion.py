@@ -79,6 +79,38 @@ def test_tools_write_layout(tmp_path):
     assert lay["structure"]["exits"] and lay["summary"]["assumptions"][0] == "x"
 
 
+def test_auto_depth_reaches_the_core_and_starts_at_side_start(tmp_path):
+    root = make_floor(tmp_path)
+    open_floor = geo.draft_ring(SCAN, "auto", {"south": [{"type": "1BR", "width_m": 7}]}, root=root)["units"][0]
+    assert abs(open_floor["polygon"][0][0]) < 0.01 or abs(open_floor["polygon"][1][0]) < 0.01   # starts at the side's start
+    assert open_floor["depth_m"] == 10.5                 # nothing behind it: capped at the daylight limit
+    facing_core = geo.draft_ring(SCAN, "auto", {"south": [{"type": "gap", "width_m": 11}, {"type": "1BR", "width_m": 7}]},
+                                 root=root)["units"][0]
+    assert 5.0 <= facing_core["depth_m"] <= 8.0 - 1.6 + 0.01   # the core is 8 m from the south facade here
+
+
+def test_photo_rejected_column_is_not_structure(tmp_path):
+    root = make_floor(tmp_path)
+    st = json.loads((root / SCAN / "structure.json").read_text())
+    st["columns"][0]["confidence"] = "rejected"
+    (root / SCAN / "structure.json").write_text(json.dumps(st))
+    bad = geo.draft_ring(SCAN, 6.0, {"north": [{"type": "studio", "width_m": 5}, {"type": "1BR", "width_m": 7}]}, root=root)
+    rep = geo.check_layout(SCAN, bad, root)
+    assert not any(v["status"] == "fail" for u in rep["units"] for k, v in u["checks"].items() if k == "walls_clear_of_structure")
+
+
+def test_photo_notes_and_3br_rent_alias(tmp_path):
+    root = make_floor(tmp_path)
+    (root / SCAN / "photocheck.json").write_text(json.dumps([{"item_kind": "stair", "x": 1, "y": 2, "verdict": "confirmed",
+                                                               "what_it_is": "open internal stair", "details": "railings", "panos": ["5"]}]))
+    t = build_tools(root)
+    assert "open internal stair" in t["read_floor"].invoke({"scan": SCAN})
+    json.loads(t["draft_layout"].invoke({"scan": SCAN, "unit_depth_m": 6.0, "sides": {"south": [{"type": "3BR", "width_m": 13}]}}))
+    out = json.loads(t["estimate_returns"].invoke({"scan": SCAN, "draft_id": "draft_1", "conversion_cost_per_sf": 400,
+                                                   "monthly_rent_per_sf_by_type": {"3BR+": 3.65}}))
+    assert out["monthly_rent_usd"] > 0
+
+
 def test_memory_writes_only_in_own_folder(tmp_path, monkeypatch):
     monkeypatch.setenv("CONVERSION_MEMORY_DIR", str(tmp_path / "mem"))
     monkeypatch.setenv("HARNESS_DATA_DIR", str(tmp_path / "hdata"))

@@ -55,7 +55,7 @@ def _photo_notes(scan: str, root: Path) -> list[str]:
     out = []
     for it in (items or [])[:20]:
         if isinstance(it, dict):
-            out.append("; ".join(f"{k}={it[k]}" for k in ("kind", "x", "y", "verdict", "label", "what", "saw", "panos") if k in it))
+            out.append("; ".join(f"{k}={it[k]}" for k in ("item_kind", "x", "y", "verdict", "what_it_is", "details", "panos") if k in it))
     return out or ["photocheck.json has no items."]
 
 
@@ -142,7 +142,9 @@ def build_tools(root: Path | None = None) -> dict[str, Any]:
             layout = _load_draft(scan, draft_id, root)
         except ValueError as e:
             return _dump({"error": str(e)})
-        rates = monthly_rent_per_sf_by_type
+        rates = dict(monthly_rent_per_sf_by_type)
+        if "3BR" not in rates and "3BR+" in rates:   # the market summary buckets three or more bedrooms as 3BR+
+            rates["3BR"] = rates["3BR+"]
         missing = sorted({u["type"] for u in layout["units"]} - set(rates))
         if missing:
             return _dump({"error": f"no monthly rent per sf given for unit types {missing}"})

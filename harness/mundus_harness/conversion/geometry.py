@@ -62,6 +62,14 @@ class Floor:
         x0, y0, w, h, res = (float(v) for v in z["frame"])
         self.x0, self.y0, self.w, self.h, self.res = x0, y0, int(w), int(h), res
         self.top = y0 + self.h / res
+        if self.struct.get("columns") is not None:   # rebuild from structure.json so photo-rejected candidates drop out
+            self.columns = np.zeros_like(self.plate)
+            half = 0.4 * res
+            for c in self.struct["columns"]:
+                if c.get("confidence") == "rejected":
+                    continue
+                cc, rr = (c["x"] - x0) * res, (self.top - c["y"]) * res
+                self.columns[max(0, int(rr - half)):max(0, int(rr + half)), max(0, int(cc - half)):max(0, int(cc + half))] = True
         self._win_dist = None
         self._walk = None
         self._unscanned = None
@@ -174,10 +182,11 @@ class Floor:
                 n = -n
             ang = math.degrees(math.atan2(-n[1], -n[0])) % 360   # outward direction
             name = ["east", "north", "west", "south"][int(((ang + 45) % 360) // 90)]
-            out.append({"name": name, "a": a, "b": b, "u": u, "n": n, "length_m": length})
-        longest = sorted(out, key=lambda s: -s["length_m"])[:2]
-        for s in out:
-            s["full"] = s in longest
+            seen = sum(1 for o in out if o["name"].split("_")[0] == name)
+            out.append({"name": name if not seen else f"{name}_{seen + 1}", "a": a, "b": b, "u": u, "n": n, "length_m": length})
+        longest = set(sorted(range(len(out)), key=lambda i: -out[i]["length_m"])[:2])
+        for i, s in enumerate(out):
+            s["full"] = i in longest
         return out
 
     def side(self, name: str) -> dict[str, Any]:
@@ -326,9 +335,9 @@ def draft_ring(scan: str, unit_depth_m: float | str, sides: dict[str, list[dict[
         if total > avail + 0.05:
             raise ValueError(f"side {name}: unit widths add up to {total:.1f} m but only {avail:.1f} m is available "
                              f"(from {t0:.1f} to {t1:.1f} m along the side)")
-        t = t0 + (0.0 if any(u.get("type") == "gap" for u in specs) else (avail - total) / 2)
+        t = t0                      # widths and gaps are positions from the side's usable start
         if avail - total > 0.5:
-            problems.append(f"side {name}: {avail - total:.1f} m of facade left unassigned (amenity or storage)")
+            problems.append(f"side {name}: {avail - total:.1f} m of facade left unassigned at the end (amenity or storage)")
         a_, u_, n_ = s["a"], s["u"], s["n"]
         ends = {"a": 0.0, "b": 0.0}
         prev_d = 0.0
