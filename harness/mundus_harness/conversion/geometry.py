@@ -339,7 +339,7 @@ def draft_ring(scan: str, unit_depth_m: float | str, sides: dict[str, list[dict[
         if avail - total > 0.5:
             problems.append(f"side {name}: {avail - total:.1f} m of facade left unassigned at the end (amenity or storage)")
         a_, u_, n_ = s["a"], s["u"], s["n"]
-        ends = {"a": 0.0, "b": 0.0}
+        spans: list[tuple[float, float, float]] = []
         prev_d = 0.0
         for spec in specs:
             typ = spec["type"]
@@ -368,10 +368,7 @@ def draft_ring(scan: str, unit_depth_m: float | str, sides: dict[str, list[dict[
                     bedrooms.append([[r2(c) for c in q] for q in (b0, b1, b1 + n_ * bd, b0 + n_ * bd)])
                     walls.append(_seg(b1, b1 + n_ * bd, "interior"))
                 walls.append(_seg(a_ + u_ * t + n_ * bd, a_ + u_ * (t + nb * BEDROOM_W_M) + n_ * bd, "interior"))
-            if abs(t - t0) < 0.05 or (t < 0.05):
-                ends["a"] = d
-            if abs(t + w - s["length_m"]) < 0.6 or abs(t + w - t1) < 0.05 and s["full"]:
-                ends["b"] = d
+            spans.append((t, t + w, d))
             centre = (p0 + p1) / 2 + n_ * d / 2
             entry = (p0 + p1) / 2 + n_ * d
             units.append({"id": f"U{k}", "type": typ, "bedrooms": nb, "side": name,
@@ -388,7 +385,11 @@ def draft_ring(scan: str, unit_depth_m: float | str, sides: dict[str, list[dict[
             t += w
         if prev_d:
             walls.append(_seg(a_ + u_ * t, a_ + u_ * t + n_ * prev_d, "demising"))
-        end_depth[name] = ends
+        # a short side's corner units reach up to this far along the long side: any long-side unit within reach
+        # of a corner sets how far the short side must move in there, gaps or leftover facade notwithstanding
+        reach = MAX_UNIT_DEPTH_M + corridor_m
+        end_depth[name] = {"a": max([d_ for a0, _, d_ in spans if a0 < reach] + [0.0]),
+                           "b": max([d_ for _, b1, d_ in spans if b1 > s["length_m"] - reach] + [0.0])}
     return {"scan": scan, "floor": f.geo.get("floor"), "unit_depth_m": unit_depth_m if auto else r2(unit_depth_m),
             "corridor_m": r2(corridor_m), "walls": walls, "units": units, "draft_problems": problems}
 

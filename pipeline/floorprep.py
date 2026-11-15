@@ -217,14 +217,23 @@ def core_from_shell(shell_path, grid, plate):
     so the agent plans on exactly the cleared floor the viewer shows."""
     sh = json.loads(open(shell_path, encoding="utf-8").read())
     blocks, core_px = [], np.zeros_like(plate)
-    for blk in sh.get("core") or []:
-        poly = blk.get("polygon", blk) if isinstance(blk, dict) else blk
-        pts = np.array([[float(p[0]), float(p[1])] for p in poly])
-        if len(pts) < 3:
-            continue
+    def ring_px(ring):
+        pts = np.array([[float(q[0]), float(q[1])] for q in ring])
         c, r = grid.to_px(pts[:, 0], pts[:, 1])
+        return pts, np.stack([c, r], 1).round().astype(np.int32)
+
+    for blk in sh.get("core") or []:
+        # the bake stores each block as {outer: ring, holes: [ring, ...]} (see web/walkthrough/index.html)
+        outer = blk.get("outer") or blk.get("polygon") if isinstance(blk, dict) else blk
+        holes = blk.get("holes") or [] if isinstance(blk, dict) else []
+        if not outer or len(outer) < 3:
+            continue
+        pts, outer_px = ring_px(outer)
         m = np.zeros(plate.shape, np.uint8)
-        cv2.fillPoly(m, [np.stack([c, r], 1).round().astype(np.int32)], 1)
+        cv2.fillPoly(m, [outer_px], 1)
+        for h in holes:
+            if len(h) >= 3:
+                cv2.fillPoly(m, [ring_px(h)[1]], 0)
         core_px |= m.astype(bool)
         blocks.append({"polygon": [[round(float(a), 2), round(float(b), 2)] for a, b in pts],
                        "area_m2": round(float(m.sum() / RES ** 2), 1), "source": "walkthrough bake (shell.json)"})

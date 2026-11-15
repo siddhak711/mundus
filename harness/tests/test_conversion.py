@@ -111,6 +111,16 @@ def test_photo_notes_and_3br_rent_alias(tmp_path):
     assert out["monthly_rent_usd"] > 0
 
 
+def test_short_side_moves_in_when_long_side_leaves_facade_at_the_corner(tmp_path):
+    root = make_floor(tmp_path)
+    lay = geo.draft_ring(SCAN, 6.0, {"south": [{"type": "1BR", "width_m": 7}] * 4,          # 2 m left over at the east end
+                                     "east": [{"type": "studio", "width_m": 5}]}, root=root)
+    south = [u for u in lay["units"] if u["side"] == "south"]
+    east = [u for u in lay["units"] if u["side"] == "east"][0]
+    ys = [p[1] for p in east["polygon"]]
+    assert min(ys) >= max(max(p[1] for p in u["polygon"]) for u in south) - 0.01   # east unit starts above the south units
+
+
 def test_memory_writes_only_in_own_folder(tmp_path, monkeypatch):
     monkeypatch.setenv("CONVERSION_MEMORY_DIR", str(tmp_path / "mem"))
     monkeypatch.setenv("HARNESS_DATA_DIR", str(tmp_path / "hdata"))
