@@ -12,10 +12,12 @@ ask() { # ask VAR "prompt" [default]
   read -r -s -p "$prompt: " val; echo
   val="${val:-$def}"
   sed -i "/^${var}=/d" .env 2>/dev/null || true
-  printf '%s=%s\n' "$var" "$val" >> .env
+  printf "%s='%s'\n" "$var" "$val" >> .env
 }
 
 touch .env && chmod 600 .env
+# .env is sourced as shell further down, so values must be quoted: a signed download URL contains "&".
+sed -i -E "s/^([A-Za-z_]+)=([^'\"].*)\$/\\1='\\2'/" .env
 echo "Enter the keys (input is hidden). Press Enter to skip an optional one."
 ask MATTERPORT_API_KEY   "Matterport API key"
 ask MATTERPORT_API_TOKEN "Matterport API token"
@@ -43,6 +45,7 @@ if ! command -v caddy >/dev/null; then
 fi
 
 echo "== python environments"
+export UV_VENV_CLEAR=1   # a rerun replaces the environments instead of stopping on the existing ones
 (cd backend && uv venv -q --python 3.12 .venv && uv pip install -q -e ".[embed]")
 (cd harness && uv venv -q --python 3.12 .venv && uv pip install -q -e ".[serve]")
 (cd eval    && uv venv -q --python 3.12 .venv && uv pip install -q -e .)
