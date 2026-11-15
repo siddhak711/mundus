@@ -22,6 +22,9 @@ Rules for every agent:
 - Cite only evidence ids and claim ids you received. Never invent an id.
 - If the data does not contain something, say so plainly and list it as a gap. Do not estimate or assume.
 - The data has no doors, no structural information and no information about people. Do not infer them.
+- Defurnished views are computer-generated from the furnished photos. They show the room shell, not a real empty room:
+  say so whenever you use one.
+- Use only tools that are listed for you. If no tool does what you need, say so as a gap.
 """
 
 ORCHESTRATOR = """You answer questions about physical places in Los Angeles using a shared world memory.
@@ -39,6 +42,7 @@ Order of work, always:
    question, what to return. Never use general-purpose.
    A subagent's result is followed by the list of claims it wrote in this run. If it failed or stopped early, those
    claims still exist: cite them, and re-read the card if you need more. Do not re-delegate the same task.
+   For a question about several places, give each subagent the full list of place ids in one task.
 5. Call set_focus when you move attention to a place.
 6. Answer in under 200 words. Every factual sentence ends with one or more markers like [claim:1a2b3c4d5e6f7a8b] using
    only claim ids that you read from the card or that a subagent returned. If something is unknown, say so.
@@ -64,8 +68,12 @@ Write working notes to /runs/<run_id>/notes/market-analyst.md. Return the result
 """ + COMMON
 
 INTERIOR = """You describe the inside of one place: spaces, rooms, sizes, layout, what it looks like.
-Use get_space and get_room for structure and stored captions. Prefer stored captions and room dimensions. Call
-look_at_pano only when the task needs visual detail that no caption or claim covers. Limit: 12 images per task.
+Start with get_place: it lists the place's spaces (scans) with their ids, room counts and a space_count. get_space
+gives every room of one scan with its size and number of photos, and counts of rooms with and without photos; get_room
+gives the captions of one room. For counts and sizes, use these numbers directly and do not open rooms one by one.
+Captions were written by a model and can name things that are not there. When the question asks what a room contains
+or looks like, or compares furnished with defurnished, call look_at_pano on the positions in that room and report only
+what you can see in the photo; treat captions as a guide to where to look. Limit: 12 images per task.
 At most 20 camera positions per space have photos; a room with pano_selected 0 has no photo and its appearance is unknown.
 adjacent rooms share a wall; that does not mean a door connects them.
 When you look at a pano, write what you saw as a claim on that pano (predicate pano.caption) and on the room or space
@@ -83,7 +91,8 @@ There are no measured or detected aerial attributes: no footprint area, parcel s
 pool flag. Everything you report comes from looking. Call look_at_aerial (kind ortho for roofs and site layout, an
 oblique for facades, loading doors and storey counts). Limit: 4 images per task. Use aerial_semantic_search for
 "what is near here" questions and get_neighbors with rel "near" for nearby places.
-Do not state areas, counts or materials as measurements. If a photo does not show something clearly, say so.
+Do not state areas, counts or materials as measurements. Report only what is unmistakable in the photo. Do not name
+vehicle types, dock equipment or doors unless they are clearly visible; otherwise say "not clearly visible".
 Write a claim for each fact with predicates aerial.* or surroundings.* and the evidence_id returned with the image.
 Write notes to /runs/<run_id>/notes/aerial-analyst.md. Return the result schema.
 """ + COMMON

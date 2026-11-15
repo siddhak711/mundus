@@ -60,8 +60,9 @@ def build_local_tools(cfg: Config, client: WorldClient) -> dict[str, Any]:
 
     @tool(response_format="content_and_artifact")
     def look_at_pano(pano_id: str, faces: list[int] | None = None, defurnished: bool = False) -> tuple[list, dict]:
-        """Look at a 360 photo. Faces 1 to 4 are the four horizontal directions. Costly: use only when stored
-        captions do not answer the question. Returns the images and one evidence_id per face to cite."""
+        """Look at a 360 photo. Faces 1 to 4 are the four horizontal directions. Use it to check what a room contains
+        or looks like before stating details; set defurnished=true for the computer-generated empty version of the
+        same view. Returns the images and one evidence_id per face to cite."""
         rid = runctx.run_id_from_config()
         rec = runctx.record(rid)
         faces = [f for f in (faces or [1, 2, 3, 4]) if f in (1, 2, 3, 4)][:4] or [1]

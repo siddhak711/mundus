@@ -56,6 +56,11 @@ class WorldGuardMiddleware(AgentMiddleware):
                 return request, ToolMessage(content=f"Rejected before sending: {reason}. Rewrite as one SELECT.",
                                             tool_call_id=call.get("id", ""), name="query_market", status="error")
             request = request.override(tool_call={**call, "args": {**(call.get("args") or {}), "sql": sql}})
+        if call.get("name") == "get_space" and str((call.get("args") or {}).get("space_id", "")).startswith("place:"):
+            return request, ToolMessage(
+                content="That is a place id, not a space id. Call get_place with it: the result lists the place's spaces "
+                        "(scans) with their space ids, room counts and a space_count.",
+                tool_call_id=call.get("id", ""), name="get_space", status="error")
         if call.get("name") == "put_claim" and not (call.get("args") or {}).get("created_by"):
             request = request.override(tool_call={**call, "args": {**(call.get("args") or {}), "created_by": self.agent}})
         return request, None

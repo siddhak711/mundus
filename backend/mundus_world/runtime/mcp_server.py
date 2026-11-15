@@ -23,6 +23,61 @@ def _dump(obj: Any) -> str:
     return s
 
 
+def agent_place(d: dict[str, Any]) -> dict[str, Any]:
+    """get_place for an agent: the claims are on the card already, and the space list gets a count."""
+    out = {k: v for k, v in d.items() if k not in ("claims", "claim_coverage")}
+    spaces = d.get("spaces") or []
+    out["spaces"] = [{k: s.get(k) for k in ("space_id", "name", "space_kind", "room_count", "pano_count", "has_defurnished",
+                                             "evidence_id")} for s in spaces]
+    out["space_count"] = len(spaces)
+    out["space_note"] = "Each space is one Matterport scan. Cite the place's evidence_id for the number of scans."
+    return out
+
+
+def agent_space(d: dict[str, Any]) -> dict[str, Any]:
+    """get_space for an agent: every room on one line with its photo count, and only the positions that have photos.
+    The full record is far larger than a model should read, and cutting it mid-list hid rooms from the agent."""
+    rooms = d.get("rooms") or []
+    real = [r for r in rooms if (r.get("label") or "").lower() != "void"]
+    out = {k: d.get(k) for k in ("space_id", "name", "space_kind", "place_id", "evidence_id", "ai_summary", "room_count",
+                                 "pano_count", "floor_count", "has_defurnished", "original_created", "hint") if d.get(k) is not None}
+    out["room_counts"] = {"rooms_excluding_void": len(real), "void_rooms": len(rooms) - len(real),
+                          "rooms_with_photo": sum(1 for r in real if (r.get("pano_selected") or 0) > 0),
+                          "rooms_without_photo": sum(1 for r in real if (r.get("pano_selected") or 0) == 0)}
+    out["rooms"] = [{"room_id": r["room_id"], "label": r.get("label"),
+                     "area_m2": round(r["area_m2"], 1) if r.get("area_m2") else None, "area_sqft": r.get("area_sqft"),
+                     "width_m": round(r["width_m"], 2) if r.get("width_m") else None,
+                     "depth_m": round(r["depth_m"], 2) if r.get("depth_m") else None,
+                     "height_m": round(r["height_m"], 2) if r.get("height_m") else None,
+                     "photos": r.get("pano_selected") or 0, "evidence_id": r.get("evidence_id")} for r in rooms]
+    shown = [p for p in d.get("panos") or [] if p.get("is_selected") and p.get("has_image")]
+    out["photo_positions"] = [{"pano_id": p["pano_id"], "label": p.get("label"), "room_id": p.get("room_id"),
+                               "room_type": p.get("room_type"), "caption_summary": (p.get("caption_summary") or "")[:220],
+                               "has_defurnished_image": p.get("has_defurnished_image"), "evidence_id": p.get("evidence_id")}
+                              for p in shown]
+    out["note"] = (f"{len(shown)} camera positions have photos and captions. photos is the number of photographed positions "
+                   "in a room: 0 means its size and label are known and its appearance is not. Use get_room for the full "
+                   "captions of one room. Rooms that share a wall are listed by get_room.")
+    return out
+
+
+def agent_room(d: dict[str, Any], max_panos: int = 8, max_caption: int = 1800) -> dict[str, Any]:
+    """get_room for an agent: one caption text per photographed position, without the duplicate structured caption,
+    the face list or the floor polygon."""
+    out = {k: v for k, v in d.items() if k not in ("panos", "polygon", "polygon_quality", "label_confidence")}
+    shown = [p for p in d.get("panos") or [] if p.get("is_selected") and p.get("caption_text")]
+    out["photo_positions"] = [{"pano_id": p["pano_id"], "label": p.get("label"), "evidence_id": p.get("evidence_id"),
+                               "has_defurnished_image": p.get("has_defurnished_image"),
+                               "caption": p["caption_text"][:max_caption] + (" ..." if len(p["caption_text"]) > max_caption else "")}
+                              for p in shown[:max_panos]]
+    if len(shown) > max_panos:
+        out["more_positions"] = [p["pano_id"] for p in shown[max_panos:]]
+        out["more_note"] = "More photographed positions exist in this room: use search_interiors or look_at_pano for them."
+    out["caption_note"] = ("Captions were written by a model from the photos and can contain mistakes. For a question about "
+                           "what a room contains or looks like, check the photo with look_at_pano before stating details.")
+    return out
+
+
 def build_mcp(c: Container, ops: Ops, run_id: contextvars.ContextVar, caller: contextvars.ContextVar) -> MCPServer:
     mcp = MCPServer("mundus-world", instructions=(
         "World context for 15 places in Los Angeles: CoStar market records, Matterport interiors (rooms, photos, captions), "
@@ -47,23 +102,23 @@ def build_mcp(c: Container, ops: Ops, run_id: contextvars.ContextVar, caller: co
                             limit: int = 10) -> str:
         return await run("search_places", ops.search_places, query, near, filters, limit)
 
-    @mcp.tool(description="Full record for one place: building basics, linked spaces, listings, tenancies, sales, aerial "
-                          "facts, and claims earlier agents established. Each item includes an evidence_id you must cite. "
+    @mcp.tool(description="Record for one place: building basics, its scans (spaces) with a count, listings, tenancies, sales "
+                          "and aerial photos. Each item includes an evidence_id you must cite. "
                           "Market lists show the 10 newest items with the true count; use query_market for more.")
     async def get_place(place_id: str) -> str:
-        return await run("get_place", ops.get_place, place_id)
+        return await run("get_place", lambda p: agent_place(ops.get_place(p)), place_id)
 
-    @mcp.tool(description="One Matterport scan (a space): summary, rooms with sizes, and camera positions with stored "
-                          "caption summaries. At most 20 positions per space have photos and captions (is_selected). "
-                          "Each item includes an evidence_id.")
+    @mcp.tool(description="One Matterport scan (a space): every room with its size and number of photos, counts of rooms "
+                          "with and without photos, and the photographed camera positions with caption summaries. Takes "
+                          "a space id (space:...), not a place id. Each item includes an evidence_id.")
     async def get_space(space_id: str) -> str:
-        return await run("get_space", ops.get_space, space_id)
+        return await run("get_space", lambda sid: agent_space(ops.get_space(sid)), space_id)
 
-    @mcp.tool(description="One room: label, dimensions in metres, floor polygon, full captions of each camera position in "
+    @mcp.tool(description="One room: label, dimensions in metres, the caption of each photographed camera position in "
                           "it, and which rooms share a wall with it. Sharing a wall does not mean there is a door: the "
                           "data has no doors. A room with pano_selected 0 has no photo, so its appearance is unknown.")
     async def get_room(room_id: str) -> str:
-        return await run("get_room", ops.get_room, room_id)
+        return await run("get_room", lambda rid: agent_room(ops.get_room(rid)), room_id)
 
     @mcp.tool(description="Search interiors by what they look like or contain, in plain words (for example 'gym with free "
                           "weights and mirrors'). Returns ranked camera positions, rooms and spaces. Pass place_id to "

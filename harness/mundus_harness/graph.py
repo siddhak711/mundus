@@ -7,8 +7,6 @@ from deepagents import create_deep_agent
 from deepagents.backends import CompositeBackend, FilesystemBackend, StateBackend
 from deepagents.middleware.filesystem import FilesystemPermission
 from langchain.agents.middleware import (
-    ClearToolUsesEdit,
-    ContextEditingMiddleware,
     ModelCallLimitMiddleware,
     TodoListMiddleware,
     ToolCallLimitMiddleware,
@@ -34,7 +32,7 @@ WORLD_TOOLS = ["search_places", "get_place", "get_space", "get_room", "search_in
                "get_evidence"]
 SUBAGENT_TOOLS = {
     "market-analyst": ["get_place", "describe_market", "query_market", "get_neighbors", "get_claims", "put_claim", "set_focus"],
-    "interior-inspector": ["get_space", "get_room", "search_interiors", "look_at_pano", "get_claims", "put_claim", "set_focus"],
+    "interior-inspector": ["get_place", "get_space", "get_room", "search_interiors", "look_at_pano", "get_claims", "put_claim", "set_focus"],
     "aerial-analyst": ["look_at_aerial", "aerial_semantic_search", "get_neighbors", "get_claims",
                        "put_claim", "set_focus"],
 }
@@ -111,11 +109,6 @@ def build_agent(cfg: Config, world_tools: dict[str, Any], orch_model: Any = None
                          ModelCallLimitMiddleware(run_limit=cfg.orch_model_calls if is_root else cfg.sub_model_calls),
                          ToolCallLimitMiddleware(run_limit=cfg.orch_tool_calls if is_root else cfg.sub_tool_calls),
                          BudgetMiddleware(agent, cfg.orch_model_calls if is_root else cfg.sub_model_calls, is_root)]
-        if not is_root:
-            # a subagent resends its whole tool history on every call: clear old tool results once it grows large
-            mw.append(ContextEditingMiddleware(edits=[ClearToolUsesEdit(
-                trigger=cfg.sub_context_trigger_tokens, keep=6, exclude_tools=("put_claim",),
-                placeholder="[older tool result cleared to save context; call the tool again if you need it]")]))
         return mw
 
     sys = {"market-analyst": prompts.MARKET + market_schema_note(client), "interior-inspector": prompts.INTERIOR, "aerial-analyst": prompts.AERIAL}

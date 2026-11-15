@@ -73,11 +73,11 @@ def node_summary(db: Database, node_id: str, strict: bool = False) -> dict[str, 
     kind = node_kind(node_id)
     r = None
     if kind == "place":
-        r = db.one("SELECT place_id AS id, name, property_type, address, is_deep FROM place WHERE place_id=?", (node_id,))
+        r = db.one("SELECT place_id AS id, name, property_type, address, is_deep, evidence_id FROM place WHERE place_id=?", (node_id,))
     elif kind == "space":
-        r = db.one("SELECT space_id AS id, name, space_kind, place_id, depth FROM space WHERE space_id=?", (node_id,))
+        r = db.one("SELECT space_id AS id, name, space_kind, place_id, depth, room_count, evidence_id FROM space WHERE space_id=?", (node_id,))
     elif kind == "room":
-        r = db.one("SELECT room_id AS id, label AS name, area_m2, space_id FROM room WHERE room_id=?", (node_id,))
+        r = db.one("SELECT room_id AS id, label AS name, area_m2, space_id, evidence_id FROM room WHERE room_id=?", (node_id,))
     elif kind == "pano":
         r = db.one("SELECT pano_id AS id, label AS name, room_id, space_id, is_selected FROM pano WHERE pano_id=?", (node_id,))
     elif kind == "claim":

@@ -67,7 +67,11 @@ def query(db: Database, sql: str, limit: int | None = None) -> dict[str, Any]:
             hint = ""
             if reason == "not_authorized":
                 hint = f" Readable tables: {', '.join(sorted(allowed))}. Columns {sorted(HIDDEN_COLUMNS)} are not readable."
-            raise ApiError("sql_rejected", f"{msg}.{hint}", {"reason": reason}) from None
+            if "no such column" in msg.lower() or "no such table" in msg.lower():
+                used = [t for t in sorted(allowed) if t in stmt]
+                with_cols = "; ".join(f"{t}: {', '.join(c for c in db.table_columns(t) if c not in HIDDEN_COLUMNS)}" for t in used[:3])
+                hint = (f" Columns you can use: {with_cols}." if with_cols else f" Readable tables: {', '.join(sorted(allowed))}.")
+            raise ApiError("sql_rejected", f"{msg}.{hint}"[:6000], {"reason": reason}) from None
         truncated = len(rows) > limit
         return {"columns": cols, "rows": [list(r) for r in rows[:limit]], "row_count": min(len(rows), limit),
                 "truncated": truncated, "elapsed_ms": round((time.monotonic() - t0) * 1000, 1)}

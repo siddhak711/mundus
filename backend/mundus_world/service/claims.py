@@ -60,8 +60,17 @@ class Claims:
     def vocab(self) -> dict[str, Any]:
         return load_vocab(self.vocab_path)
 
+    def _namespaces(self) -> set[str]:
+        return {p.split(".")[0] for p in self.vocab}
+
     def _is_free(self, predicate: str) -> bool:
-        return predicate.startswith(FREE_NAMESPACES)
+        """note.* and synthesis.* are free-form, and so is a predicate the vocabulary does not list inside a namespace
+        it does know (market.listing_count): agents meet facts the vocabulary did not foresee, and rejecting them cost
+        a third of all put_claim calls. Listed predicates keep their type, unit and conflict rules."""
+        if predicate.startswith(FREE_NAMESPACES):
+            return True
+        ns, _, rest = predicate.partition(".")
+        return bool(rest) and predicate not in self.vocab and ns in self._namespaces()
 
     def _is_multi(self, predicate: str) -> bool:
         return self._is_free(predicate) or bool((self.vocab.get(predicate) or {}).get("multi"))

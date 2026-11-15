@@ -63,7 +63,7 @@ def test_rejections(world):
         world.claims.put(PLACE, "market.tenant_count", 3, "Three tenants.", ["ev:doesnotexist0000"])
     assert e.value.details["unknown_evidence_ids"] == ["ev:doesnotexist0000"]
     with pytest.raises(ApiError):
-        world.claims.put(PLACE, "market.not_a_predicate", 3, "Three tenants.", [rec])
+        world.claims.put(PLACE, "weather.rainfall", 3, "Three tenants.", [rec])        # unknown namespace
     with pytest.raises(ApiError):
         world.claims.put(PLACE, "market.tenant_count", 3, "Three tenants.", [])
     with pytest.raises(ApiError):
@@ -181,3 +181,27 @@ def test_old_database_is_purged_of_aerial_facts(tmp_path):
     assert "aerial_facts" not in db2.tables()
     assert [r[0] for r in db2.q("SELECT evidence_id FROM evidence")] == ["ev:y"]
     assert db2.scalar("SELECT count(*) FROM edges") == 0
+
+
+def test_unlisted_predicate_in_known_namespace_is_free_form(world):
+    rec = _ev(world, "record")
+    a = world.claims.put(PLACE, "market.listing_count", 2, "Two listings are recorded.", [rec])
+    b = world.claims.put(PLACE, "market.listing_count", 5, "Five listings are recorded.", [rec])   # no conflict rule
+    assert a["outcome"] == "created" and b["outcome"] == "created"
+    assert "market=partial(2)" in render_card(world.db, world.claims, PLACE)
+
+
+def test_agent_views_are_compact(world):
+    import json
+
+    from mundus_world.runtime.mcp_server import agent_place, agent_room, agent_space
+    space = agent_space(world.world.get_space(f"space:{SID}"))
+    rc = space["room_counts"]
+    assert rc["rooms_excluding_void"] == 3 and rc["void_rooms"] == 1
+    assert rc["rooms_with_photo"] + rc["rooms_without_photo"] == 3
+    assert all("photos" in r and "evidence_id" in r for r in space["rooms"]) and "panos" not in space
+    assert all(p["pano_id"] for p in space["photo_positions"]) and len(json.dumps(space)) < 12000
+    room = agent_room(world.world.get_room(space["rooms"][0]["room_id"]))
+    assert "polygon" not in room and all("caption" in p and "faces" not in p for p in room["photo_positions"])
+    place = agent_place(world.world.get_place(PLACE))
+    assert place["space_count"] == 1 and "claims" not in place and place["spaces"][0]["evidence_id"]
