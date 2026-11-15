@@ -38,8 +38,27 @@ class BudgetMiddleware(AgentMiddleware):
         super().__init__()
         self.agent, self.limit, self.is_root = agent, model_call_limit, is_root
 
+    # ---- every agent: one result per tool call ------------------------------
+    @staticmethod
+    def _dedupe(request) -> Any:
+        """The model API rejects a conversation that holds two results for one tool call. It happened in 3 of 90 runs
+        and stopped them with no answer; keep the first result for each call id."""
+        msgs = getattr(request, "messages", None)
+        if not msgs:
+            return request
+        seen: set[str] = set()
+        out = []
+        for m in msgs:
+            if isinstance(m, ToolMessage):
+                if m.tool_call_id in seen:
+                    continue
+                seen.add(m.tool_call_id)
+            out.append(m)
+        return request if len(out) == len(msgs) else request.override(messages=out)
+
     # ---- subagent: warn on the last call -----------------------------------
     def _last_call(self, request) -> Any:
+        request = self._dedupe(request)
         if self.is_root:
             return request
         state = getattr(request, "state", None) or {}

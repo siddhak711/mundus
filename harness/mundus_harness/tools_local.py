@@ -76,7 +76,7 @@ def build_local_tools(cfg: Config, client: WorldClient) -> dict[str, Any]:
                 data, evid, _sha = client.image(f"/v1/panos/{pano_id}/faces/{f}", defurnished=int(defurnished))
             except WorldError as e:
                 return ([{"type": "text", "text": f"Unavailable: {e.message}. Do not retry. Record this as a gap."}], {})
-            blocks.append(_img_block(_resize(data, 768)))
+            blocks.append(_img_block(_resize(data, 1024)))
             lines.append(f"face {f}: evidence_id {evid}")
             events.emit("evidence", agent="interior-inspector", evidence_id=evid, kind="pano_image", source_id=pano_id,
                         image_url=f"/v1/panos/{pano_id}/faces/{f}?defurnished={int(defurnished)}")

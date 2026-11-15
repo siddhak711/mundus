@@ -154,8 +154,13 @@ def neighbors(db: Database, node_id: str, rel: str | None = None, depth: int = 1
     for e in edges:
         by_rel[e["rel"]] = by_rel.get(e["rel"], 0) + 1
     total = db.scalar("SELECT count(*) FROM edges WHERE src=? OR dst=?", (node_id, node_id))
-    return {"node": nodes[node_id], "edges": edges, "nodes": nodes, "counts_by_rel": by_rel,
-            "total_edges_at_node": total, "truncated": truncated}
+    totals = {r[0]: r[1] for r in db.q("SELECT rel, count(*) FROM edges WHERE src=? OR dst=? GROUP BY rel", (node_id, node_id))}
+    out = {"node": nodes[node_id], "edges": edges, "nodes": nodes, "counts_by_rel": by_rel,
+           "total_by_rel": totals, "total_edges_at_node": total, "truncated": truncated}
+    if truncated or total > len(edges):
+        out["note"] = ("Only some edges are listed. counts_by_rel counts the listed edges; total_by_rel is the true "
+                       "number of edges of each kind at this node. Never report a listed count as a total.")
+    return out
 
 
 def edge_types_report(db: Database) -> dict[str, int]:

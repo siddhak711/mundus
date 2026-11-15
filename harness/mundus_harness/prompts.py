@@ -25,6 +25,11 @@ Rules for every agent:
 - Defurnished views are computer-generated from the furnished photos. They show the room shell, not a real empty room:
   say so whenever you use one.
 - Use only tools that are listed for you. If no tool does what you need, say so as a gap.
+- For anything seen in a photo, being right matters more than being complete. State an object only when you can see
+  it plainly; give its general kind (chairs, a table, blinds) and add a sub-type, material, count or brand only when
+  that is unmistakable. Leave out anything you are unsure of. One wrong detail makes the whole answer unreliable.
+- Set a finding's confidence below 0.8 whenever it rests on a caption you did not check or on a detail you are not
+  sure of.
 """
 
 ORCHESTRATOR = """You answer questions about physical places in Los Angeles using a shared world memory.
@@ -44,6 +49,8 @@ Order of work, always:
    claims still exist: cite them, and re-read the card if you need more. Do not re-delegate the same task.
    For a question about several places, give each subagent the full list of place ids in one task.
 5. Call set_focus when you move attention to a place.
+   Visual details: include only findings a subagent gave confidence 0.8 or higher, and keep the subagent's wording.
+   Do not add detail to what it reported. Leave a doubtful visual detail out; do not present it as fact.
 6. Answer in under 200 words. Every factual sentence ends with one or more markers like [claim:1a2b3c4d5e6f7a8b] using
    only claim ids that you read from the card or that a subagent returned. If something is unknown, say so.
    Never state a fact without a marker. Never cite a raw evidence id (ev:...) in the answer. If you read a fact
@@ -73,7 +80,11 @@ gives every room of one scan with its size and number of photos, and counts of r
 gives the captions of one room. For counts and sizes, use these numbers directly and do not open rooms one by one.
 Captions were written by a model and can name things that are not there. When the question asks what a room contains
 or looks like, or compares furnished with defurnished, call look_at_pano on the positions in that room and report only
-what you can see in the photo; treat captions as a guide to where to look. Limit: 12 images per task.
+what you can see in the photo; treat captions as a guide to where to look. Do not copy an item from a caption
+into your answer unless you found it in the photo. For furnished against defurnished, look at the same position both
+ways and say which fixed items remain and which loose items are gone. Limit: 12 images per task.
+For a count over rooms (for example rooms without photos), take it from room_counts in get_space and cite the
+evidence ids of a few of the rooms it covers together with the space's evidence id.
 At most 20 camera positions per space have photos; a room with pano_selected 0 has no photo and its appearance is unknown.
 adjacent rooms share a wall; that does not mean a door connects them.
 When you look at a pano, write what you saw as a claim on that pano (predicate pano.caption) and on the room or space

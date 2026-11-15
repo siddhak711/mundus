@@ -222,3 +222,22 @@ def test_budget_warns_on_last_call_and_attaches_claims():
     assert "Model call limits exceeded" in out.content and "[claim:ab12] Three tenants." in out.content
     other = Req(tool_call={"name": "get_claims", "args": {}, "id": "t2"})
     assert root._attach(other, msg) is msg
+
+
+def test_duplicate_tool_results_are_dropped_before_a_model_call():
+    from types import SimpleNamespace
+
+    from mundus_harness.middleware.budget import BudgetMiddleware
+
+    class Req(SimpleNamespace):
+        def override(self, **kw):
+            return Req(**{**self.__dict__, **kw})
+
+    a = ToolMessage(content="first", tool_call_id="t1", name="get_room")
+    b = ToolMessage(content="second", tool_call_id="t1", name="get_room")
+    c = ToolMessage(content="other", tool_call_id="t2", name="get_room")
+    ai = AIMessage(content="x")
+    out = BudgetMiddleware._dedupe(Req(messages=[ai, a, b, c]))
+    assert [m.content for m in out.messages] == ["x", "first", "other"]
+    same = Req(messages=[ai, a, c])
+    assert BudgetMiddleware._dedupe(same) is same

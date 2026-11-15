@@ -57,7 +57,8 @@ class WorldBackend(BackendProtocol):
                 text = "".join(json.dumps(c, ensure_ascii=False) + "\n" for c in cs)
             else:
                 n = self.client.get_json("/v1/graph/neighbors", node_id=pid, depth=1, limit=60)
-                lines = [f"# Neighbours of {pid}", f"{n['total_edges_at_node']} edges in total. Counts shown: {n['counts_by_rel']}", ""]
+                lines = [f"# Neighbours of {pid}", f"{n['total_edges_at_node']} edges in total. True totals by kind: {n.get('total_by_rel') or n['counts_by_rel']}. "
+                         f"Only {len(n['edges'])} are listed below: never count the list.", ""]
                 for e in n["edges"]:
                     other = e["dst"] if e["src"] == pid else e["src"]
                     s = n["nodes"].get(other) or {}
