@@ -346,7 +346,6 @@ class ScanIngest:
             lat, lon = pl["lat"], pl["lon"]
             if lat is None or lon is None:
                 raise RuntimeError("place has no coordinates")
-            method = "point"
             fc = self.vx.property_at(f"POINT({lon} {lat})")
             feats = (fc or {}).get("features") or []
 
@@ -359,11 +358,9 @@ class ScanIngest:
                 more = (fc2 or {}).get("features") or []
                 if more:
                     feats = feats + more
-                    method = "point+polygon" if fc else "polygon"
             key = pl["place_id"].replace(":", "_")
-            raw = save_raw(self.s.raw_dir, "vexcel", f"property_{key}", {"features": feats})
+            # The property record is used only to frame the angled photos around the building. Nothing from it is kept.
             facts = pick_structure(feats, lat, lon)
-            facts["query_method"] = method
             images = []
             for size in (80, 250):
                 try:
@@ -377,20 +374,6 @@ class ScanIngest:
                 except Exception as e:  # noqa: BLE001
                     log.warning("%s %s: %s", kind, pl["place_id"], e)
             with self.db.write() as c:
-                aid = f"aerial:{pl['place_id']}"
-                attrs = facts["attributes"]
-                evid = ev.register(c, "aerial_facts", "vexcel", aid, content={"a": attrs, "f": facts.get("footprint_wkt")},
-                                   place_id=pl["place_id"], url=f"/v1/aerial/{pl['place_id']}",
-                                   excerpt=f"Vexcel aerial facts: {facts['structure_count']} structures on parcel, "
-                                           f"footprint {facts.get('footprint_area_m2') or 'none'} m2, "
-                                           f"pool {attrs.get('pool.detected')}, vehicles {attrs.get('vehicles.count')}")
-                c.execute(
-                    """INSERT OR REPLACE INTO aerial_facts(aerial_id,place_id,footprint_wkt,parcel_wkt,footprint_area_m2,
-                         structure_count,parcel_count,attributes_json,match_method,match_distance_m,query_method,
-                         fetched_at,evidence_id,raw_path) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (aid, pl["place_id"], facts.get("footprint_wkt"), facts.get("parcel_wkt"), facts.get("footprint_area_m2"),
-                     facts["structure_count"], facts["parcel_count"], json.dumps(attrs), facts["match_method"],
-                     facts.get("match_distance_m"), method, now_iso(), evid, str(raw.relative_to(self.s.data_dir))))
                 for kind, size, data in images:
                     im = Image.open(io.BytesIO(data))
                     p = self._img(f"aerial/{key}/{kind}_{size}.jpg")
@@ -623,7 +606,7 @@ def pick_structure(features: list[dict[str, Any]], lat: float, lon: float) -> di
 
 
 def place_card(db: Database, pl: dict[str, Any]) -> str:
-    """One text blob per place combining market, interior and aerial facts. No model call."""
+    """One text blob per place combining market and interior facts. No model call."""
     pid = pl["place_id"]
     lines = [f"{pl['name']} ({pid}). {pl['property_type'] or 'Unknown type'} at {pl['address'] or 'unknown address'}, "
              f"{pl['city'] or 'Los Angeles'}. "
@@ -664,18 +647,4 @@ def place_card(db: Database, pl: dict[str, Any]) -> str:
     if spaces:
         lines.append(f"{len(spaces)} scanned spaces: " + "; ".join(f"{s['name']} ({s['space_kind']}, {s['room_count']} rooms)"
                                                                    for s in spaces[:30]) + ".")
-    a = db.one("SELECT * FROM aerial_facts WHERE place_id=?", (pid,))
-    if a:
-        at = json.loads(a["attributes_json"] or "{}")
-        bits = [f"{a['structure_count']} structures on the parcel"]
-        if a["footprint_area_m2"]:
-            bits.append(f"building footprint {a['footprint_area_m2']:.0f} m2")
-        for k, label in (("structure.roof-characteristics.material.class", "roof material"),
-                         ("structure.roof-characteristics.shape.value", "roof shape"),
-                         ("structure.roof-objects.solar.value", "rooftop solar"),
-                         ("structure.roof-objects.ac-unit.count", "rooftop AC units"), ("pool.detected", "pool detected"),
-                         ("vehicles.count", "vehicles visible"), ("parcel-tree-cover.percent", "parcel tree cover percent")):
-            if k in at:
-                bits.append(f"{label} {at[k]}")
-        lines.append("From above (Vexcel): " + ", ".join(bits) + ".")
     return "\n".join(lines)

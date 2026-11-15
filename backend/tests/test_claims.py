@@ -13,7 +13,7 @@ def test_created_then_merged(world):
     rec = _ev(world, "record")
     a = world.claims.put(PLACE, "market.tenant_count", 3, "Three tenants are recorded.", [rec], 0.9)
     assert a["outcome"] == "created" and a["claim"]["status"] == "active"
-    b = world.claims.put(PLACE, "market.tenant_count", 3, "It has 3 tenants.", [_ev(world, "aerial_facts")])
+    b = world.claims.put(PLACE, "market.tenant_count", 3, "It has 3 tenants.", [_ev(world, "ortho_image")])
     assert b["outcome"] == "merged" and b["claim"]["id"] == a["claim"]["id"]
     assert b["claim"]["confirmations"] == 2 and len(b["claim"]["evidence_ids"]) == 2
 
@@ -127,3 +127,40 @@ def test_room_notes_count_toward_interior_coverage():
                     mk("place:costar:1", "note.general")])
     assert cov["interior"]["state"] == "fresh" and cov["interior"]["fresh"] == 3
     assert cov["market"]["state"] == "none"
+
+
+def test_private_scope_isolates_runs(world):
+    """Two runs with their own scope never see or merge each other's claims, and the shared memory stays clean."""
+    from mundus_world.service.claims import render_card
+    from mundus_world.types.ctx import CLAIM_SCOPE
+    rec = _ev(world, "record")
+    ids = {}
+    for run in ("run-a", "run-b"):
+        tok = CLAIM_SCOPE.set(run)
+        try:
+            assert world.claims.get(PLACE)["count"] == 0
+            out = world.claims.put(PLACE, "market.tenant_count", 3, "Three tenants are recorded.", [rec], 0.9, run_id=run)
+            assert out["outcome"] == "created"
+            ids[run] = out["claim"]["id"]
+            assert world.claims.get(PLACE)["count"] == 1 and "market=partial(1)" in render_card(world.db, world.claims, PLACE)
+        finally:
+            CLAIM_SCOPE.reset(tok)
+    assert ids["run-a"] != ids["run-b"]
+    assert world.claims.get(PLACE)["count"] == 0 and "No claims yet" in render_card(world.db, world.claims, PLACE)
+    assert world.claims.purge_scoped() == {"purged": 2}
+    assert world.db.scalar("SELECT count(*) FROM claim") == 0
+
+
+def test_old_database_is_purged_of_aerial_facts(tmp_path):
+    from mundus_world.repo.db import Database
+    db = Database(tmp_path / "old.db")
+    with db.write() as c:
+        c.execute("CREATE TABLE aerial_facts (aerial_id TEXT PRIMARY KEY, place_id TEXT, evidence_id TEXT)")
+        c.execute("INSERT INTO aerial_facts VALUES('aerial:p','p','ev:x')")
+        c.execute("INSERT INTO evidence(evidence_id,type,source,source_id) VALUES('ev:x','aerial_facts','vexcel','aerial:p')")
+        c.execute("INSERT INTO evidence(evidence_id,type,source,source_id) VALUES('ev:y','ortho_image','vexcel','aimg:p')")
+        c.execute("INSERT INTO edges(src,rel,dst,source) VALUES('p','has_aerial','aerial:p','join')")
+    db2 = Database(tmp_path / "old.db")
+    assert "aerial_facts" not in db2.tables()
+    assert [r[0] for r in db2.q("SELECT evidence_id FROM evidence")] == ["ev:y"]
+    assert db2.scalar("SELECT count(*) FROM edges") == 0

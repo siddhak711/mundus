@@ -7,8 +7,8 @@ from typing import Any
 from mundus_world.repo.db import Database
 from mundus_world.types.ids import canonical_json, evidence_id, now_iso, sha256_hex
 
-EVIDENCE_RANK = {"record": 5, "room": 4, "aerial_facts": 4, "pano_image": 3, "ortho_image": 3, "oblique_image": 3,
-                 "floorplan": 3, "caption": 2, "summary": 1, "claim": 0}
+EVIDENCE_RANK = {"record": 5, "room": 4, "pano_image": 3, "ortho_image": 3, "oblique_image": 3,
+                 "floorplan": 3, "caption": 2, "aerial_search": 1, "summary": 1, "claim": 0}
 
 
 def content_hash(content: Any) -> str:

@@ -84,13 +84,13 @@ def verify(s, db: Database) -> dict[str, Any]:
     with_faces = db.scalar("SELECT count(*) FROM pano WHERE is_selected=1 AND has_faces=1")
     check("at least 98% of selected panos captioned", with_faces == 0 or caps >= 0.98 * with_faces,
           {"captions": caps, "panos_with_faces": with_faces})
-    aer = db.scalar("SELECT count(*) FROM aerial_facts")
-    check("aerial facts for every deep place", aer >= deep, {"aerial": aer, "deep": deep})
+    aer = db.scalar("SELECT count(DISTINCT place_id) FROM aerial_image WHERE kind='ortho'")
+    check("an overhead photo for every deep place", aer >= deep, {"with_overhead_photo": aer, "deep": deep})
     signed = 0
     for t, col in (("evidence", "url"), ("pano_face", "path"), ("aerial_image", "path"), ("floorplan", "path")):
         signed += db.scalar(f"SELECT count(*) FROM {t} WHERE {col} LIKE '%?t=%' OR {col} LIKE '%&t=%'")
     check("no signed upstream URL stored", signed == 0, signed)
-    for t in ("place", "aerial_facts", "pano_caption", "room"):
+    for t in ("place", "pano_caption", "room"):
         col = "evidence_id"
         where = " WHERE is_deep=1" if t == "place" else ""
         n = db.scalar(f"SELECT count(*) FROM {t}{where}{' AND' if where else ' WHERE'} {col} IS NULL")

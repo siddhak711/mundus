@@ -109,11 +109,13 @@ def build_world(tmp_path, cap: int = 20, api_token: str = "", admin_token: str =
                       "VALUES(?,?,?,?,?,?,?,?)",
                       (pid, "furnished", "fixture", "cap-v2", json.dumps({"room_type": text.split(".")[0], "summary": text}),
                        text, "2026-11-14T00:00:00Z", cev))
-        aev = ev.register(c, "aerial_facts", "vexcel", f"aerial:{PLACE}", content={"pool": False}, place_id=PLACE)
-        c.execute("INSERT INTO aerial_facts(aerial_id,place_id,footprint_area_m2,structure_count,parcel_count,attributes_json,"
-                  "match_method,match_distance_m,evidence_id) VALUES(?,?,?,?,?,?,?,?,?)",
-                  (f"aerial:{PLACE}", PLACE, 900.0, 1, 1, json.dumps({"pool.detected": False, "vehicles.count": 4}),
-                   "contains", 0.0, aev))
+        img = _jpeg((90, 110, 90))
+        (tmp_path / "img").mkdir(exist_ok=True)
+        (tmp_path / "img" / "ortho.jpg").write_bytes(img)
+        aev = ev.register(c, "ortho_image", "vexcel", f"aimg:{PLACE}:ortho:80", content=img, place_id=PLACE)
+        c.execute("INSERT INTO aerial_image(image_id,place_id,kind,size_m,path,width,height,content_sha256,evidence_id) "
+                  "VALUES(?,?,?,?,?,?,?,?,?)",
+                  (f"aimg:{PLACE}:ortho:80", PLACE, "ortho", 80, "img/ortho.jpg", 8, 8, ev.content_hash(img), aev))
         c.execute("UPDATE space SET depth=4 WHERE space_id=?", (SPACE,))
     occ, sales = [], []
     with db.write() as c:

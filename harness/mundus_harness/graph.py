@@ -22,13 +22,13 @@ from mundus_harness.tools_local import build_local_tools
 from mundus_harness.world_backend import WorldBackend
 from mundus_harness.world_client import WorldClient
 
-WORLD_TOOLS = ["search_places", "get_place", "get_space", "get_room", "search_interiors", "get_aerial_facts",
+WORLD_TOOLS = ["search_places", "get_place", "get_space", "get_room", "search_interiors",
                "aerial_semantic_search", "describe_market", "query_market", "get_neighbors", "get_claims", "put_claim",
                "get_evidence"]
 SUBAGENT_TOOLS = {
     "market-analyst": ["get_place", "describe_market", "query_market", "get_neighbors", "get_claims", "put_claim", "set_focus"],
     "interior-inspector": ["get_space", "get_room", "search_interiors", "look_at_pano", "get_claims", "put_claim", "set_focus"],
-    "aerial-analyst": ["get_aerial_facts", "look_at_aerial", "aerial_semantic_search", "get_neighbors", "get_claims",
+    "aerial-analyst": ["look_at_aerial", "aerial_semantic_search", "get_neighbors", "get_claims",
                        "put_claim", "set_focus"],
 }
 ORCH_TOOLS = ["resolve_place", "get_neighbors", "get_claims", "put_claim", "set_focus"]
@@ -47,6 +47,8 @@ async def load_world_tools(cfg: Config) -> dict[str, Any]:
     async def tag_run(request: MCPToolCallRequest, handler):
         h = dict(request.headers or {})
         h["X-Run-Id"] = runctx.run_id_from_config()
+        if cfg.claim_scope_run:
+            h["X-Claim-Scope"] = "run"
         return await handler(request.override(headers=h))
 
     client = MultiServerMCPClient({"world": {"transport": "streamable_http", "url": cfg.world_mcp_url, "headers": headers}},
@@ -89,7 +91,7 @@ def build_agent(cfg: Config, world_tools: dict[str, Any], orch_model: Any = None
     desc = {
         "market-analyst": "Market facts for one place from CoStar records: building basics, listings and rents, tenants and leases, sales.",
         "interior-inspector": "What the inside of a place is like: spaces, rooms, sizes, layout, appearance from photos and captions.",
-        "aerial-analyst": "What a place looks like from above and what surrounds it: footprint, roof, parking, pool, neighbours.",
+        "aerial-analyst": "What a place looks like from above and what surrounds it, read from aerial photos: roof, parking, loading, pool, neighbours.",
     }
     subagents = [{"name": n, "description": desc[n], "system_prompt": sys[n], "model": worker,
                   "tools": [tools[t] for t in SUBAGENT_TOOLS[n]], "middleware": stack(n, False),

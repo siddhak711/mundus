@@ -13,7 +13,7 @@ frontend (separate)  ──REST──►  backend/   World API: ingestion, SQLit
 | Folder | What it is | Spec |
 |---|---|---|
 | `backend/` | Ingests the three data sources for a fixed 15-place evaluation set and serves one World API over REST and MCP | `specs/backend-spec.md` |
-| `harness/` | LangChain `deepagents` harness: one orchestrator, market / interior / aerial subagents, router, metrics, guard and answer middleware | `harness/DECISIONS.md` |
+| `harness/` | LangChain `deepagents` harness: one orchestrator, market / interior / aerial-photo subagents, router, metrics, guard and answer middleware | `harness/DECISIONS.md` |
 | `eval/` | `tasks.yaml` (15 draft tasks), `combos.yaml` (harness combinations), graders, runner, report | this file |
 | `shared/predicates.yaml` | The claim predicate vocabulary, read by both backend and harness | |
 | `scripts/` | `verify.sh` (lint and tests for all three), `deploy/` (VM setup) | |
@@ -65,6 +65,10 @@ Every model call the backend makes is logged with its token counts and reported 
 ## Evaluation
 
 ```bash
+cd eval && .venv/bin/mundus-eval preflight
+```
+
+```bash
 cd eval && .venv/bin/mundus-eval truth
 ```
 
@@ -73,18 +77,24 @@ cd eval && .venv/bin/mundus-eval references
 ```
 
 ```bash
-cd eval && .venv/bin/mundus-eval seed
+cd eval && .venv/bin/mundus-eval run --workers 6
 ```
 
-```bash
-cd eval && .venv/bin/mundus-eval run
-```
+The eval measures the harness: 15 tasks x 2 combinations (`combos.yaml`: Sonnet 5.5 or Haiku 5.5 as orchestrator,
+Haiku 5.5 workers) x 3 repeats = 90 runs. Comparing memory states is deferred, so every run starts from an empty claim
+memory.
 
-`truth` computes ground truth from the World API. `references` has Claude Fable 5.2 write visual references from the
-actual photos. `seed` builds the warm-memory snapshot. `run` executes every task for every combination in
-`combos.yaml`, three times each, sequentially and interleaved, resetting agent memory before each run, and writes
-`eval/data/results/<time>/report.md` with pass rate, tokens in and out, cost, wall-clock time, time to first action
-and tool calls per combination. Six tasks are graded by code and nine by Claude Fable 5.2.
+- `preflight` refuses to go on unless every place is ingested, every selected pano is captioned, every search document
+  is embedded, search answers in `hybrid` mode and no aerial facts are served. `run` repeats this check.
+- `truth` computes ground truth from the World API. `references` has Claude Fable 5.2 write visual references from the
+  actual photos; stored captions are never used as the reference, because the agent reads those same captions.
+- `run` executes the runs several at a time. Each run gets a private claim memory keyed by its run id
+  (`X-Claim-Scope: run`), so runs do not see each other's claims and the shared memory is not touched. A stopped
+  suite continues with `--resume <results folder>`.
+- The report is `eval/data/results/<time>/report.md`: pass rate overall and by group, tokens, cost, wall-clock time,
+  time to first action, tool calls, tool error rate and claims written per combination, and passes out of 3 per task
+  with a `flaky` mark. Six tasks are graded by code and nine by Claude Fable 5.2.
+- Wall-clock figures come from overlapping runs, so read them as a comparison between combinations.
 
 ## Deploy
 

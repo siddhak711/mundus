@@ -13,7 +13,7 @@ Rules:
 - `value` is the machine-readable value (number, string, true/false). `statement` is one plain sentence.
 - Put the claim on the most specific node: a room fact on the room, a building fact on the place.
 - Predicates marked multi can hold many values. The others hold one: a different value is a conflict, settled by
-  evidence strength (record > room or aerial facts > image > caption > summary).
+  evidence strength (record > room > image > caption > summary).
 - Predicates marked exact must match exactly (years, counts). Other numbers within 5% count as the same fact.
 
 | Predicate | Type | Unit | Notes |
@@ -50,16 +50,11 @@ Rules:
 | `interior.amenity_present` | string |  | multi |
 | `interior.layout_note` | string |  | multi |
 | `interior.adjacent_room` | string |  | multi |
-| `aerial.footprint_area_m2` | number | m2 |  |
-| `aerial.parcel_area_m2` | number | m2 |  |
-| `aerial.roof_material` | string |  |  |
 | `aerial.roof_condition` | string |  |  |
 | `aerial.has_pool` | boolean |  |  |
 | `aerial.has_solar` | boolean |  |  |
-| `aerial.tree_cover_pct` | number | pct |  |
 | `aerial.parking_visible` | string |  |  |
 | `aerial.loading_access` | string |  |  |
-| `aerial.vehicle_count` | number |  | exact |
 | `surroundings.nearby_feature` | string |  | multi |
 | `surroundings.street_frontage` | string |  |  |
 | `pano.caption` | string |  | multi |

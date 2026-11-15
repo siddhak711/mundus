@@ -1,4 +1,4 @@
-"""mundus-eval: build truth and references, seed warm memory, run the suite, report."""
+"""mundus-eval: check the world, build truth and references, run the suite in parallel, report."""
 from __future__ import annotations
 
 import argparse
@@ -25,8 +25,8 @@ def world_client(admin: bool = False) -> httpx.Client:
 
 
 def plan(tasks: list[dict[str, Any]], combos: list[dict[str, Any]], repeats: int) -> list[tuple[int, str, str]]:
-    """Run order: sequential and interleaved. Within each repeat, each task runs once per combination back to back,
-    so slow drift in the backend or the model providers falls on every combination equally."""
+    """Run order, interleaved: within each repeat, each task is queued once per combination back to back, so load on
+    the backend and the model providers falls on every combination equally."""
     return [(rep, t["id"], c["name"]) for rep in range(1, repeats + 1) for t in tasks for c in combos]
 
 
@@ -104,45 +104,119 @@ async def build_agent_for(combo: dict[str, Any]) -> Any:
     return build_agent(cfg, await load_world_tools(cfg))
 
 
+def preflight(expect_places: int = 15) -> dict[str, Any]:
+    """Refuses an eval on a world that is not ready: every place ingested, every selected pano captioned, every
+    search document embedded, semantic search answering, and no aerial facts served."""
+    checks: list[dict[str, Any]] = []
+
+    def add(name: str, ok: bool, detail: Any = None) -> None:
+        checks.append({"check": name, "ok": bool(ok), "detail": detail})
+
+    try:
+        with world_client() as w:
+            h = w.get("/healthz").json()
+            add(f"{expect_places} places ingested", h.get("deep_places") == expect_places, h.get("deep_places"))
+            c = w.get("/v1/stats").json().get("counts", {})
+            add("every selected pano with images is captioned",
+                c.get("panos_selected_with_faces", 0) > 0 and c.get("pano_caption") == c.get("panos_selected_with_faces"),
+                {"captions": c.get("pano_caption"), "panos": c.get("panos_selected_with_faces")})
+            add("every search document is embedded", c.get("docs", 0) > 0 and c.get("docs_embedded") == c.get("docs"),
+                {"embedded": c.get("docs_embedded"), "docs": c.get("docs")})
+            r = w.post("/v1/interiors/search", json={"text": "somewhere to sit and wait", "limit": 1})
+            add("semantic search answers (mode hybrid)", r.status_code == 200 and r.json().get("mode") == "hybrid",
+                r.json().get("mode") if r.status_code == 200 else r.status_code)
+            p = w.get("/v1/places/search", params={"deep_only": "true", "limit": 1}).json()["places"][0]["place_id"]
+            add("aerial facts are not served", w.get(f"/v1/aerial/{p}").status_code == 404
+                and "aerial" not in w.get(f"/v1/places/{p}").json())
+    except (httpx.HTTPError, KeyError, IndexError, ValueError) as e:
+        add("World API reachable", False, f"{type(e).__name__}: {str(e)[:160]}")
+    return {"ok": all(c["ok"] for c in checks), "checks": checks}
+
+
+def cmd_preflight(args) -> int:
+    out = preflight(args.places)
+    print(json.dumps(out, indent=1))
+    return 0 if out["ok"] else 1
+
+
+def run_key(rec: dict[str, Any]) -> tuple[str, str, int]:
+    return rec["task_id"], rec["combo"], int(rec["repeat"])
+
+
+def finished_keys(path: Path) -> set[tuple[str, str, int]]:
+    """Runs already recorded without a run error. A resumed suite skips these and retries the rest."""
+    if not path.exists():
+        return set()
+    recs = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    return {run_key(r) for r in recs if not r.get("error")}
+
+
 async def cmd_run(args) -> int:
     tasks = [t for t in load_tasks() if not args.tasks or t["id"] in args.tasks.split(",")]
     cdoc = load_combos()
     combos = [c for c in cdoc["combos"] if not args.combos or c["name"] in args.combos.split(",")]
     repeats = args.runs or cdoc.get("runs_per_task", 3)
+    if not args.skip_preflight:
+        pf = preflight(args.places)
+        if not pf["ok"]:
+            print("Preflight failed; no run started:", json.dumps([c for c in pf["checks"] if not c["ok"]], indent=1), file=sys.stderr)
+            return 2
     truth = load_json("truth.json")
     if truth is None:
         print("No truth file: run `mundus-eval truth` first.", file=sys.stderr)
         return 2
     refs = load_json("references.json", {})
-    out_dir = DATA_DIR / "results" / time.strftime("%Y%m%d-%H%M%S")
+    out_dir = Path(args.resume) if args.resume else DATA_DIR / "results" / time.strftime("%Y%m%d-%H%M%S")
     out_dir.mkdir(parents=True, exist_ok=True)
+    runs_path = out_dir / "runs.jsonl"
+    done = finished_keys(runs_path)
     by_id = {t["id"]: t for t in tasks}
-    by_combo = {c["name"]: c for c in combos}
+    order = [o for o in plan(tasks, combos, repeats) if (o[1], o[2], o[0]) not in done]
+    workers = max(1, args.workers)
+    print(f"{len(order)} runs to do ({len(done)} already recorded): {len(tasks)} tasks x {len(combos)} combinations x "
+          f"{repeats} repeats, {workers} at a time -> {out_dir}", flush=True)
+    # Each run gets a private, empty claim memory keyed by its run id, so runs are independent and can overlap.
+    os.environ["CLAIM_SCOPE"] = "run"
     agents: dict[str, Any] = {}
-    order = plan(tasks, combos, repeats)
-    print(f"{len(order)} runs: {len(tasks)} tasks x {len(combos)} combinations x {repeats} repeats -> {out_dir}")
-    with world_client() as world, (out_dir / "runs.jsonl").open("a", encoding="utf-8") as fh:
-        for n, (rep, tid, cname) in enumerate(order, 1):
-            task, combo = by_id[tid], by_combo[cname]
-            reset_memory(combo.get("memory", "cold"))
-            if cname not in agents or args.fresh_agent:
-                agents[cname] = await build_agent_for(combo)
-            run_id = f"eval-{cname}-{tid}-r{rep}-{int(time.time())}"
-            run = enrich(await run_once(agents[cname], task["question"], run_id, args.timeout), world)
-            if task["grader"] == "code" or args.no_model_grader:
-                grade = graders.grade_code(task, truth.get(tid, {}), run) if task["grader"] == "code" else \
-                    {"grader": "model", "pass": None, "score": None, "skipped": "model grader disabled",
-                     "checks": graders.common_checks(task, run)}
-            else:
-                grade = graders.grade_model(task, truth.get(tid, {}), (refs.get(tid) or {}).get("text"), run)
-            rec = {"n": n, "repeat": rep, "task_id": tid, "group": task["group"], "combo": cname,
-                   "memory": combo.get("memory", "cold"), **run, "grade": grade}
-            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-            fh.flush()
-            m = run["metrics"]
-            print(f"[{n}/{len(order)}] {tid} {cname} r{rep}: pass={grade['pass']} {run['wall_clock_s']}s "
-                  f"tokens={m.get('tokens_total')} calls={m.get('model_calls')}/{m.get('tool_calls')}"
-                  + (f" ERROR {run['error']}" if run["error"] else ""), flush=True)
+    for c in combos:                       # built one at a time: building reads the combination's environment
+        agents[c["name"]] = await build_agent_for(c)
+    sem = asyncio.Semaphore(workers)
+    write_lock = asyncio.Lock()
+    count = 0
+    with world_client() as world, runs_path.open("a", encoding="utf-8") as fh:
+
+        async def one(rep: int, tid: str, cname: str) -> None:
+            nonlocal count
+            task = by_id[tid]
+            async with sem:
+                run_id = f"eval-{cname}-{tid}-r{rep}-{int(time.time())}"
+                run = await run_once(agents[cname], task["question"], run_id, args.timeout)
+                run = await asyncio.to_thread(enrich, run, world)
+                if task["grader"] == "code":
+                    grade = graders.grade_code(task, truth.get(tid, {}), run)
+                elif args.no_model_grader:
+                    grade = {"grader": "model", "pass": None, "score": None, "skipped": "model grader disabled",
+                             "checks": graders.common_checks(task, run)}
+                else:
+                    grade = await asyncio.to_thread(graders.grade_model, task, truth.get(tid, {}),
+                                                    (refs.get(tid) or {}).get("text"), run)
+            rec = {"repeat": rep, "task_id": tid, "group": task["group"], "combo": cname, "memory": "cold",
+                   "workers": workers, **run, "grade": grade}
+            async with write_lock:
+                count += 1
+                fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                fh.flush()
+                m = run["metrics"]
+                print(f"[{count}/{len(order)}] {tid} {cname} r{rep}: pass={grade['pass']} {run['wall_clock_s']}s "
+                      f"tokens={m.get('tokens_total')} calls={m.get('model_calls')}/{m.get('tool_calls')}"
+                      + (f" ERROR {run['error']}" if run["error"] else ""), flush=True)
+
+        await asyncio.gather(*(one(rep, tid, cname) for rep, tid, cname in order))
+    try:                                    # private memories are only needed during the run
+        with world_client(admin=True) as a:
+            a.post("/v1/admin/claims/purge-scoped")
+    except httpx.HTTPError:
+        pass
     from mundus_eval.report import write_report
     print(write_report(out_dir))
     return 0
@@ -229,8 +303,14 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--runs", type=int, help="repeats per task and combination (default from combos.yaml)")
     e.add_argument("--timeout", type=float, default=600)
     e.add_argument("--no-model-grader", action="store_true", help="skip the Fable grader (code checks only)")
-    e.add_argument("--fresh-agent", action="store_true", help="rebuild the agent before every run")
+    e.add_argument("--workers", type=int, default=6, help="runs executed at the same time (default 6)")
+    e.add_argument("--resume", help="results folder to continue: runs already recorded without error are skipped")
+    e.add_argument("--places", type=int, default=15, help="number of ingested places the preflight expects")
+    e.add_argument("--skip-preflight", action="store_true", help="do not check the world before running (tests only)")
     e.set_defaults(fn=cmd_run)
+    pf = sub.add_parser("preflight", help="check the world is fully ingested, captioned and searchable")
+    pf.add_argument("--places", type=int, default=15)
+    pf.set_defaults(fn=cmd_preflight)
     rp = sub.add_parser("report", help="rebuild the report for a results folder")
     rp.add_argument("--dir")
     rp.set_defaults(fn=cmd_report)

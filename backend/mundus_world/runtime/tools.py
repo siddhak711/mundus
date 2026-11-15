@@ -35,9 +35,6 @@ class Ops:
                          kinds: list[str] | None = None, limit: int = 10) -> dict[str, Any]:
         return self.c.search.interiors(text, place_id, near, kinds, limit)
 
-    def get_aerial_facts(self, place_id: str) -> dict[str, Any]:
-        return self.c.world.aerial_facts(place_id)
-
     def aerial_semantic_search(self, text: str, near: dict | None = None, radius_m: int = 1000, limit: int = 10,
                                lat: float | None = None, lon: float | None = None) -> dict[str, Any]:
         if near:

@@ -20,13 +20,58 @@ def test_task_file_shape():
     assert "truth" not in json.dumps([t.get("checks") for t in tasks])       # no answers stored in the task file
 
 
-def test_plan_is_sequential_and_interleaved():
+def test_plan_is_interleaved_and_combos_are_cold():
     combos = load_combos()["combos"]
+    assert [c["name"] for c in combos] == ["cold-sonnet-haiku", "cold-all-haiku"] and all(c["memory"] == "cold" for c in combos)
     order = plan([{"id": "A"}, {"id": "B"}], combos, 3)
     assert len(order) == 2 * len(combos) * 3
     names = [c["name"] for c in combos]
     assert [c for _, t, c in order[:len(names)]] == names and {t for _, t, _ in order[:len(names)]} == {"A"}
     assert [r for r, _, _ in order] == sorted(r for r, _, _ in order)
+    assert len(plan(load_tasks(), combos, load_combos()["runs_per_task"])) == 90
+
+
+def test_no_task_depends_on_aerial_facts():
+    for t in load_tasks():
+        assert "aerial_facts" not in (t.get("required_evidence_types") or [])
+        assert not any("/v1/aerial/" in str(v.get("path", "")) for v in (t.get("truth") or {}).values())
+
+
+def test_resume_skips_only_clean_runs(tmp_path):
+    from mundus_eval.runner import finished_keys
+    p = tmp_path / "runs.jsonl"
+    p.write_text("\n".join(json.dumps(r) for r in [
+        {"task_id": "R1", "combo": "a", "repeat": 1, "error": None},
+        {"task_id": "R1", "combo": "a", "repeat": 2, "error": "timeout after 600s"}]), encoding="utf-8")
+    assert finished_keys(p) == {("R1", "a", 1)} and finished_keys(tmp_path / "missing.jsonl") == set()
+
+
+def test_preflight_gates_on_captions_embeddings_and_aerial(monkeypatch):
+    from mundus_eval import runner
+
+    def world(counts, mode="hybrid", aerial=404):
+        def handler(req: httpx.Request) -> httpx.Response:
+            path = req.url.path
+            if path == "/healthz":
+                return httpx.Response(200, json={"deep_places": 15})
+            if path == "/v1/stats":
+                return httpx.Response(200, json={"counts": counts})
+            if path == "/v1/interiors/search":
+                return httpx.Response(200, json={"mode": mode, "hits": []})
+            if path == "/v1/places/search":
+                return httpx.Response(200, json={"places": [{"place_id": "place:x"}]})
+            if path.startswith("/v1/aerial/"):
+                return httpx.Response(aerial, json={})
+            return httpx.Response(200, json={"place_id": "place:x"})
+        return lambda admin=False: httpx.Client(base_url="http://world", transport=httpx.MockTransport(handler))
+
+    good = {"pano_caption": 10, "panos_selected_with_faces": 10, "docs": 30, "docs_embedded": 30}
+    monkeypatch.setattr(runner, "world_client", world(good))
+    assert runner.preflight()["ok"]
+    for bad_counts, kw in (({**good, "pano_caption": 9}, {}), ({**good, "docs_embedded": 0}, {}), (good, {"mode": "text_only"}),
+                           (good, {"aerial": 200})):
+        monkeypatch.setattr(runner, "world_client", world(bad_counts, **kw))
+        assert not runner.preflight()["ok"]
 
 
 def test_number_parsing_and_checks():
@@ -105,16 +150,13 @@ def test_truth_from_world_api():
     def handler(req: httpx.Request) -> httpx.Response:
         if req.url.path == "/v1/market/query":
             return httpx.Response(200, json={"columns": ["n"], "rows": [[752]]})
-        if req.url.path.startswith("/v1/aerial/"):
-            return httpx.Response(200, json={"structure_count": 0, "attributes": {"pool.detected": True,
-                                             "structure.roof-characteristics.material.class": "membrane"}})
         return httpx.Response(404, json={"error": {"code": "not_found"}})
 
     tasks = [t for t in load_tasks() if t["id"] in ("R1", "R2", "R3")]
     with httpx.Client(base_url="http://world", transport=httpx.MockTransport(handler)) as c:
         truth = build_truth(tasks, c)
-    assert truth["R1"] == {"tenancies": 752} and truth["R2"]["structures"] == 0
-    assert truth["R3"]["roof_material"] == "membrane" and truth["R3"]["solar"] is None
+    assert truth["R1"] == {"tenancies": 752} and truth["R2"]["asking_price"] == 752
+    assert truth["R3"] == {"rooms": 752, "largest_m2": 752}
     assert _dig({"attributes": {"pool.detected": True}}, "attributes.pool.detected") is True
 
 
@@ -128,4 +170,5 @@ def test_report_summary():
     s = summarize([rec("cold", "R1", True, 1000, 30), rec("cold", "R1", False, 1200, 40), rec("warm", "R1", True, 100, 5)])
     assert s["combos"]["cold"]["pass_rate"] == 0.5 and s["combos"]["warm"]["pass_rate"] == 1.0
     assert s["combos"]["cold"]["mean_tokens_total"] == 1110 and s["combos"]["cold"]["mean_cost_usd"] is None
-    assert s["tasks"]["R1"]["warm"] == {"pass": 1, "runs": 1, "mean_tokens": 110}
+    assert s["tasks"]["R1"]["warm"] == {"pass": 1, "runs": 1, "mean_tokens": 110, "flaky": False}
+    assert s["tasks"]["R1"]["cold"]["flaky"] and s["combos"]["cold"]["tool_error_rate"] == 0.0

@@ -12,8 +12,9 @@ import yaml
 from mundus_world.repo.db import Database
 from mundus_world.service import evidence as ev
 from mundus_world.service import graph
+from mundus_world.types.ctx import CLAIM_SCOPE
 from mundus_world.types.errors import ApiError
-from mundus_world.types.ids import claim_id, node_kind, normalize_value, now_iso
+from mundus_world.types.ids import claim_id, node_kind, normalize_value, now_iso, sha256_hex
 
 FREE_NAMESPACES = ("note.", "synthesis.")
 MARKET_TTL = timedelta(days=7)
@@ -109,12 +110,16 @@ class Claims:
             found = {}
         if derived_from:
             have = {r[0] for r in self.db.q(
-                f"SELECT claim_id FROM claim WHERE claim_id IN ({','.join('?' * len(derived_from))})", derived_from)}
+                f"SELECT claim_id FROM claim WHERE scope=? AND claim_id IN ({','.join('?' * len(derived_from))})",
+                [CLAIM_SCOPE.get(), *derived_from])}
             unknown = [c for c in derived_from if c not in have]
             if unknown:
                 raise ApiError("invalid_argument", "Unknown derived_from claim ids.", {"unknown_claim_ids": unknown})
 
+        scope = CLAIM_SCOPE.get()
         cid = claim_id(subject_id, predicate, value)
+        if scope:                      # a private memory gets its own ids, so the same fact in two runs never merges
+            cid = "claim:" + sha256_hex(f"{cid}|{scope}")[:16]
         now = now_iso()
         place = graph.place_of(self.db, subject_id)
         rank = self._rank(evidence_ids, derived_from)
@@ -126,8 +131,8 @@ class Claims:
             outcome, status = "created", "active"
             if not self._is_multi(predicate):
                 others = [dict(r) for r in c.execute(
-                    "SELECT * FROM claim WHERE subject_id=? AND predicate=? AND status IN ('active','disputed')",
-                    (subject_id, predicate))]
+                    "SELECT * FROM claim WHERE subject_id=? AND predicate=? AND scope=? AND status IN ('active','disputed')",
+                    (subject_id, predicate, scope))]
                 exact = bool((self.vocab.get(predicate) or {}).get("exact"))
                 close = [o for o in others if not _differs(json.loads(o["value_json"]), value, exact)]
                 if close:
@@ -149,11 +154,11 @@ class Claims:
                         self._edge(c, cid, "contradicts", old["claim_id"], "rule", now)
             c.execute(
                 """INSERT INTO claim(claim_id,subject_id,place_id,predicate,value_json,unit,statement,evidence_ids,evidence_sha,
-                     derived_from,confidence,status,confirmations,rank,created_by,run_id,created_at,updated_at)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                     derived_from,confidence,status,confirmations,rank,created_by,run_id,created_at,updated_at,scope)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (cid, subject_id, place, predicate, json.dumps(value, ensure_ascii=False), unit, statement.strip(),
                  json.dumps(evidence_ids), json.dumps(found), json.dumps(derived_from), confidence, status, 1, rank,
-                 created_by, run_id, now, now))
+                 created_by, run_id, now, now, scope))
             self._edge(c, cid, "about", subject_id, "agent", now)
             for e in evidence_ids:
                 self._edge(c, cid, "supported_by", e, "agent", now)
@@ -231,8 +236,8 @@ class Claims:
             raise ApiError("not_found", f"No node with id {subject_id}")
         is_place = node_kind(subject_id) == "place"
         self.refresh_stale(subject_id if is_place else graph.place_of(self.db, subject_id))
-        sql = f"SELECT * FROM claim WHERE {'place_id' if is_place else 'subject_id'}=?"
-        params: list[Any] = [subject_id]
+        sql = f"SELECT * FROM claim WHERE {'place_id' if is_place else 'subject_id'}=? AND scope=?"
+        params: list[Any] = [subject_id, CLAIM_SCOPE.get()]
         if status and status != "all":
             sql += " AND status=?"
             params.append(status)
@@ -266,7 +271,8 @@ class Claims:
     def places_with_claims(self) -> list[dict[str, Any]]:
         return [dict(r) for r in self.db.q(
             """SELECT c.place_id, p.name, count(*) AS claims, sum(c.status='active') AS active FROM claim c
-               JOIN place p ON p.place_id=c.place_id GROUP BY c.place_id ORDER BY claims DESC""")]
+               JOIN place p ON p.place_id=c.place_id WHERE c.scope=? GROUP BY c.place_id ORDER BY claims DESC""",
+            (CLAIM_SCOPE.get(),))]
 
     # ---- reset and snapshots -------------------------------------------------
     def _clear(self, c) -> None:
@@ -274,6 +280,17 @@ class Claims:
         c.execute("DELETE FROM edges WHERE source IN ('agent','rule')")
         c.execute("DELETE FROM doc_fts WHERE doc_type='claim'")
         c.execute("DELETE FROM embedding WHERE doc_type='claim'")
+
+    def purge_scoped(self) -> dict[str, Any]:
+        """Deletes every private (run-scoped) claim. The shared memory is not touched."""
+        with self.db.write() as c:
+            ids = [r[0] for r in c.execute("SELECT claim_id FROM claim WHERE scope!=''")]
+            for cid in ids:
+                c.execute("DELETE FROM edges WHERE src=? OR dst=?", (cid, cid))
+                c.execute("DELETE FROM doc_fts WHERE doc_id=?", (cid,))
+                c.execute("DELETE FROM embedding WHERE doc_id=?", (cid,))
+            c.execute("DELETE FROM claim WHERE scope!=''")
+        return {"purged": len(ids)}
 
     def snapshot(self, name: str) -> dict[str, Any]:
         now = now_iso()

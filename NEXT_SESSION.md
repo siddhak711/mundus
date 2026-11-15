@@ -1,3 +1,6 @@
+> Superseded on Nov 15. Gemini is gone (Claude captions, local embeddings), Vexcel aerial facts are removed (photos
+> stay), and the eval is 90 parallel cold runs. Current commands are in `README.md`. Kept for history only.
+
 # Next session: what to do, in order
 
 Starting point: branch `claude/new-session-e32bmm`, commit `7f65684`. Backend, harness and eval are built and

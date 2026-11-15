@@ -56,7 +56,7 @@ def build_local_tools(cfg: Config, client: WorldClient) -> dict[str, Any]:
         except WorldError as e:
             return f"Unavailable: {e.message}. Do not retry. Record this as a gap."
         return json.dumps({"candidates": cands, "note": "No place matched: tell the user it was not found." if not cands else
-                           "Only places with is_deep true have interiors, captions and aerial facts."})
+                           "Only places with is_deep true have interiors, captions and aerial photos."})
 
     @tool(response_format="content_and_artifact")
     def look_at_pano(pano_id: str, faces: list[int] | None = None, defurnished: bool = False) -> tuple[list, dict]:

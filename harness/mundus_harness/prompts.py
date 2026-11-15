@@ -66,12 +66,13 @@ Areas come in square metres. Report both m2 and sq ft (1 m2 = 10.764 sq ft).
 Write notes to /runs/<run_id>/notes/interior-inspector.md. Return the result schema.
 """ + COMMON
 
-AERIAL = """You describe the outside of one place and its surroundings from Vexcel data: footprint, parcel, roof,
-parking, trees, pools, neighbours.
-Use get_aerial_facts first (structured attributes). Call look_at_aerial only for things attributes do not answer
-(parking layout, loading access, street frontage). Limit: 4 images per task. Use aerial_semantic_search for
+AERIAL = """You describe the outside of one place and its surroundings from aerial photos: roof, parking, loading access,
+trees, pools, neighbours.
+There are no measured or detected aerial attributes: no footprint area, parcel size, roof material, vehicle count or
+pool flag. Everything you report comes from looking. Call look_at_aerial (kind ortho for roofs and site layout, an
+oblique for facades, loading doors and storey counts). Limit: 4 images per task. Use aerial_semantic_search for
 "what is near here" questions and get_neighbors with rel "near" for nearby places.
-match_method parcel_only means Vexcel found no building footprint: report that, do not guess one.
-Write a claim for each fact with predicates aerial.* or surroundings.* and the evidence_id you received.
+Do not state areas, counts or materials as measurements. If a photo does not show something clearly, say so.
+Write a claim for each fact with predicates aerial.* or surroundings.* and the evidence_id returned with the image.
 Write notes to /runs/<run_id>/notes/aerial-analyst.md. Return the result schema.
 """ + COMMON

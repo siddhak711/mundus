@@ -108,15 +108,6 @@ CREATE TABLE IF NOT EXISTS pano_caption (
   PRIMARY KEY (pano_id, variant)
 );
 
-CREATE TABLE IF NOT EXISTS aerial_facts (
-  aerial_id TEXT PRIMARY KEY,
-  place_id TEXT UNIQUE NOT NULL,
-  footprint_wkt TEXT, parcel_wkt TEXT,
-  footprint_area_m2 REAL, structure_count INTEGER, parcel_count INTEGER,
-  attributes_json TEXT,
-  match_method TEXT, match_distance_m REAL, query_method TEXT,
-  fetched_at TEXT, evidence_id TEXT, raw_path TEXT
-);
 CREATE TABLE IF NOT EXISTS aerial_image (
   image_id TEXT PRIMARY KEY,
   place_id TEXT, kind TEXT, size_m INTEGER, path TEXT, width INTEGER, height INTEGER,
@@ -211,6 +202,30 @@ class Database:
         self._write_lock = threading.RLock()
         with self._write_lock:
             self.conn().executescript(SCHEMA)
+            self._migrate()
+
+    def _migrate(self) -> None:
+        """Brings an older database up to the current schema. Safe to run on every open."""
+        c = self.conn()
+        if "scope" not in [r[1] for r in c.execute("PRAGMA table_info(claim)")]:
+            c.execute("ALTER TABLE claim ADD COLUMN scope TEXT NOT NULL DEFAULT ''")
+            c.commit()
+        if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='aerial_facts'").fetchone():
+            # Vexcel property attributes ("aerial facts") were removed: drop them and everything that cites them.
+            ev_ids = [r[0] for r in c.execute("SELECT evidence_id FROM evidence WHERE type='aerial_facts'")]
+            dead = [r[0] for r in c.execute("SELECT claim_id, evidence_ids FROM claim")
+                    if any(e in r[1] for e in ev_ids)] if ev_ids else []
+            for cid in dead:
+                c.execute("DELETE FROM claim WHERE claim_id=?", (cid,))
+                c.execute("DELETE FROM edges WHERE src=? OR dst=?", (cid, cid))
+                c.execute("DELETE FROM doc_fts WHERE doc_id=?", (cid,))
+                c.execute("DELETE FROM embedding WHERE doc_id=?", (cid,))
+            c.execute("DELETE FROM edges WHERE rel='has_aerial' OR src LIKE 'aerial:%' OR dst LIKE 'aerial:%'")
+            c.executemany("DELETE FROM edges WHERE dst=?", [(e,) for e in ev_ids])
+            c.execute("DELETE FROM evidence WHERE type='aerial_facts'")
+            c.execute("DELETE FROM aerial_search_cache")
+            c.execute("DROP TABLE aerial_facts")
+            c.commit()
 
     def conn(self) -> sqlite3.Connection:
         c = getattr(self._local, "conn", None)
