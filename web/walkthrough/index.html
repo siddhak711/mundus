@@ -249,6 +249,23 @@ const coreMat = new THREE.ShaderMaterial({
       gl_FragColor = vec4(col, uOpacity); }`,
 });
 const capMat = new THREE.MeshBasicMaterial({ color: 0x3a4049, transparent: true });
+// Probable structural columns: free-standing footprints in the scan that run floor to ceiling, drawn as white columns.
+// They rise out of the floor as the walls go down. Sizes are the drywall wrap, so slightly larger than the steel inside.
+const colGroup = new THREE.Group(); colGroup.visible = false; scene.add(colGroup);
+const colMat = new THREE.ShaderMaterial({
+  uniforms: { uOpacity: { value: 1 }, uZ0: { value: SH.z0 }, uH: { value: SH.z1 - SH.z0 } }, transparent: true,
+  vertexShader: `varying vec3 vW; varying vec3 vN; void main(){ vN = normalize(normalMatrix * normal); vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform float uOpacity, uZ0, uH; varying vec3 vW; varying vec3 vN;
+    void main(){ float hh = clamp(vW.y - uZ0, 0.0, uH); vec3 col = vec3(0.96, 0.955, 0.94);
+      col *= 0.80 + 0.20 * abs(dot(vN, normalize(vec3(0.55, 0.0, 0.83))));
+      col *= 1.0 - 0.10 * exp(-hh * 5.0) - 0.08 * exp(-(uH - hh) * 4.0);
+      if (hh < 0.10) col = vec3(0.40, 0.23, 0.10); else if (hh < 0.112) col = vec3(0.25, 0.14, 0.06);
+      gl_FragColor = vec4(col, uOpacity); }`,
+});
+const columns = (SH.columns || []).map((c) => {
+  const h = SH.z1 - SH.z0, g = new THREE.BoxGeometry(c.size, h, c.size); g.translate(0, h / 2, 0);   // pivot at the floor so it can grow upward
+  const m = new THREE.Mesh(g, colMat); m.position.set(c.x, SH.z0, -c.y); m.userData = c; colGroup.add(m); return m;
+});
 for (const blk of SH.core) {
   const p = [], nn = [];
   for (const ring of [blk.outer, ...blk.holes]) for (let k = 0; k < ring.length; k++) {
@@ -265,7 +282,8 @@ const walkMask = await (async () => {
   const im = await loadImg('data/walk.png'); const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
   const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0); return { w: im.width, h: im.height, d: cx.getImageData(0, 0, im.width, im.height).data };
 })();
-const walkable = (x, z) => { const px = Math.floor((x - bx) / bw * walkMask.w), py = Math.floor((by + bh + z) / bh * walkMask.h); return px >= 0 && py >= 0 && px < walkMask.w && py < walkMask.h && walkMask.d[(py * walkMask.w + px) * 4] > 127; };
+const walkable = (x, z) => { const px = Math.floor((x - bx) / bw * walkMask.w), py = Math.floor((by + bh + z) / bh * walkMask.h); if (!(px >= 0 && py >= 0 && px < walkMask.w && py < walkMask.h && walkMask.d[(py * walkMask.w + px) * 4] > 127)) return false;
+  for (const c of SH.columns || []) if (Math.abs(x - c.x) < c.size / 2 + 0.3 && Math.abs(z + c.y) < c.size / 2 + 0.3) return false; return true; };
 const EYE = S.floorY + SH.eye;
 
 // capture-point markers and the cursor ring (walk mode)
@@ -298,7 +316,7 @@ const hints = {
 function setUi(m) {
   document.body.classList.toggle('walk', m === 'walk' || m === 'shell');
   document.querySelectorAll('.bar button[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (m === 'shell' ? 'walk' : m))));
-  $('hint').textContent = removed && (m === 'doll' || m === 'plan') ? 'Interior walls and furniture are down · click Walk inside to stand on the empty floor' : hints[m];
+  $('hint').textContent = removed && (m === 'doll' || m === 'plan') ? 'Interior walls down · white columns are probable structural columns found in the scan · click Walk inside' : hints[m];
   if (m === 'shell') $('where').textContent = 'Empty floor · walk anywhere';
   const flat = m !== 'walk' && m !== 'shell';
   glass.visible = flat && !removed; band.visible = flat && $('band').checked; $('legend').hidden = !(flat && $('band').checked);
@@ -400,9 +418,13 @@ async function setWalls(down) {
   $('walls').setAttribute('aria-pressed', String(down)); $('walls').textContent = down ? 'Bring walls back' : 'Remove walls';
   const total = U.uSpread.value + U.uDur.value;
   if (down) U.uOrigin.value.set(orbit.target.x, orbit.target.z);
-  shellWalls.visible = true; coreGroup.visible = true;
-  await tween((total * 1000) | 0, (e, k) => { const q = down ? k : 1 - k; U.uDropT.value = q * total; const o = THREE.MathUtils.smoothstep(q, 0.12, 0.6); shellWalls.material.opacity = o; coreMat.uniforms.uOpacity.value = o; capMat.opacity = o; });
-  shellWalls.visible = down; coreGroup.visible = down; shellWalls.material.opacity = down ? 1 : 0; setUi(mode);
+  shellWalls.visible = true; coreGroup.visible = true; colGroup.visible = true;
+  await tween((total * 1000) | 0, (e, k) => {
+    const q = down ? k : 1 - k; U.uDropT.value = q * total; const o = THREE.MathUtils.smoothstep(q, 0.12, 0.6); shellWalls.material.opacity = o; coreMat.uniforms.uOpacity.value = o; capMat.opacity = o;
+    // each column rises once the walls around it have gone, in the same ripple order
+    columns.forEach((m) => { const delay = Math.min(1, Math.hypot(m.position.x - U.uOrigin.value.x, m.position.z - U.uOrigin.value.y) / U.uMaxD.value) * U.uSpread.value; const kk = THREE.MathUtils.clamp((q * total - delay - U.uDur.value * 0.6) / 0.7, 0, 1); m.scale.y = Math.max(0.001, kk * kk * (3 - 2 * kk)); });
+  });
+  shellWalls.visible = down; coreGroup.visible = down; colGroup.visible = down; shellWalls.material.opacity = down ? 1 : 0; columns.forEach((m) => { m.scale.y = down ? 1 : 0.001; }); setUi(mode);
   dropping = false;
 }
 $('walls').addEventListener('click', () => setWalls(!removed));
