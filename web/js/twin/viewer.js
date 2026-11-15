@@ -131,7 +131,7 @@ export class Viewer {
     this.labelLayer.replaceChildren();
     this.pins = pins.map((pin) => {
       const el = document.createElement(pin.onClick ? 'button' : 'div');
-      el.className = `pin${pin.onClick ? '' : ' is-height'}`;
+      el.className = `pin${pin.onClick ? '' : ' is-height'}${pin.walk ? ' is-walk' : ''}`;
       el.textContent = pin.label;
       if (pin.onClick) { el.type = 'button'; el.addEventListener('click', pin.onClick); }
       this.labelLayer.append(el);

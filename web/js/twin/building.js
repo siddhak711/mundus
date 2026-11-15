@@ -5,6 +5,7 @@ const NEUTRAL = new THREE.Color('#e9ecef');
 const LEASED = new THREE.Color('#c2761b');
 const AVAILABLE = new THREE.Color('#1c8a68');
 const EMPHASIS = new THREE.Color('#17212b');
+const WALK = new THREE.Color('#1f6bff');  // a floor with a walkthrough: press it to go inside
 const SLAB_FILL = 0.8; // share of each storey that is slab; the rest is a visible gap
 
 export function createBuilding({ ring, roof, stories }) {
@@ -46,13 +47,14 @@ export function createBuilding({ ring, roof, stories }) {
     floorMid: (floor) => floorBase(floor) + (storeyHeight * SLAB_FILL) / 2,
     height: () => floorBase(stories) + storeyHeight,
 
-    /** paint(floor) -> { leasedShare, available, emphasised } */
+    /** paint(floor) -> { leasedShare, available, emphasised, walk } */
     paint(describe) {
       for (const slab of slabs) {
-        const { leasedShare = 0, available = false, emphasised = false } = describe(slab.userData.floor);
+        const { leasedShare = 0, available = false, emphasised = false, walk = false } = describe(slab.userData.floor);
         scratch.copy(NEUTRAL);
         if (leasedShare > 0) scratch.lerp(LEASED, 0.35 + 0.65 * leasedShare);
         if (available) scratch.lerp(AVAILABLE, leasedShare > 0 ? 0.55 : 0.9);
+        if (walk) scratch.copy(WALK);
         if (emphasised) scratch.lerp(EMPHASIS, 0.55);
         slab.material.color.copy(scratch);
       }

@@ -25,13 +25,14 @@
   #where{position:fixed;top:16px;right:16px;padding:6px 12px;font-size:12.5px;color:#c5ced8;display:none} body.walk #where{display:block}
   #dip{position:fixed;inset:0;background:#14171c;opacity:0;pointer-events:none;transition:opacity .18s}
   .card .back{display:inline-block;margin:0 0 8px;color:#ffb02e;text-decoration:none;font-size:13px} .card .back:hover{text-decoration:underline}
+  .card{z-index:2} /* above the loading cover, so the way back works while the scan loads or if it fails */
   #loading{position:fixed;inset:0;display:grid;place-items:center;background:#14171c;font-size:15px;color:#9aa6b4;text-align:center}
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js", "three-mesh-bvh": "./vendor/three-mesh-bvh.module.js" } }</script>
 </head><body>
 <canvas id="c"></canvas>
 <div class="card panel">
-  <a class="back" id="back" hidden>&larr; Back to the building's floors</a>
+  <a class="back" id="back" hidden>&larr; Back to the building</a>
   <h1>Suite 1600, full floor</h1>
   <p class="sub">The Oppenheimer Tower · 10880 Wilshire Blvd, Los Angeles · floor 16 of 24 · built 1969</p>
   <dl>
@@ -70,11 +71,8 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
 const loadingEl = $('loading');
-// opened from the city view (/city/#/<building>/<floor>): offer the way back to that building's floor stack
-if (/^\d+$/.test(Q.get('building') || '')) {
-  const floor = /^\d+$/.test(Q.get('floor') || '') ? `/${Q.get('floor')}` : '';
-  $('back').href = `/city/#/${Q.get('building')}${floor}`; $('back').hidden = false;
-}
+// opened from Atlas's 3-D model of the building (?building=<CoStar id>): offer the way back to it
+if (/^\d+$/.test(Q.get('building') || '')) { $('back').href = `/#/los-angeles/commercial/${Q.get('building')}`; $('back').hidden = false; }
 const fail = (msg) => { loadingEl.textContent = msg; throw new Error(msg); };
 if (location.protocol === 'file:') fail('Open this through the local server (run start.command, or "python3 -m http.server 8123" in this folder, then visit http://localhost:8123).');
 

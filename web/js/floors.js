@@ -2,10 +2,17 @@
 
 export const CURRENT_YEAR = 2026;
 
-export function createFloorModel(detail, twin) {
+export function createFloorModel(detail, twin, conversion = null) {
   const stories = twin.building.stories;
   const tenancies = (detail.tenancies || []).filter((t) => t.floor);
-  const available = (detail.availability?.spaces || []).filter((s) => s.floor);
+  // every active listing when the index has them (allSpaces), else the main listing
+  const available = (detail.availability?.allSpaces || detail.availability?.spaces || []).filter((s) => s.floor);
+  // the conversion screen's view of each floor, and the floors that have a baked walkthrough
+  const screened = new Map((conversion?.floors || []).map((f) => [f.floor, f]));
+  const walkthrough = (floor) => {
+    const w = screened.get(floor)?.walkthrough;
+    return w ? { ...w, href: `${w.url}?building=${detail.id}&floor=${floor}` } : null;
+  };
   const scans = twin.scans.filter((s) => s.floor);
   const years = tenancies.map((t) => t.from).filter(Boolean);
 
@@ -25,6 +32,8 @@ export function createFloorModel(detail, twin) {
       leasedShare: cap ? Math.min(1, leasedSf / cap) : tenants.length ? 1 : 0,
       available: isNow ? available.filter((s) => s.floor === floor) : [],
       scans: isNow ? scans.filter((s) => s.floor === floor) : [],
+      walkthrough: isNow ? walkthrough(floor) : null,
+      conversion: isNow ? screened.get(floor) || null : null,
     };
   }
 
@@ -45,6 +54,8 @@ export function createFloorModel(detail, twin) {
     at,
     summary,
     hasHistory: tenancies.length > 0,
+    walkthroughFloors: [...screened.values()].filter((f) => f.walkthrough).map((f) => f.floor),
+    walkthrough,
     firstYear: years.length ? Math.max(1980, Math.min(...years)) : CURRENT_YEAR,
     floorsOf: (tenantName) => [...new Set(tenancies.filter((t) => t.tenant === tenantName && t.to == null).map((t) => t.floor))],
   };

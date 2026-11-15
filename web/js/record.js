@@ -105,10 +105,10 @@ function floorsPane(d, floors) {
     if (t.floor) entry.floors.add(t.floor);
   }
   const tenants = Object.entries(current).sort((a, b) => b[1].sf - a[1].sf).slice(0, 40);
-  const spaces = (d.availability?.spaces || []).slice().sort((a, b) => (b.floor || 0) - (a.floor || 0));
+  const spaces = (d.availability?.allSpaces || d.availability?.spaces || []).slice().sort((a, b) => (b.floor || 0) - (a.floor || 0));
 
   return `
-    <p class="legend"><span><i class="key leased"></i>Leased</span><span><i class="key available"></i>Available</span><span><i class="key scanned"></i>Interior scan</span></p>
+    <p class="legend"><span><i class="key leased"></i>Leased</span><span><i class="key available"></i>Available</span><span><i class="key scanned"></i>Interior scan</span>${floors.walkthroughFloors?.length ? '<span><i class="key walk"></i>Walkthrough: click to go inside</span>' : ''}</p>
     <section id="floor-focus"></section>
     ${spaces.length ? `<section><h2>Available space</h2><table>
       <tr><th>Floor</th><th>Suite</th><th class="num">Size</th><th class="num">Asking</th></tr>
@@ -128,7 +128,43 @@ export function floorFocusHtml(info, scans) {
   for (const t of info.tenants) lines.push([t.tenant, `${number(t.sf)} sq ft${t.from ? `, since ${t.from}` : ''}`]);
   for (const s of info.available) lines.push([`Suite ${s.suite || ''} available`, `${number(s.sf)} sq ft at ${rate(s.rate)}`]);
   const scanButtons = scans.map((s) => `<button class="quiet" type="button" data-open-scan="${s.id}">Show the scan of ${h(s.name)}</button>`).join('');
-  return `<h2>Floor ${info.floor}</h2>${lines.length ? rows(lines) : '<p class="sub">No tenant or listing on record for this floor.</p>'}${scanButtons}`;
+  const c = info.conversion;
+  const status = c ? `<p class="sub">${h(FLOOR_STATUS[c.status] || '')}${c.vacantSf ? `: ${number(c.vacantSf)} sq ft available (${Math.round((c.vacantShare || 0) * 100)}%)` : ''}</p>` : '';
+  const walk = info.walkthrough ? `<a class="walk-link" href="${h(info.walkthrough.href)}">Walk floor ${info.floor}${info.walkthrough.suite ? ` (suite ${h(info.walkthrough.suite)})` : ''}</a>` : '';
+  return `<h2>Floor ${info.floor}</h2>${status}${lines.length ? rows(lines) : '<p class="sub">No tenant or listing on record for this floor.</p>'}${walk}${scanButtons}`;
+}
+
+// ---- conversion (pipeline/conversion.py) ------------------------------------------
+const FLOOR_STATUS = { convertible: 'Convertible now', partial: 'Partly vacant', leased: 'Leased', no_data: 'No record' };
+const CHECK_MARK = { pass: '✓', fail: '✕', review: '!', unknown: '?' };
+const STATUS_CLASS = { strong: 'strong', possible: 'possible', review: 'review' };
+const pct = (x) => (x == null ? '' : `${Math.round(x * 100)}%`);
+
+function conversionPane(c) {
+  const fit = c.fit;
+  const open = c.floors.filter((f) => f.status === 'convertible' || f.status === 'partial').sort((a, b) => b.floor - a.floor);
+  const d = c.daylightPlate;
+  return `
+    <section><p><span class="conv-pill ${STATUS_CLASS[c.status] || 'other'}">${h(c.statusLabel)}</span>
+      ${fit ? `<b class="conv-fit">Fit ${fit.score} / 100</b>` : ''}</p>
+      <p class="sub">Screened against LA's Citywide Adaptive Reuse Ordinance and for how well the floors suit apartments.
+        <a href="/city/">See every LA office on the map</a>.</p></section>
+    ${open.length ? `<section><h2>Floors with space now</h2><table>
+      <tr><th>Floor</th><th>Status</th><th class="num">Available</th></tr>
+      ${open.map((f) => `<tr data-floor="${f.floor}"><td>${f.floor}</td><td>${h(FLOOR_STATUS[f.status])}${f.walkthrough ? '<br><span class="sub">Walkthrough</span>' : ''}</td>
+        <td class="num">${number(f.vacantSf)} sq ft<br><span class="sub">${pct(f.vacantShare)}</span></td></tr>`).join('')}
+    </table><p class="sub">A floor is convertible now when half or more of it is listed. Pick a row to mark it on the model.</p></section>` : ''}
+    <section><h2>Adaptive Reuse eligibility</h2>
+      <ul class="conv-checks">${c.checks.map((k) => `<li class="c-${k.result}"><b>${CHECK_MARK[k.result]}</b><span>${h(k.name)}<span class="sub">${h(k.note)}</span></span></li>`).join('')}</ul></section>
+    ${fit ? `<section><h2>Fit for apartments</h2>
+      <ul class="conv-parts">${fit.parts.map((p) => `<li><span>${h(p.name)}<span class="sub">${h(p.note)}</span></span>
+        <span class="bar"><span style="width:${(p.points / p.of) * 100}%"></span></span><b>${p.points}/${p.of}</b></li>`).join('')}</ul></section>` : ''}
+    ${d ? `<section><h2>Daylight, measured on floor ${d.floor}</h2>
+      <ul class="conv-parts">${[25, 30, 35].map((ft) => `<li><span>Within ${ft} ft of a window</span>
+        <span class="bar day"><span style="width:${(d[`within${ft}ft`] || 0) * 100}%"></span></span><b>${pct(d[`within${ft}ft`])}</b></li>`).join('')}</ul>
+      <p class="sub">Share of the floor plate, measured from the Matterport floor plan of ${h(d.name)}. Plate about
+        ${number(d.plateSf)} sq ft; the deepest point is ${Math.round(d.deepestFt)} ft from a window, and
+        ${number(d.beyond30ftSf)} sq ft (core and interior rooms) lies beyond 30 ft.</p></section>` : ''}`;
 }
 
 // ---- interiors ------------------------------------------------------------------
@@ -162,9 +198,10 @@ function aerialPane(d, twin) {
 }
 
 // ---- controller -----------------------------------------------------------------
-export function renderRecord(container, { detail, twin, floors, city, handlers }) {
+export function renderRecord(container, { detail, twin, floors, city, conversion = null, handlers }) {
   const tabs = [['overview', 'Overview']];
   if (detail.kind !== 'home' && twin.building.stories > 1) tabs.push(['floors', 'Floors']);
+  if (conversion?.floors) tabs.push(['conversion', 'Conversion']);
   tabs.push(['interiors', `Interiors (${twin.scans.length})`], ['aerial', 'Aerial']);
 
   const subtitle = detail.kind === 'home'
@@ -186,6 +223,7 @@ export function renderRecord(container, { detail, twin, floors, city, handlers }
   const builders = {
     overview: () => overviewPane(detail, twin),
     floors: () => floorsPane(detail, floors),
+    conversion: () => conversionPane(conversion),
     interiors: () => interiorsPane(twin),
     aerial: () => aerialPane(detail, twin),
   };

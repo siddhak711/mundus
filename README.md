@@ -167,8 +167,10 @@ server the rest of the site still works and the drawer says the agent is off.
 
 ## Office to housing (`/city/`)
 
-A map of every Los Angeles office building in the kit, coloured by whether it could become housing, and a floor-by-floor
-view of one building that opens the floor walkthrough. It runs on the same index as the rest of Atlas:
+A map of every Los Angeles office building in the kit, coloured by whether it could become housing. Picking a building
+opens its 3-D model in Atlas: each floor is coloured by tenants and available space, the Conversion tab holds the
+screen, and a floor with a walkthrough is painted blue with a "Walk floor N" pin, so clicking it goes inside. It runs
+on the same index as the rest of Atlas:
 
 ```bash
 python pipeline/build_index.py raw/costar
@@ -210,8 +212,8 @@ Then open http://localhost:5190/city/, or follow "LA office to housing" in the t
   and 35 ft of its edge, and how deep the deepest point is. The 30 ft share then replaces the floor-size guess in the fit
   score. Suite scans are recorded but not measured: their edges are mostly corridor walls. Needs the Matterport keys in
   `.env`. The Oppenheimer Tower's floor 16 measures 67% within 30 ft, deepest point 59 ft.
-- Floors with a baked walkthrough are listed in `pipeline/walkthroughs.json`. Opened from the city view, the
-  walkthrough links back to its building's floors.
+- Floors with a baked walkthrough are listed in `pipeline/walkthroughs.json`. The walkthrough links back to the
+  building's 3-D model. The 3-D model needs `VEXCEL_API_KEY` in `.env`.
 
 ## What the model does and does not show
 
