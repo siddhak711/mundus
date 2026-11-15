@@ -60,7 +60,10 @@ export function createTerrain({ extent, grid, heights, orthoUrl, sky, anisotropy
   for (const h of heights) if (h > maxHeight) maxHeight = h;
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, maxHeight / 2, 0), extent);
 
-  const map = new THREE.TextureLoader().load(orthoUrl);
+  // ready resolves once the aerial photo has loaded (or failed), so the viewer can upload it before animating
+  let resolveReady;
+  const ready = new Promise((resolve) => { resolveReady = resolve; });
+  const map = new THREE.TextureLoader().load(orthoUrl, () => resolveReady(), undefined, () => resolveReady());
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = anisotropy;
 
@@ -79,6 +82,7 @@ export function createTerrain({ extent, grid, heights, orthoUrl, sky, anisotropy
     mesh,
     uniforms,
     maxHeight,
+    ready,
     dispose() {
       geometry.dispose();
       map.dispose();

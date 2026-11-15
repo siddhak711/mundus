@@ -12,14 +12,16 @@ const clamp01 = (t) => Math.min(1, Math.max(0, t));
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export class Viewer {
-  constructor({ canvas, labelLayer, onFloorHover, onFloorClick }) {
+  constructor({ canvas, labelLayer, onFloorHover, onFloorMove, onFloorClick }) {
     this.canvas = canvas;
     this.labelLayer = labelLayer;
-    this.onFloorHover = onFloorHover;
+    this.onFloorHover = onFloorHover;   // the floor under the pointer changed
+    this.onFloorMove = onFloorMove;     // same floor, pointer moved: only the tooltip follows
     this.onFloorClick = onFloorClick;
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    // 1.5x is sharp on a retina screen at about half the pixels of 2x: the terrain shader runs per pixel
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     this.renderer.autoClear = false;
 
     this.scene = new THREE.Scene();
@@ -43,6 +45,8 @@ export class Viewer {
     this.pointer = new THREE.Vector2();
     this.raycaster = new THREE.Raycaster();
     this.layers = { heights: false, footprints: false };
+    this.pendingPointer = null;   // latest pointermove, handled once per frame
+    this.rect = canvas.getBoundingClientRect();
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas.parentElement);
@@ -71,11 +75,25 @@ export class Viewer {
     this.controls.minDistance = twin.extent * 0.04;
     this.controls.maxDistance = twin.extent * 3;
     this.view = 'model';
+    this.resize();
+    this.placeCamera(this.cameraFor('plan'));          // where the opening animation starts, while the photo loads
+    this.controls.enabled = false;
+
+    // Upload the aerial photo and compile every shader now, not on the first frame that needs them: otherwise both
+    // land in the middle of the opening animation as a visible stall.
+    await this.terrain.ready;
+    this.renderer.initTexture(this.terrain.uniforms.uMap.value);
+    this.building.setBuilt(1);                       // floors start hidden; show them so their material compiles too
+    this.footprints.visible = true;
+    this.renderer.compile(this.scene, this.camera);
+    this.building.setBuilt(0);
+    this.footprints.visible = this.layers.footprints;
 
     if (reducedMotion()) {
       this.terrain.uniforms.uGrow.value = 1;
       this.building.setBuilt(1);
       this.placeCamera(this.cameraFor('model'));
+      this.controls.enabled = true;
     } else {
       this.controls.enabled = false;
       this.reveal = { start: performance.now(), from: this.cameraFor('plan'), to: this.cameraFor('model') };
@@ -141,21 +159,27 @@ export class Viewer {
 
   updatePins() {
     const visible = !this.reveal && !this.scan;
-    const rect = this.canvas.getBoundingClientRect();
-    const anchor = new THREE.Vector3();
+    const rect = this.rect;            // measured on resize, not every frame: reading layout here forces a reflow
+    const anchor = this.anchor || (this.anchor = new THREE.Vector3());
     for (const pin of this.pins) {
       const y = pin.floor ? this.building.floorMid(pin.floor) : this.building.height() + this.extent * 0.01;
       anchor.set(this.building.eastEdge, y, this.building.centre.z).project(this.camera);
       const shown = visible && anchor.z < 1;
-      pin.el.hidden = !shown;
-      pin.el.style.left = `${(anchor.x * 0.5 + 0.5) * rect.width}px`;
-      pin.el.style.top = `${(-anchor.y * 0.5 + 0.5) * rect.height}px`;
+      if (pin.el.hidden === shown) pin.el.hidden = !shown;
+      if (!shown) continue;
+      const x = Math.round((anchor.x * 0.5 + 0.5) * rect.width * 2) / 2;
+      const y2 = Math.round((-anchor.y * 0.5 + 0.5) * rect.height * 2) / 2;
+      if (x !== pin.x || y2 !== pin.y) {     // only touch the DOM when the pin actually moves
+        pin.x = x; pin.y = y2;
+        pin.el.style.setProperty('--x', `${x}px`);
+        pin.el.style.setProperty('--y', `${y2}px`);
+      }
     }
   }
 
   floorUnder(event) {
     if (!this.building || this.reveal) return 0;
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.rect;
     this.pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const hit = this.raycaster.intersectObjects(this.building.slabs, false)[0];
@@ -163,13 +187,23 @@ export class Viewer {
   }
 
   setHover(floor, event) {
-    if (floor === this.hoveredFloor && !floor) return;
+    if (floor === this.hoveredFloor) return;
     this.hoveredFloor = floor;
     this.canvas.style.cursor = floor ? 'pointer' : 'grab';
     this.onFloorHover?.(floor, event);
   }
 
-  handlePointerMove(event) { this.setHover(this.floorUnder(event), event); }
+  // pointermove can fire far more often than frames are drawn: keep the latest and raycast once per frame
+  handlePointerMove(event) { this.pendingPointer = event; }
+
+  hoverStep() {
+    const event = this.pendingPointer;
+    if (!event) return;
+    this.pendingPointer = null;
+    const floor = this.floorUnder(event);
+    if (floor !== this.hoveredFloor) this.setHover(floor, event);
+    else if (floor) this.onFloorMove?.(event);
+  }
 
   handlePointerUp(event) {
     const moved = this.pressAt ? Math.hypot(event.clientX - this.pressAt[0], event.clientY - this.pressAt[1]) : 99;
@@ -217,6 +251,7 @@ export class Viewer {
   resize() {
     const { clientWidth: width, clientHeight: height } = this.canvas.parentElement;
     if (!width || !height) return;
+    this.rect = this.canvas.getBoundingClientRect();
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
@@ -262,6 +297,7 @@ export class Viewer {
       this.scan.setCut(min + (this.scan.cut - min) * easeInOut(opening));
     }
 
+    this.hoverStep();
     this.updatePins();
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);

@@ -2,6 +2,7 @@
 // Atlas's 3-D model, where each floor shows its tenants and vacancy and a walkthrough floor can be entered directly.
 import * as L from 'leaflet';
 import { escapeHtml, number } from '/js/format.js';
+import { onHoverIntent, prefetchProperty } from '/js/prefetch.js';
 
 const $ = (id) => document.getElementById(id);
 const LA = [[34.05, -118.33], 11];
@@ -60,6 +61,7 @@ function drawMarkers() {
     m.bindTooltip(`<span class="map-tip">${escapeHtml(b.name)}</span><br>${escapeHtml(data.statusLabels[b.status] || b.status)}`
       + (b.score != null ? ` · fit ${b.score}` : ''), { direction: 'top' });
     m.on('click', () => { location.href = modelUrl(b.id); });      // every building opens in Atlas's 3-D model
+    m.on('mouseover', () => prefetchProperty('commercial', b.id));
     layer.addLayer(m);
     markers.set(String(b.id), m);
   }
@@ -98,7 +100,7 @@ function renderList() {
     const facts = [b.stories && `${b.stories} floors`, b.yearBuilt && `built ${b.yearBuilt}`,
       b.vacancy != null && `${Math.round(b.vacancy * 100)}% available`,
       b.convertibleFloors && `${b.convertibleFloors} convertible ${b.convertibleFloors === 1 ? 'floor' : 'floors'}`].filter(Boolean);
-    return `<li><a class="row" href="${modelUrl(b.id)}">
+    return `<li><a class="row" href="${modelUrl(b.id)}" data-id="${b.id}">
       <i style="background:${g.color}"></i>
       <span><b>${escapeHtml(b.name)}</b>${b.walkthrough ? ' <em class="tag">Walkthrough</em>' : ''}
         <small>${escapeHtml(b.name !== b.address ? b.address : '')}</small>
@@ -138,7 +140,21 @@ async function start() {
   renderList();
   renderMethod();
   drawMarkers();
-  $('search').addEventListener('input', () => { listLimit = PAGE; renderList(); });
+  let searchTimer = 0;
+  $('search').addEventListener('input', () => {
+    listLimit = PAGE;
+    renderList();
+    // a search narrowed to a few buildings is a strong hint: start building their 3-D models now
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      const hits = $('search').value.trim() ? candidates() : [];
+      if (hits.length && hits.length <= 3) hits.forEach((b) => prefetchProperty('commercial', b.id));
+    }, 250);
+  });
+  onHoverIntent($('list'), '.row[data-id]', (row) => ['commercial', Number(row.dataset.id)]);
+  // the buildings with a walkthrough are the likeliest first click: warm them once the page is idle
+  (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() =>
+    data.buildings.filter((b) => b.walkthrough).forEach((b) => prefetchProperty('commercial', b.id)));
   $('side').addEventListener('scroll', () => {
     const el = $('side');
     if (el.scrollTop + el.clientHeight > el.scrollHeight - 300) { listLimit += PAGE; renderList(); }

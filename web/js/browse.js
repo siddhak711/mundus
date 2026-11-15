@@ -1,6 +1,7 @@
 // City view: a filterable list of every property and home, mirrored on a map.
 import * as L from 'leaflet';
 import { fetchIndex } from './api.js';
+import { onHoverIntent, prefetchProperty } from './prefetch.js';
 import { compact, escapeHtml, moneyCompact, number, plural, CITY_NAMES } from './format.js';
 
 const PAGE = 60;
@@ -87,6 +88,7 @@ function renderMarkers() {
     });
     marker.bindTooltip(`<span class="map-tip">${escapeHtml(item.name)}</span><br>${escapeHtml(item.type)}`, { direction: 'top' });
     marker.on('click', () => { location.hash = linkTo(state.city, item); });
+    marker.on('mouseover', () => prefetchProperty(item.kind, item.id));
     markerLayer.addLayer(marker);
   }
 }
@@ -100,6 +102,10 @@ function setUpOnce() {
   markerLayer = L.layerGroup().addTo(map);
 
   els.search.addEventListener('input', applyFilters);
+  onHoverIntent(els.results, '.result[data-id]', (a) => {
+    const item = state.shown.find((i) => String(i.id) === a.dataset.id);
+    return item && [item.kind, item.id];
+  });
   els.type.addEventListener('change', applyFilters);
   els.sort.addEventListener('change', applyFilters);
   els.results.addEventListener('scroll', () => {

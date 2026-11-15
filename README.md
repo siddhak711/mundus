@@ -180,8 +180,17 @@ python pipeline/build_index.py raw/costar
 python pipeline/conversion.py
 ```
 
+Optional, once: build every candidate's 3-D model ahead of time, so even a first open is instant (about 1.5 s
+saved per building; already built models are skipped):
+
+```bash
+python -m pipeline.prewarm
+```
+
 Then open http://localhost:5190/city/, or follow "LA office to housing" in the top bar. `conversion.py` writes
-`data/conversion/los-angeles.json` and one floor file per office building in the City of LA.
+`data/conversion/los-angeles.json` and one floor file per office building in the City of LA. The page also starts
+loading a building's model in the background when the pointer rests on it, when it is focused, or when a search
+narrows to three buildings or fewer, so the click only has to draw it.
 
 | Dot | Meaning |
 |---|---|

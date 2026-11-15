@@ -61,10 +61,16 @@ function showFloorTip(floor, event) {
   if (info.scans.length) lines.push('Has an interior scan');
   if (info.walkthrough) lines.push('<b>Click to walk this floor</b>');
   tip.innerHTML = `<strong>Floor ${floor}</strong>${lines.length ? lines.join('<br>') : 'Nothing on record'}`;
-  const stage = tip.parentElement.getBoundingClientRect();
-  tip.style.left = `${event.clientX - stage.left + 14}px`;
-  tip.style.top = `${event.clientY - stage.top + 14}px`;
   tip.hidden = false;
+  tipStage = tip.parentElement.getBoundingClientRect();   // measured once per floor, not on every pointer move
+  moveFloorTip(event);
+}
+
+// The tooltip follows the pointer without rebuilding its text or repainting the floors.
+let tipStage = null;
+function moveFloorTip(event) {
+  if (tip.hidden || !event || !tipStage) return;
+  tip.style.transform = `translate(${event.clientX - tipStage.left + 14}px, ${event.clientY - tipStage.top + 14}px)`;
 }
 
 function setYear(year) {
@@ -144,7 +150,9 @@ async function openProperty(city, kind, id) {
   const viewer = new Viewer({
     canvas: freshCanvas(),
     labelLayer: el('stage-labels'),
-    onFloorHover: (floor, event) => { if (current) { current.hovered = floor; repaint(); showFloorTip(floor, event); } },
+    // called only when the floor under the pointer changes; onFloorMove handles the rest of the movement
+    onFloorHover: (floor, event) => { if (current?.floors) { current.hovered = floor; repaint(); showFloorTip(floor, event); } },
+    onFloorMove: moveFloorTip,
     onFloorClick: (floor) => {
       if (!current?.floors) return;
       const info = current.floors.at(floor, current.year);

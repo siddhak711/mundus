@@ -68,6 +68,7 @@ if [ -f "$KIT/schemas/enums.json" ] && .venv/bin/python pipeline/build_index.py 
   # daylight depth measured from the walkthrough buildings' Matterport scans, then the office-to-housing screen
   .venv/bin/python -m pipeline.daylight --walkthroughs || echo "WARNING: daylight not measured; the screen uses floor size instead"
   .venv/bin/python pipeline/conversion.py
+  .venv/bin/python -m pipeline.prewarm || echo 'WARNING: 3-D models not prebuilt; each builds on its first open'
 else
   echo "WARNING: site index not built from $KIT. The site will show no properties until"
   echo "         .venv/bin/python pipeline/build_index.py <kit folder>  succeeds."
