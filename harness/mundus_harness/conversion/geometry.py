@@ -64,6 +64,30 @@ class Floor:
         self.top = y0 + self.h / res
         self._win_dist = None
         self._walk = None
+        self._unscanned = None
+        self._open_dist = None
+
+    def unscanned_facade(self) -> np.ndarray:
+        """Facade pixels more than 5 m from every camera position: offices the scanner never entered, seen at most
+        through interior glass. Whether they have windows is unknown, not 'no'."""
+        if self._unscanned is None:
+            edge = self.plate & ~ndimage.binary_erosion(self.plate)
+            cams = np.zeros_like(self.plate)
+            pf = self.dir / "panos.json"
+            if pf.exists():
+                for p in json.loads(pf.read_text(encoding="utf-8")):
+                    c, r = self.to_px(p["x"], p["y"])
+                    if 0 <= int(r) < self.h and 0 <= int(c) < self.w:
+                        cams[int(r), int(c)] = True
+            far = ndimage.distance_transform_edt(~cams) / self.res > 5.0 if cams.any() else np.zeros_like(self.plate)
+            self._unscanned = ndimage.binary_dilation(edge & far, iterations=1) & ~ndimage.binary_dilation(self.window, iterations=3)
+        return self._unscanned
+
+    def open_facade_distance_m(self) -> np.ndarray:
+        """Distance to the nearest window or unscanned facade (where a window is possible but unseen)."""
+        if self._open_dist is None:
+            self._open_dist = ndimage.distance_transform_edt(~(self.window | self.unscanned_facade())) / self.res
+        return self._open_dist
 
     # ---------- frame ----------
     def to_px(self, x, y):
@@ -199,8 +223,24 @@ def floor_summary(scan: str, root: Path | None = None) -> dict[str, Any]:
             rr, cc = int(r), int(c)
             flags.append(bool(0 <= rr < f.h and 0 <= cc < f.w and f.window[max(0, rr - 3):rr + 4, max(0, cc - 3):cc + 4].any()))
         win = sum(flags)
+        uns = f.unscanned_facade()
+        uflags = []
+        for t in ts:
+            p = s["a"] + s["u"] * t + s["n"] * 0.05
+            c, r = f.to_px(*p)
+            rr, cc = int(r), int(c)
+            uflags.append(bool(0 <= rr < f.h and 0 <= cc < f.w and uns[max(0, rr - 3):rr + 4, max(0, cc - 3):cc + 4].any()))
+        ugaps, ustart = [], None
+        for t, fl in zip(list(ts) + [s["length_m"] + 1], uflags + [False], strict=True):
+            if fl and ustart is None:
+                ustart = t
+            elif not fl and ustart is not None:
+                if t - ustart >= 1.0:
+                    ugaps.append([r2(ustart - 0.25), r2(min(t - 0.25, s["length_m"]))])
+                ustart = None
+        flags = [a or b for a, b in zip(flags, uflags, strict=True)]   # unscanned is not "no window"
         gaps, start = [], None
-        for t, fl in zip(list(ts) + [s["length_m"] + 1], flags + [True]):
+        for t, fl in zip(list(ts) + [s["length_m"] + 1], flags + [True], strict=True):
             if not fl and start is None:
                 start = t
             elif fl and start is not None:
@@ -212,6 +252,7 @@ def floor_summary(scan: str, root: Path | None = None) -> dict[str, Any]:
                       "facade_to_core_m": {"min": r2(min(cl)), "p10": r2(np.percentile(cl, 10)), "median": r2(np.median(cl))} if cl else None,
                       "window_share": round(win / max(1, len(ts)), 2),
                       "no_window_stretches_along_m": gaps,
+                      "unscanned_facade_along_m": ugaps,
                       "column_candidates": cols})
     return {
         "scan": scan, "name": g.get("name"), "floor": g.get("floor"), "property": g.get("property"),
@@ -264,15 +305,24 @@ def draft_ring(scan: str, unit_depth_m: float, sides: dict[str, list[dict[str, A
         if total > avail + 0.05:
             raise ValueError(f"side {name}: unit widths add up to {total:.1f} m but only {avail:.1f} m is available "
                              f"(from {t0:.1f} to {t1:.1f} m along the side)")
-        t = t0 + (avail - total) / 2          # centre the run; leftover becomes amenity space at both ends
+        # centre the run when no gaps are given; with explicit gaps, start at the side's usable start
+        t = t0 + (0.0 if any(u.get("type") == "gap" for u in specs) else (avail - total) / 2)
         if avail - total > 0.5:
             problems.append(f"side {name}: {avail - total:.1f} m of facade left unassigned (amenity or storage)")
         run_start = t
         a_, u_, n_ = s["a"], s["u"], s["n"]
         for spec in specs:
             typ = spec["type"]
+            if typ == "gap":                     # facade left unassigned here: amenity, storage, no windows
+                g = float(spec["width_m"])
+                if units and units[-1]["side"] == name and t > run_start:
+                    walls.append(_seg(a_ + u_ * t, a_ + u_ * t + n_ * unit_depth_m, "demising"))
+                    walls.append(_seg(a_ + u_ * run_start + n_ * unit_depth_m, a_ + u_ * t + n_ * unit_depth_m, "corridor"))
+                t += g
+                run_start = t
+                continue
             if typ not in TYPE_BEDROOMS:
-                raise ValueError(f"unit type {typ!r} must be one of {list(TYPE_BEDROOMS)}")
+                raise ValueError(f"unit type {typ!r} must be one of {list(TYPE_BEDROOMS) + ['gap']}")
             w = float(spec["width_m"])
             k += 1
             p0, p1 = a_ + u_ * t, a_ + u_ * (t + w)
@@ -298,10 +348,12 @@ def draft_ring(scan: str, unit_depth_m: float, sides: dict[str, list[dict[str, A
                           "entry": [r2(entry[0]), r2(entry[1])], "bedroom_polygons": bedrooms})
             walls.append(_seg(p0, p0 + n_ * unit_depth_m, "demising"))
             t += w
-        walls.append(_seg(a_ + u_ * t, a_ + u_ * t + n_ * unit_depth_m, "demising"))
-        if specs:
+        if t > run_start + 0.01:
+            walls.append(_seg(a_ + u_ * t, a_ + u_ * t + n_ * unit_depth_m, "demising"))
             walls.append(_seg(a_ + u_ * run_start + n_ * unit_depth_m, a_ + u_ * t + n_ * unit_depth_m, "corridor"))
-            cl = f.clearance(s, run_start, t)
+        side_units = [x for x in units if x["side"] == name]
+        if side_units:
+            cl = f.clearance(s, t0, t)
             if cl and min(cl) < unit_depth_m + max(corridor_m, MIN_CORRIDOR_M):
                 problems.append(f"side {name}: the core is {min(cl):.1f} m from the facade in places; units {unit_depth_m:.1f} m "
                                 f"deep plus a {corridor_m:.1f} m corridor need {unit_depth_m + corridor_m:.1f} m")
@@ -328,6 +380,9 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
     core_in = ndimage.binary_erosion(f.core, structure=f.disk(0.2))
     win_zone = ndimage.binary_dilation(f.window, structure=f.disk(0.5))
     win_d = f.window_distance_m()
+    open_d = f.open_facade_distance_m()
+    uns = f.unscanned_facade()
+    uns_zone = ndimage.binary_dilation(uns, structure=f.disk(0.5))
     walk = f.walk_distance_m()
     ceiling = f.geo.get("ceiling_height_ft")
     exits_assumed = all((e.get("confidence") == "assumed") for e in f.struct.get("exits") or [])
@@ -344,7 +399,7 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
         area_sf = px / f.res ** 2 * SF_PER_M2
         checks: dict[str, dict[str, Any]] = {}
 
-        def put(name, status, value=None, rule=None):
+        def put(name, status, value=None, rule=None, checks=checks):
             checks[name] = {"status": status, **({"value": value} if value is not None else {}), **({"rule": rule} if rule else {})}
 
         inside = float((m & f.plate).sum() / max(1, px))
@@ -357,21 +412,28 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
         taken |= m
         put("unit_size", "pass" if area_sf >= MIN_UNIT_SF else "fail", f"{area_sf:.0f} sf",
             f"Unit at least {MIN_UNIT_SF} sf (CBC 1208.4, unconfirmed)")
-        frontage = float((ndimage.binary_dilation(m, iterations=2) & f.window).sum() / f.res)
-        put("window_frontage", "pass" if frontage >= 2.0 else "fail", f"{frontage:.1f} m of window")
-        glazing_m2 = frontage * 2.0
-        put("natural_light", "pass" if glazing_m2 >= 0.08 * px / f.res ** 2 else "fail",
-            f"about {glazing_m2:.0f} m2 glass for {px / f.res ** 2:.0f} m2 floor (assumes 2 m of glazed height)",
+        grown = ndimage.binary_dilation(m, iterations=2)
+        frontage = float((grown & f.window).sum() / f.res)
+        unseen = float((grown & uns).sum() / f.res)
+
+        def tri(ok_seen, ok_with_unseen):
+            return "pass" if ok_seen else ("unknown" if ok_with_unseen else "fail")
+        put("window_frontage", tri(frontage >= 2.0, frontage + unseen >= 2.0),
+            f"{frontage:.1f} m of window" + (f", {unseen:.1f} m of facade not scanned" if unseen else ""))
+        floor_m2 = px / f.res ** 2
+        put("natural_light", tri(frontage * 2.0 >= 0.08 * floor_m2, (frontage + unseen) * 2.0 >= 0.08 * floor_m2),
+            f"about {frontage * 2.0:.0f} m2 glass for {floor_m2:.0f} m2 floor (assumes 2 m of glazed height)",
             "Glazing at least 8% of floor area (CBC 1204.2, unconfirmed); glazed height is an estimate")
         deepest = float(win_d[m].max() * FT_PER_M) if px else None
-        put("daylight_depth", "pass" if deepest is not None and deepest <= DAYLIGHT_FT else "fail",
-            f"deepest point {deepest:.0f} ft from a window" if deepest is not None else None,
+        deepest_open = float(open_d[m].max() * FT_PER_M) if px else None
+        put("daylight_depth", tri(deepest is not None and deepest <= DAYLIGHT_FT, deepest_open is not None and deepest_open <= DAYLIGHT_FT),
+            f"deepest point {deepest:.0f} ft from a seen window" + (f", {deepest_open:.0f} ft counting unscanned facade" if deepest_open is not None and deepest_open < deepest else "") if deepest is not None else None,
             f"Rule of thumb, not code: within {DAYLIGHT_FT} ft of a window")
         bed_status, bed_notes = "pass", []
         beds = u.get("bedroom_polygons") or []
         if u.get("bedrooms") and not beds:
             bed_status, bed_notes = "unknown", ["bedrooms not drawn; unit window frontage checked instead"]
-            if frontage < 2.0:
+            if frontage + unseen < 2.0:
                 bed_status = "fail"
         for i, bp in enumerate(beds, 1):
             bm = f.raster(bp)
@@ -379,10 +441,14 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
             bx = np.array(bp)
             dims = sorted([float(np.hypot(*(bx[1] - bx[0]))), float(np.hypot(*(bx[2] - bx[1])))])
             touches = bool((bm & win_zone).any())
-            ok = touches and bsf >= MIN_BEDROOM_SF and dims[0] * FT_PER_M >= MIN_ROOM_DIM_FT
-            if not ok:
+            maybe = bool((bm & uns_zone).any())
+            size_ok = bsf >= MIN_BEDROOM_SF and dims[0] * FT_PER_M >= MIN_ROOM_DIM_FT
+            if not size_ok or not (touches or maybe):
                 bed_status = "fail"
-            bed_notes.append(f"bedroom {i}: {bsf:.0f} sf, {'touches' if touches else 'NO'} window, narrowest {dims[0] * FT_PER_M:.1f} ft")
+            elif not touches and bed_status == "pass":
+                bed_status = "unknown"
+            seen = "touches a window" if touches else ("faces unscanned facade" if maybe else "NO window")
+            bed_notes.append(f"bedroom {i}: {bsf:.0f} sf, {seen}, narrowest {dims[0] * FT_PER_M:.1f} ft")
         put("bedroom_windows", bed_status, "; ".join(bed_notes) or "no bedrooms",
             "Every bedroom has an exterior window (CBC 1204/1205, unconfirmed); bedroom at least 70 sf and 7 ft wide (CBC 1208)")
         travel = walk[m & np.isfinite(walk)]
@@ -412,6 +478,7 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
             "walls_crossing_structure": [{"a": r["wall"]["a"], "b": r["wall"]["b"], "kind": r["wall"].get("kind"),
                                           "core": r["core"], "column": r["column"]} for r in wall_results],
             "assumptions": (["Exits are assumed at the ends of the core: fire stairs were not scanned."] if exits_assumed else [])
+            + (["Some facade was not scanned (offices never entered); units there are 'unknown' for windows, not failed."] if uns.any() else [])
             + ["Column positions are low-confidence guesses from the mesh.",
                "Code thresholds are unconfirmed until the compliance agent confirms them."]}
 
@@ -435,7 +502,7 @@ def finalize(scan: str, layout: dict[str, Any], report: dict[str, Any], summary:
     for u in layout.get("units") or []:
         r = by_id.get(u["id"], {})
         units.append({"id": u["id"], "type": u["type"], "bedrooms": int(u.get("bedrooms", TYPE_BEDROOMS.get(u["type"], 0))),
-                      "area_sf": r.get("area_sf", u.get("area_sf")), "polygon": u["polygon"],
+                      "area_sf": u.get("area_sf") or r.get("area_sf"), "polygon": u["polygon"],
                       "label_at": u.get("label_at") or [r2(np.mean([p[0] for p in u["polygon"]])), r2(np.mean([p[1] for p in u["polygon"]]))],
                       "checks": {"status": r.get("status", "unknown"), **{k: v["status"] for k, v in (r.get("checks") or {}).items()}}})
     walls = [{"a": w["a"], "b": w["b"], "kind": w.get("kind", "demising")} for w in layout.get("walls") or []]

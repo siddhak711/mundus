@@ -9,7 +9,7 @@ from langchain_core.tools import tool
 
 from mundus_harness.conversion import geometry as geo
 
-MAX_CHARS = 9000
+MAX_CHARS = 24000
 
 
 def _dump(obj: Any) -> str:
@@ -74,7 +74,8 @@ def build_tools(root: Path | None = None) -> dict[str, Any]:
     def draft_layout(scan: str, unit_depth_m: float, sides: dict[str, list[dict[str, Any]]], corridor_m: float = 1.6) -> str:
         """Draw apartments along the facade and check them. `sides` maps a facade side name (north, south, east,
         west) to its units in order along the side, e.g. {"north": [{"type": "1BR", "width_m": 7.0}, ...]}.
-        Types: studio, 1BR, 2BR, 3BR. Every unit is unit_depth_m deep from the facade; the corridor runs behind
+        Types: studio, 1BR, 2BR, 3BR, or "gap" to leave that much facade unassigned (no windows, amenity) and
+        continue with more units after it. Positions start at the side's usable start. Every unit is unit_depth_m deep from the facade; the corridor runs behind
         them. Bedrooms are drawn against the facade, 3.2 m wide each, so a 1BR needs at least 6.2 m of facade and a
         2BR 9.4 m. Returns a draft id, the check counts and every unit that does not pass, with the reason."""
         try:
@@ -107,7 +108,9 @@ def build_tools(root: Path | None = None) -> dict[str, Any]:
         if failing_only:
             return _dump(_compact_report(rep, True))
         units = [{"id": u["id"], "type": u["type"], "area_sf": u["area_sf"], "status": u["status"],
-                  "checks": {k: f"{v['status']}: {v.get('value', '')}" for k, v in u["checks"].items()}} for u in rep["units"]]
+                  "checks": {k: (v["status"] if v["status"] == "pass" and k not in ("exit_travel", "daylight_depth")
+                                 else f"{v['status']}: {v.get('value', '')}") for k, v in u["checks"].items()}}
+                 for u in rep["units"]]
         return _dump({"counts": rep["counts"], "units": units, "assumptions": rep["assumptions"],
                       "rules": {k: v.get("rule") for k, v in (rep["units"][0]["checks"].items() if rep["units"] else []) if v.get("rule")}})
 

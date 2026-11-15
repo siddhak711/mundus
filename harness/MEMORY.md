@@ -2,6 +2,13 @@
 
 Draft, 2026-11-15. Sources are listed at the end. Where this file disagrees with what is built, the code wins; update this file.
 
+As built (mundus_harness/conversion/): `/memories/` is a folder on disk (harness/data/conversion_memory/, or
+CONVERSION_MEMORY_DIR), shared by every run; `/skills/` is harness/skills_conversion/ (read-only). Write rules are
+deepagents FilesystemPermission per agent: allow `/memories/<own>/**` (orchestrator also INDEX.md), then deny
+`/memories/**` and `/skills/**`; a test proves a cross-folder write is refused. Reference data is
+data/conversion/<scan>/ (floorprep output), read only through tools. Drafts live in data/conversion/<scan>/drafts/
+instead of `/work/`. There is no web search, so the compliance rules are seeded in the skill, all unconfirmed.
+
 ## 1. What memory is for
 
 Memory holds what an agent cannot re-read from the environment and will need again. Anthropic's memory research puts
