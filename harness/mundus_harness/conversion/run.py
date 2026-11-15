@@ -17,6 +17,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("scan")
     ap.add_argument("--ask", default="", help="extra instruction for this run, e.g. a what-if")
+    ap.add_argument("--tag", action="append", default=[], help="extra LangSmith tag (repeatable), e.g. knob:fixtures")
+    ap.add_argument("--meta", action="append", default=[], help="extra LangSmith metadata as key=value (repeatable)")
     a = ap.parse_args()
     from mundus_harness.config import load_config
     load_config()   # loads .env and maps MUNDUS_ANTHROPIC_KEY to ANTHROPIC_API_KEY
@@ -27,8 +29,12 @@ def main() -> int:
     msg = (f"Convert office floor scan {a.scan} into a rough-draft apartment layout. "
            "Follow your process and write the layout with write_layout. " + a.ask)
     t0 = time.time()
+    run_id = str(uuid.uuid4())
+    meta = {"scan": a.scan, "conversion_run_id": run_id, **dict(m.split("=", 1) for m in a.meta)}
     result = agent.invoke({"messages": [{"role": "user", "content": msg}]},
-                          config={"configurable": {"thread_id": str(uuid.uuid4())}, "recursion_limit": 300})
+                          config={"configurable": {"thread_id": run_id}, "recursion_limit": 300,
+                                  "run_name": f"conversion:{a.scan}", "tags": ["conversion", a.scan, *a.tag],
+                                  "metadata": meta})
     last = result["messages"][-1]
     print(getattr(last, "content", last) if isinstance(getattr(last, "content", None), str) else json.dumps(getattr(last, "content", ""), default=str)[:3000])
     if not out.exists() or out.stat().st_mtime <= before:

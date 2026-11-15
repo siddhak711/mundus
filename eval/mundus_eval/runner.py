@@ -332,6 +332,9 @@ def main(argv: list[str] | None = None) -> int:
     rp = sub.add_parser("report", help="rebuild the report for a results folder")
     rp.add_argument("--dir")
     rp.set_defaults(fn=cmd_report)
+    from mundus_eval.floorplan.cli import add_parser as add_floorplan
+
+    add_floorplan(sub)
     args = p.parse_args(argv)
     out = args.fn(args)
     return asyncio.run(out) if asyncio.iscoroutine(out) else out
