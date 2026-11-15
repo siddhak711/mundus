@@ -1,0 +1,16 @@
+# HTTPS front for both services. sslip.io gives the VM's IP a hostname, so Caddy can get a certificate.
+@HOST@ {
+	encode gzip
+
+	# Agent server: shared-secret header, so strangers cannot spend the model credits.
+	handle_path /agent/* {
+		@noauth not header X-Agent-Token @AGENT_TOKEN@
+		respond @noauth "unauthorized" 401
+		reverse_proxy 127.0.0.1:2024
+	}
+
+	# World API: REST under /v1, MCP under /mcp, health check. Bearer token is checked by the API itself.
+	handle {
+		reverse_proxy 127.0.0.1:8000
+	}
+}

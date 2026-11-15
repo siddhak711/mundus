@@ -1,0 +1,5 @@
+{
+  "note": "The 15-place evaluation set (specs/backend-spec.md section 1.2). Ids only.",
+  "properties": ["246941", "120125", "11104240", "9134890", "6067080", "755901", "5576060", "4164481", "255445", "21290728", "8810904", "256445", "4025799", "20976526"],
+  "homes": [{"residential_listing_id": "216888684", "sid": "iSRaeV1DjrZ"}]
+}

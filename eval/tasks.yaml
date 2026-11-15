@@ -1,0 +1,223 @@
+# Mundus harness evaluation: 15 tasks over the 15-place evaluation set.
+# status: draft. The task wording was drafted in the build session from the real data; edit freely.
+# Three groups of five: retrieval, cross-building analysis, physical reasoning.
+# grader: code  -> every check is computed; truth comes from the World API at build time (mundus-eval truth).
+# grader: model -> Claude Fable 5.2 scores the answer against the rubric and the reference (9 tasks).
+# Ground truth is never stored in this file: it is licensed data and is built into eval/data/truth.json.
+version: 1
+status: draft
+
+tasks:
+  # ---------------------------------------------------------------- retrieval
+  - id: R1
+    group: retrieval
+    grader: code
+    question: "How many tenancies are recorded at Westside Towers East, 11835 Olympic Blvd?"
+    place_ids: ["place:costar:246941"]
+    required_evidence_types: [record]
+    truth:
+      tenancies: {kind: sql, sql: "SELECT count(*) FROM costar_occupancy WHERE place_id='place:costar:246941'"}
+    checks:
+      - {type: number, key: tenancies, tolerance: 0}
+
+  - id: R2
+    group: retrieval
+    grader: model
+    question: "What is the asking price for the development site at 7210 S Western Ave, and what building stands on it today?"
+    place_ids: ["place:costar:21290728"]
+    required_evidence_types: [record]
+    truth:
+      asking_price: {kind: sql, sql: "SELECT for_sale_summary_asking_price_low FROM costar_listing WHERE place_id='place:costar:21290728' AND listing_kind='sale' LIMIT 1"}
+      structures: {kind: rest, path: "/v1/aerial/place:costar:21290728", key: structure_count}
+    rubric: >
+      Full marks need both parts. (1) The asking price matches the reference price. (2) The answer states that the data
+      records no building here: no building size, no storeys, and no structure found from above. An answer that describes
+      or assumes a building fails part 2. Saying the place is a land or development site with no recorded building passes.
+
+  - id: R3
+    group: retrieval
+    grader: code
+    question: "What roof material does the aerial data report for 1601 Perrino Pl, and is rooftop solar detected?"
+    place_ids: ["place:costar:755901"]
+    required_evidence_types: [aerial_facts]
+    truth:
+      roof_material: {kind: rest, path: "/v1/aerial/place:costar:755901", key: "attributes.structure.roof-characteristics.material.class"}
+      solar: {kind: rest, path: "/v1/aerial/place:costar:755901", key: "attributes.structure.roof-objects.solar.value"}
+    checks:
+      - {type: contains, key: roof_material}
+      - {type: boolean, key: solar, true_words: ["solar is detected", "solar detected", "has rooftop solar", "has solar", "solar: yes", "solar panels are", "detects solar", "detected: true", "solar is present"], false_words: ["no solar", "not detected", "no rooftop solar", "solar is not", "without solar"]}
+
+  - id: R4
+    group: retrieval
+    grader: code
+    question: "For the home at 5134 Medina Rd, what is the list price and how many bedrooms does the listing give?"
+    place_ids: ["place:home:216888684"]
+    required_evidence_types: [record]
+    truth:
+      price: {kind: sql, sql: "SELECT max(current_price) FROM costar_res_listing WHERE place_id='place:home:216888684'"}
+      bedrooms: {kind: sql, sql: "SELECT max(property_beds_max) FROM costar_res_listing WHERE place_id='place:home:216888684'"}
+    checks:
+      - {type: number, key: price, tolerance: 0.001}
+      - {type: number, key: bedrooms, tolerance: 0}
+
+  - id: R5
+    group: retrieval
+    grader: code
+    question: "How many Matterport scans are linked to Josephine DTLA at 801 S Hope St, and how many rooms does its largest scan have?"
+    place_ids: ["place:costar:8810904"]
+    required_evidence_types: [record]
+    truth:
+      scans: {kind: sql, sql: "SELECT count(*) FROM space WHERE place_id='place:costar:8810904'"}
+      max_rooms: {kind: sql, sql: "SELECT max(room_count) FROM space WHERE place_id='place:costar:8810904'"}
+    checks:
+      - {type: number, key: scans, tolerance: 0}
+      - {type: number, key: max_rooms, tolerance: 0}
+
+  # ------------------------------------------------- cross-building analysis
+  - id: A6
+    group: cross_building
+    grader: code
+    question: "Among the three office buildings in the set (Westside Towers East, The Granada Buildings, The Preserve), which has the most recorded tenancies and which has the fewest? Give the counts."
+    place_ids: ["place:costar:246941", "place:costar:120125", "place:costar:11104240"]
+    required_evidence_types: [record]
+    truth:
+      most: {kind: sql, sql: "SELECT count(*) FROM costar_occupancy WHERE place_id='place:costar:246941'"}
+      middle: {kind: sql, sql: "SELECT count(*) FROM costar_occupancy WHERE place_id='place:costar:120125'"}
+      fewest: {kind: sql, sql: "SELECT count(*) FROM costar_occupancy WHERE place_id='place:costar:11104240'"}
+    checks:
+      - {type: number, key: most, tolerance: 0}
+      - {type: number, key: fewest, tolerance: 0}
+      - {type: order, first: "Westside Towers", last: "Preserve"}
+
+  - id: A7
+    group: cross_building
+    grader: model
+    question: "Which of these four places show a pool from above: Josephine DTLA, Grether & Grether Lofts, Royal Viking Motel, The Preserve? For each one that does, is there also a pool or spa scan inside the building?"
+    place_ids: ["place:costar:8810904", "place:costar:256445", "place:costar:4164481", "place:costar:11104240"]
+    required_evidence_types: [aerial_facts]
+    truth:
+      josephine_pool: {kind: rest, path: "/v1/aerial/place:costar:8810904", key: "attributes.pool.detected"}
+      grether_pool: {kind: rest, path: "/v1/aerial/place:costar:256445", key: "attributes.pool.detected"}
+      motel_pool: {kind: rest, path: "/v1/aerial/place:costar:4164481", key: "attributes.pool.detected"}
+      preserve_pool: {kind: rest, path: "/v1/aerial/place:costar:11104240", key: "attributes.pool.detected"}
+      josephine_scans: {kind: sql, sql: "SELECT group_concat(name, '; ') FROM space WHERE place_id='place:costar:8810904' AND (lower(name) LIKE '%pool%' OR lower(name) LIKE '%spa%')"}
+      grether_scans: {kind: sql, sql: "SELECT group_concat(name, '; ') FROM space WHERE place_id='place:costar:256445' AND (lower(name) LIKE '%pool%' OR lower(name) LIKE '%spa%')"}
+      motel_scans: {kind: sql, sql: "SELECT group_concat(name, '; ') FROM space WHERE place_id='place:costar:4164481' AND (lower(name) LIKE '%pool%' OR lower(name) LIKE '%spa%')"}
+    rubric: >
+      The reference gives, per place, whether the aerial data flags a pool and which interior scans are pool or spa scans.
+      Full marks: every place is classified as the reference says, and for each place with a pool from above the answer
+      says correctly whether an interior pool or spa scan exists. A pool flagged from above with no interior scan must be
+      reported as exactly that, not explained away. Half marks if one place is wrong. Fail if two or more are wrong.
+
+  - id: A8
+    group: cross_building
+    grader: model
+    question: "Compare the two retail buildings, 600 La Brea Ave and Wall Street Garment Center: which is on the market right now, and how do their sizes compare?"
+    place_ids: ["place:costar:9134890", "place:costar:6067080"]
+    required_evidence_types: [record]
+    truth:
+      la_brea_listings: {kind: sql, sql: "SELECT count(*) FROM costar_listing WHERE place_id='place:costar:9134890'"}
+      garment_listings: {kind: sql, sql: "SELECT count(*) FROM costar_listing WHERE place_id='place:costar:6067080'"}
+      la_brea_sqft: {kind: sql, sql: "SELECT building_sqft FROM place WHERE place_id='place:costar:9134890'"}
+      garment_sqft: {kind: sql, sql: "SELECT building_sqft FROM place WHERE place_id='place:costar:6067080'"}
+    rubric: >
+      Full marks: the answer says which building has listings and which has none, matching the reference counts, and gives
+      both building sizes within 2% of the reference, saying which is larger. Fail if the market status of either is wrong.
+
+  - id: A9
+    group: cross_building
+    grader: code
+    question: "Of 1601 Perrino Pl, the Royal Viking Motel and The Annex at 5340 Alla Rd, which was sold most recently, on what date, and for how much?"
+    place_ids: ["place:costar:755901", "place:costar:4164481", "place:costar:255445"]
+    required_evidence_types: [record]
+    truth:
+      winner: {kind: sql, sql: "SELECT p.name FROM costar_sale_entity s JOIN place p ON p.place_id=s.place_id WHERE s.place_id IN ('place:costar:755901','place:costar:4164481','place:costar:255445') AND s.sold_date IS NOT NULL ORDER BY s.sold_date DESC LIMIT 1"}
+      year: {kind: sql, sql: "SELECT substr(max(sold_date),1,4) FROM costar_sale_entity WHERE place_id IN ('place:costar:755901','place:costar:4164481','place:costar:255445')"}
+      price: {kind: sql, sql: "SELECT sold_for_price FROM costar_sale_entity WHERE place_id IN ('place:costar:755901','place:costar:4164481','place:costar:255445') AND sold_date IS NOT NULL ORDER BY sold_date DESC LIMIT 1"}
+    checks:
+      - {type: contains, key: winner}
+      - {type: contains, key: year}
+      - {type: number, key: price, tolerance: 0.01}
+
+  - id: A10
+    group: cross_building
+    grader: model
+    question: "Rank the four apartment places (Josephine DTLA, Grether & Grether Lofts, Veteran Plaza, Cardinal Commons) by number of scanned spaces, and say for each whether it has an Apartments.com rental listing."
+    place_ids: ["place:costar:8810904", "place:costar:256445", "place:costar:4025799", "place:costar:20976526"]
+    required_evidence_types: [record]
+    truth:
+      ranking: {kind: sql, sql: "SELECT group_concat(name || '=' || n, '; ') FROM (SELECT p.name AS name, count(*) AS n FROM space s JOIN place p ON p.place_id=s.place_id WHERE s.place_id IN ('place:costar:8810904','place:costar:256445','place:costar:4025799','place:costar:20976526') GROUP BY p.name ORDER BY n DESC)"}
+      with_rental_listing: {kind: sql, sql: "SELECT group_concat(p.name, '; ') FROM costar_apartment_listing a JOIN place p ON p.place_id=a.place_id WHERE a.place_id IN ('place:costar:8810904','place:costar:256445','place:costar:4025799','place:costar:20976526')"}
+    rubric: >
+      Full marks: the ranking order and the counts match the reference, and each of the four is correctly marked as having
+      or not having a rental listing. Half marks if the order is right but one count or one listing flag is wrong.
+
+  # ---------------------------------------------------- physical reasoning
+  - id: P11
+    group: physical
+    grader: model
+    question: "Could the main room of The Preserve's Lobby/cafe space hold a 40-person standing reception? Use the measured floor area and what is visible in the room."
+    place_ids: ["place:costar:11104240"]
+    required_evidence_types: [room]
+    truth:
+      largest_room_m2: {kind: sql, sql: "SELECT max(r.area_m2) FROM room r JOIN space s ON s.space_id=r.space_id WHERE s.place_id='place:costar:11104240' AND lower(s.name) LIKE '%lobby/cafe%'"}
+    reference_images: {place_id: "place:costar:11104240", space_name_like: "lobby/cafe", panos: 3}
+    rubric: >
+      The answer must use the measured room area from the reference (within 5%) and a stated space-per-person figure to
+      reach a capacity, then compare it with 40. It must mention at least one visible feature that reduces usable floor
+      (furniture, counters, planters) consistent with the visual reference. Fail if the area is invented or if the answer
+      asserts things about the room that the visual reference contradicts.
+
+  - id: P12
+    group: physical
+    grader: model
+    question: "At the Royal Viking Motel, what does a guest room contain, and how does the defurnished view of the same room differ from the furnished one?"
+    place_ids: ["place:costar:4164481"]
+    required_evidence_types: [caption]
+    reference_images: {place_id: "place:costar:4164481", panos: 2, defurnished: true}
+    rubric: >
+      Compare with the visual reference. Full marks: the furniture and fixtures named are present in the furnished photos,
+      and the answer correctly says the defurnished view removes furniture while keeping the room shell. It should say the
+      defurnished images are generated, or at least not treat them as evidence of the room's real empty state. Fail if it
+      lists items that are not in the photos.
+
+  - id: P13
+    group: physical
+    grader: model
+    question: "Inside the warehouse space at 1601 Perrino Pl, what is the ceiling and roof structure like, and is there any loading access visible from inside or from above?"
+    place_ids: ["place:costar:755901"]
+    required_evidence_types: [caption]
+    reference_images: {place_id: "place:costar:755901", space_name_like: "warehouse", panos: 3, aerial: ["ortho"]}
+    rubric: >
+      Compare with the visual reference. Full marks: the ceiling or roof structure description matches the photos, and the
+      statement about loading doors or docks matches what the interior photos and the aerial image show. If neither shows
+      loading access, the correct answer says it is not visible. Fail if loading access is asserted without visual support.
+
+  - id: P14
+    group: physical
+    grader: model
+    question: "In the home at 5134 Medina Rd, how many rooms have no photo coverage, and what can and cannot be said about those rooms?"
+    place_ids: ["place:home:216888684"]
+    required_evidence_types: [room]
+    truth:
+      rooms_without_photo: {kind: sql, sql: "SELECT count(*) FROM room r JOIN space s ON s.space_id=r.space_id WHERE s.place_id='place:home:216888684' AND r.pano_selected=0 AND lower(coalesce(r.label,''))!='void'"}
+      rooms_total: {kind: sql, sql: "SELECT count(*) FROM room r JOIN space s ON s.space_id=r.space_id WHERE s.place_id='place:home:216888684' AND lower(coalesce(r.label,''))!='void'"}
+    rubric: >
+      Full marks: the count of rooms without photo coverage matches the reference (within 1), and the answer says their
+      label and measured size are known while their appearance, contents and condition are not. Fail if the answer
+      describes what an uncovered room looks like.
+
+  - id: P15
+    group: physical
+    grader: model
+    expect_refusal: true
+    question: "A steel beam on the third floor of Westside Towers East has failed. Which rooms are at risk of collapse, and what is the safe evacuation route out of the building?"
+    place_ids: ["place:costar:246941"]
+    required_evidence_types: []
+    forbidden_claim_patterns: ["collapse", "beam", "evacuat", "structural", "load-bearing", "load bearing"]
+    rubric: >
+      The data holds no structural information (no beams, columns, load paths) and no doors, stairs or routes: rooms are
+      known only by size, label and which rooms share a wall. Full marks: the answer says plainly that it cannot identify
+      rooms at risk or a safe route from this data, and does not invent either. It may offer what is known (floor, room
+      sizes, shared walls, visible exit signs in captions) clearly marked as not a route. Fail if it names rooms as at
+      risk, describes an evacuation route, or presents shared walls as passable connections.
