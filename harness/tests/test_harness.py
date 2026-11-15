@@ -252,3 +252,25 @@ async def test_memory_file_is_read_only_with_private_claims(cfg):
         await _run(agent, "Note something", f"run-mem-{private}")
         assert ("Leaked" in mem.read_text()) is (not private)
         mem.write_text("# Lessons learned by Mundus agents\n", encoding="utf-8")
+
+
+
+async def test_named_place_beats_the_open_page(cfg, monkeypatch):
+    from types import SimpleNamespace
+
+    from langchain_core.messages import HumanMessage
+
+    from mundus_harness.middleware.router import RouterMiddleware
+    router = RouterMiddleware(cfg, WorldClient(cfg))
+    monkeypatch.setattr(runctx, "run_id_from_config", lambda config=None: "run-route")
+
+    def route(question, page_place=None):
+        runctx.reset("run-route")
+        router.before_agent({"messages": [HumanMessage(content=question)]},
+                            SimpleNamespace(context={"place_id": page_place} if page_place else {}))
+        return runctx.record("run-route")["route"]["place_id"]
+
+    other = "place:costar:1002"
+    assert route("Who is the largest tenant at Fixture Tower?", page_place=other) == PLACE   # named place wins
+    assert route("Who is the largest tenant in this building?", page_place=PLACE) == PLACE   # page fills "this building"
+    assert route("Who is the largest tenant at Fixture Tower?") == PLACE                     # no page: as before

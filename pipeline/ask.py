@@ -223,10 +223,9 @@ def run(question, thread_id=None, context=None):
     """Asks the deep agent one question on a thread and yields page events."""
     context = context or {}
     prop = context.get("property")
+    # The open property goes to the router as context.place_id: it answers "this building" questions, and a place
+    # named in the question still wins. The question itself is sent unchanged.
     place_id = place_id_for(prop)
-    if prop and prop.get("name"):
-        # the agent sees the page only through this line; the router also receives place_id directly
-        question = f"{question}\n\n(The page has {prop['name']} open.)"
     try:
         if not thread_id:
             thread_id = _new_thread()
