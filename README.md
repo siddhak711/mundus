@@ -130,12 +130,17 @@ sources that describe the same address.
 3. Install and build the index, then start the server:
 
 ```bash
-pip install requests shapely pillow numpy tifffile imagecodecs anthropic
+pip install requests shapely pillow numpy tifffile imagecodecs
 python pipeline/build_index.py
 python server.py
 ```
 
 Open http://localhost:5190.
+
+Ask Atlas needs the World API (port 8000) and the harness's agent server (port 2024) running, as in
+"Run it locally" above. `server.py` finds them through `WORLD_REST_URL` and `HARNESS_URL` in `.env`, which default
+to those two ports. Set `AGENT_TOKEN` only when the agent server sits behind the VM's Caddy. Without the agent
+server the rest of the site still works and the drawer says the agent is off.
 
 ## How it is put together
 
@@ -144,8 +149,10 @@ Open http://localhost:5190.
 - `pipeline/twin.py` builds a property's site model the first time it is opened (about three
   seconds) and caches it under `cache/`. `pipeline/vexcel.py` and `pipeline/matterport.py` are the
   API clients.
-- `pipeline/agent.py` is Ask Atlas: Claude with tools that search the records, measure from the
-  aerial survey, read the scans and drive the page.
+- `pipeline/ask.py` is Ask Atlas: a bridge to the Mundus deep agent in `harness/`. Each question is one run on a
+  LangGraph thread, so the agent server keeps the conversation. The bridge turns the harness's stream events into
+  the drawer's activity trail, opens the property the agent focuses on, and numbers the answer's claim citations.
+  The agent knows only the Los Angeles places ingested into the World API, not the whole kit.
 - `server.py` serves the site and those APIs. `web/` is the front end: plain ES modules, three.js
   for the model, Leaflet for the map, no build step.
 

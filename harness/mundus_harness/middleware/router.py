@@ -1,6 +1,7 @@
 """Read-card-first, enforced in code: decides once per user turn which facets need work."""
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from typing import Any
@@ -103,6 +104,10 @@ class RouterMiddleware(AgentMiddleware):
             rec["route"] = info
         events.emit("route", **{k: v for k, v in info.items() if k != "candidates"})
         return None
+
+    # LangGraph Server runs graphs in an event loop and refuses blocking calls there: do the HTTP and file work in a thread
+    async def abefore_agent(self, state, runtime):
+        return await asyncio.to_thread(self.before_agent, state, runtime)
 
     def _note(self) -> str:
         info = runctx.record(runctx.run_id_from_config()).get("route") or {}

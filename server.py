@@ -7,7 +7,7 @@ import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from pipeline import config, matterport, twin, vexcel
+from pipeline import ask, config, matterport, twin, vexcel
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5190
 STATIC_ROOTS = {"/data/": config.DATA, "/cache/": config.CACHE}
@@ -73,7 +73,7 @@ class Handler(SimpleHTTPRequestHandler):
             if url.path == "/api/oblique":
                 return self.send_oblique(query.get("kind", "commercial"), int(query["id"]), query.get("direction", "north"))
             if url.path == "/api/status":
-                return self.send_json({"agent": bool(config.ANTHROPIC_API_KEY)})
+                return self.send_json({"agent": ask.agent_ready()})
         except FileNotFoundError as error:
             return self.send_json({"error": str(error)}, 404)
         except Exception as error:  # surface upstream API failures to the page instead of a blank 500
@@ -83,14 +83,13 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if urlparse(self.path).path != "/api/agent":
             return self.send_json({"error": "Not found"}, 404)
-        from pipeline import agent  # imported late so the site works without the Anthropic SDK
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         try:
-            for event in agent.run(body.get("messages", []), body.get("context", {})):
+            for event in ask.run(body.get("question", ""), body.get("thread_id"), body.get("context", {})):
                 self.wfile.write(f"data: {json.dumps(event)}\n\n".encode("utf-8"))
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):

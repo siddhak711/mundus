@@ -1,6 +1,7 @@
 """Builds the deep agent: one orchestrator, three specialist subagents, the /world mount and the middleware stack."""
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from deepagents import create_deep_agent
@@ -138,7 +139,10 @@ def build_agent(cfg: Config, world_tools: dict[str, Any], orch_model: Any = None
         subagents=subagents,
         skills=["/skills/"],
         memory=["/memory/AGENTS.md"],
-        permissions=[FilesystemPermission(operations=["write"], paths=["/world/**", "/skills/**"], mode="deny")],
+        # With private claim memories (parallel eval runs), the lessons file is read-only too: deepagents tells the agent
+        # to edit it, and every run shares the one file on disk, so one run's notes would reach the runs after it.
+        permissions=[FilesystemPermission(operations=["write"], paths=["/world/**", "/skills/**"]
+                                          + (["/memory/**"] if cfg.claim_scope_run else []), mode="deny")],
         backend=build_backend(cfg, client),
         context_schema=Ctx,
         checkpointer=checkpointer,
@@ -147,6 +151,8 @@ def build_agent(cfg: Config, world_tools: dict[str, Any], orch_model: Any = None
 
 
 async def make_graph():
-    """Entry point for LangGraph Server (langgraph.json)."""
+    """Entry point for LangGraph Server (langgraph.json). build_agent does blocking file and HTTP work, which the
+    server refuses inside its event loop, so it runs in a worker thread."""
     cfg = load_config()
-    return build_agent(cfg, await load_world_tools(cfg))
+    tools = await load_world_tools(cfg)
+    return await asyncio.to_thread(build_agent, cfg, tools)

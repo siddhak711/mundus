@@ -1,4 +1,4 @@
-// The "Ask Atlas" drawer: sends the conversation to the agent and plays back its text, steps and actions.
+// The "Ask Atlas" drawer: sends each question to the Mundus deep agent and plays back its steps, actions and cited answer.
 import { fetchStatus } from './api.js';
 import { escapeHtml } from './format.js';
 
@@ -9,12 +9,12 @@ const form = document.getElementById('ask-form');
 const input = document.getElementById('ask-input');
 
 const STARTERS = [
-  'Find office towers over 40 stories with a full floor available',
-  'Which floors here are empty, and what would the largest one cost per year?',
-  'Compare the scanned suites in this building by rent and size',
+  'How many tenancies are recorded at Westside Towers East, 11835 Olympic Blvd?',
+  'Which of Josephine DTLA, Grether & Grether Lofts, Royal Viking Motel and The Preserve have a pool or spa among their scans?',
+  "Could the main room of The Preserve's Lobby/cafe space hold a 40-person standing reception?",
 ];
 
-const history = []; // [{ role, content }] plain-text turns
+let threadId = null; // the agent server keeps the conversation; this names it
 let busy = false;
 
 function add(className, text = '') {
@@ -30,8 +30,8 @@ function showStarters(agentReady) {
   const hint = document.createElement('div');
   hint.className = 'hint';
   hint.innerHTML = agentReady
-    ? `Ask about either city or the building on screen. Atlas can search CoStar records, measure from aerial imagery, read interior scans, and move the model for you.${STARTERS.map((s) => `<button type="button">${escapeHtml(s)}</button>`).join('')}`
-    : 'Ask Atlas is switched off. Add ANTHROPIC_API_KEY to the .env file in the project folder and restart the server.';
+    ? `Ask about the Los Angeles places in world memory. A deep agent sends market, interior and aerial specialists, saves what they find, and cites every fact.${STARTERS.map((s) => `<button type="button">${escapeHtml(s)}</button>`).join('')}`
+    : 'Ask Atlas is switched off: the agent server is not running. Start the World API and the harness (see README), then reload.';
   hint.addEventListener('click', (event) => {
     if (event.target.tagName === 'BUTTON') send(event.target.textContent);
   });
@@ -63,25 +63,28 @@ async function send(question) {
   form.querySelector('button').disabled = true;
   input.value = '';
   add('q', question);
-  history.push({ role: 'user', content: question });
 
-  let answer = null;
-  let answerText = '';
   try {
     const response = await fetch('/api/agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history, context: handlers.context() }),
+      body: JSON.stringify({ question, thread_id: threadId, context: handlers.context() }),
     });
     for await (const event of readEvents(response)) {
-      if (event.type === 'text') {
-        answer ||= add('a');
-        answerText += event.text;
-        answer.textContent = answerText;
-        log.scrollTop = log.scrollHeight;
+      if (event.type === 'thread') {
+        threadId = event.id;
+      } else if (event.type === 'text') {
+        add('a', event.text);
+      } else if (event.type === 'sources') {
+        const list = add('sources');
+        for (const item of event.items) {
+          const row = document.createElement('div');
+          row.textContent = `[${item.n}] ${item.statement || item.claim_id}`;
+          row.title = item.claim_id;
+          list.append(row);
+        }
       } else if (event.type === 'step') {
         add('step', event.text);
-        answer = null; // text after a step starts a new paragraph block
       } else if (event.type === 'action') {
         handlers.actions[event.name]?.(event.input);
       } else if (event.type === 'error') {
@@ -91,7 +94,6 @@ async function send(question) {
   } catch (error) {
     add('step', `The request failed: ${error.message}`);
   }
-  if (answerText) history.push({ role: 'assistant', content: answerText });
   busy = false;
   form.querySelector('button').disabled = false;
 }

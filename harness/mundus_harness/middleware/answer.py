@@ -1,6 +1,7 @@
 """After the run: checks every [claim:...] marker in the answer, drops the ones that do not resolve, emits `answer`."""
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any
 
@@ -56,3 +57,7 @@ class AnswerMiddleware(AgentMiddleware):
         if dropped:
             return {"messages": [AIMessage(content=text, id=last.id)]}
         return None
+
+    # LangGraph Server runs graphs in an event loop and refuses blocking calls there: do the HTTP and file work in a thread
+    async def aafter_agent(self, state, runtime):
+        return await asyncio.to_thread(self.after_agent, state, runtime)

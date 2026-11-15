@@ -43,6 +43,18 @@ def _text(result: Any) -> str:
     return " ".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
 
 
+def _short_args(args: Any, limit: int = 300) -> dict[str, Any]:
+    """Tool arguments for the activity feed: long strings cut, nested values kept only when small."""
+    out: dict[str, Any] = {}
+    for k, v in (args or {}).items() if isinstance(args, dict) else ():
+        if isinstance(v, str):
+            out[k] = v[:limit]
+        else:
+            text = json.dumps(v, default=str)
+            out[k] = v if len(text) <= limit else text[:limit]
+    return out
+
+
 class WorldGuardMiddleware(AgentMiddleware):
     def __init__(self, agent: str, world_tools: set[str]):
         super().__init__()
@@ -50,6 +62,7 @@ class WorldGuardMiddleware(AgentMiddleware):
 
     def _pre(self, request) -> tuple[Any, ToolMessage | None]:
         call = request.tool_call
+        events.emit("tool", agent=self.agent, name=call.get("name"), args=_short_args(call.get("args")))
         if call.get("name") == "query_market":
             sql, reason = check_sql((call.get("args") or {}).get("sql", ""))
             if reason:

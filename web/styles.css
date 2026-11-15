@@ -123,6 +123,7 @@ td.num, th.num { text-align: right; padding-right: 0; }
 .ask-log .q { font-weight: 600; }
 .ask-log .a { white-space: pre-wrap; max-width: 60ch; }
 .ask-log .step { color: var(--muted); font-size: 13px; padding-left: 12px; border-left: 2px solid var(--rule); }
+.ask-log .sources { color: var(--muted); font-size: 12px; display: grid; gap: 4px; max-width: 60ch; }
 .ask-log .hint { color: var(--muted); }
 .ask-log .hint button { all: unset; display: block; color: var(--link); cursor: pointer; margin-top: 6px; }
 .ask-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--rule); }
