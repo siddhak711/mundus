@@ -70,16 +70,16 @@ All 32 failed runs were read. Causes, with a run counted once under its main cau
 
 | Cause | Sonnet | Haiku | Kind |
 |---|---|---|---|
-| A subagent ran into its 12-model-call cap and returned nothing, so the orchestrator answered without claims and the answer had no valid citations | 5 | 10 | Harness |
-| Answer had citations but the content was wrong or incomplete (miscounts, a missing rental-listing flag, loading doors missed) | 4 | 3 | Harness |
-| Answer listed things that are not in the photographs (a framed painting, stools, trucks in the yard) | 4 | 2 | Harness and captions |
-| Question was ambiguous: R5 asks for the "largest scan" and the truth uses room count, while several runs chose floor area | 1 | 3 | Task |
+| A subagent returned nothing usable, so the orchestrator answered without claims and the answer had no valid citations. 15 of these 19 answers name the 12-model-call cap as the reason | 5 | 14 | Harness |
+| Answer had citations but the content was wrong or incomplete (miscounts, a missing rental-listing flag, loading doors missed) | 3 | 1 | Harness |
+| Answer listed things that are not in the photographs (a framed painting, stools, trucks in the yard) or misread the defurnished views | 5 | 2 | Harness and captions |
+| Question was ambiguous: R5 asks for the "largest scan" and the truth uses room count, while the run chose floor area | 1 | 1 | Task |
 
 Findings behind those numbers:
 
 - **The subagent call cap is the largest single problem.** A subagent reached the cap of 12 model calls in 29 of 45
   runs on each combination (64%). When it does, it returns no result and no claims. The orchestrator then answers
-  from graph lookups with raw evidence ids, which the citation check rejects. 15 of the 32 failures are this.
+  from graph lookups with raw evidence ids, which the citation check rejects. 19 of the 32 failures are this.
 - **Subagents carry most of the cost.** They account for 89% (Sonnet) and 86% (Haiku) of input tokens, at about
   38,000 input tokens per subagent call, because each call resends the growing tool history.
 - **A third of `put_claim` calls are rejected**: 152 of 433 (Sonnet) and 85 of 262 (Haiku). `query_market` fails 35% and
