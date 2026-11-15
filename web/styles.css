@@ -147,6 +147,12 @@ td.num, th.num { text-align: right; padding-right: 0; }
 .ask-log .sources { color: var(--muted); font-size: 12px; display: grid; gap: 4px; max-width: 60ch; }
 .ask-log .hint { color: var(--muted); }
 .ask-log .hint button { all: unset; display: block; color: var(--link); cursor: pointer; margin-top: 6px; }
+.ask-log .layout { display: grid; gap: 8px; max-width: 60ch; padding: 12px; border: 1px solid var(--rule); border-radius: 6px; }
+.ask-log .layout .photo-grid { display: block; }
+.ask-log .layout img { width: 100%; height: auto; cursor: zoom-in; border-radius: 4px; }
+.ask-log .layout table { font-size: 13px; border-collapse: collapse; }
+.ask-log .layout th { text-align: left; font-weight: 500; color: var(--muted); padding: 2px 12px 2px 0; }
+.ask-log .layout a { color: var(--link); }
 .ask-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--rule); }
 .ask-form textarea { flex: 1; resize: none; border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; }
 .ask-form button { background: var(--ink); color: #fff; border: 0; border-radius: 6px; padding: 0 16px; font-weight: 600; cursor: pointer; }
