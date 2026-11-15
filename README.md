@@ -96,6 +96,9 @@ git clone https://github.com/siddhak711/mundus && cd mundus && bash scripts/depl
 
 The script asks for the keys once, ingests the 15 places, and starts both services behind HTTPS.
 
+Without SSH (Google Compute Engine): pass `scripts/deploy/vm_boot.sh` as the instance's `startup-script` metadata
+and the keys as `mundus-<KEY>` metadata attributes. It runs the same setup at boot and logs to the serial console.
+
 ---
 
 # Atlas
