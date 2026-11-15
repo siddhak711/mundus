@@ -3,8 +3,10 @@
     python server.py            # http://localhost:5190
 """
 import json
+import os
 import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from pipeline import ask, config, matterport, twin, vexcel
@@ -15,13 +17,17 @@ STATIC_ROOTS = {"/data/": config.DATA, "/cache/": config.CACHE}
 
 class Handler(SimpleHTTPRequestHandler):
     def translate_path(self, path):
+        # normpath, not resolve: blocks "../" escapes but follows symlinks the owner placed, such as the
+        # walkthrough's data/ and pano/ links to the baked scan kept outside the repository
         clean = urlparse(path).path
         for prefix, root in STATIC_ROOTS.items():
             if clean.startswith(prefix):
-                target = (root / clean[len(prefix):]).resolve()
-                return str(target if root.resolve() in target.parents else root)
-        target = (config.WEB / clean.lstrip("/")).resolve()
-        return str(target if target == config.WEB.resolve() or config.WEB.resolve() in target.parents else config.WEB)
+                base = Path(os.path.abspath(root))
+                target = Path(os.path.normpath(base / clean[len(prefix):].lstrip("/")))
+                return str(target if base in target.parents else base)
+        base = Path(os.path.abspath(config.WEB))
+        target = Path(os.path.normpath(base / clean.lstrip("/")))
+        return str(target if target == base or base in target.parents else base)
 
     def end_headers(self):
         if self.path.startswith(("/cache/", "/data/")):

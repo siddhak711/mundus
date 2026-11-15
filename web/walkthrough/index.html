@@ -1,101 +1,189 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>10880 Wilshire, Suite 1600: floor walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..110,400..700&display=swap" rel="stylesheet">
 <style>
-  html,body{margin:0;height:100%;background:#14171c;color:#e9edf2;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
-  canvas#c{display:block;width:100vw;height:100vh;cursor:grab;touch-action:none} canvas#c.drag{cursor:grabbing} canvas#c.point{cursor:pointer}
-  .panel{background:rgba(20,23,28,.86);border:1px solid #2c333d;border-radius:10px;backdrop-filter:blur(8px)}
-  .card{position:fixed;top:16px;left:16px;max-width:300px;padding:14px 16px;transition:opacity .3s}
-  .card h1{font-size:16px;margin:0 0 2px;font-weight:650} .card .sub{color:#9aa6b4;margin:0 0 10px;font-size:13px}
-  .card dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:13px} .card dt{color:#9aa6b4} .card dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
-  .card .src{color:#6f7b89;font-size:11.5px;margin:10px 0 0}
-  body.walk .card dl, body.walk .card .src{display:none} body.walk .card .sub{margin:0}
-  .bar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;border-radius:999px;padding:6px 8px}
-  .bar button{all:unset;cursor:pointer;padding:7px 14px;border-radius:999px;color:#c5ced8;font-size:13.5px} .bar button[aria-pressed=true]{background:#e9edf2;color:#14171c;font-weight:600}
-  .bar button:focus-visible{outline:2px solid #ffb02e}
-  .bar label{display:flex;gap:6px;align-items:center;padding:0 12px 0 8px;border-left:1px solid #2c333d;color:#c5ced8;font-size:13.5px;cursor:pointer}
-  body.walk .bar label{display:none}
-  .bar button.act{border:1px solid #3a4350;margin-left:2px} .bar button.act[aria-pressed=true]{background:#ffb02e;color:#14171c;border-color:#ffb02e}
-  .bar button[disabled]{opacity:.4;cursor:default}
-  #cmd{position:fixed;right:16px;bottom:18px;padding:6px 8px;border-radius:999px} #cmd input{all:unset;width:250px;padding:5px 10px;font-size:13px;color:#e9edf2} #cmd input::placeholder{color:#7d8996}
-  .hint{position:fixed;bottom:66px;left:50%;transform:translateX(-50%);margin:0;padding:4px 12px;border-radius:999px;background:rgba(20,23,28,.8);color:#c5ced8;font-size:12.5px;white-space:nowrap}
-  .legend{position:fixed;top:16px;right:16px;padding:10px 14px;font-size:12.5px;max-width:240px}
-  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
-  #mini{position:fixed;left:16px;bottom:18px;padding:8px;display:none} body.walk #mini{display:block} #mini canvas{display:block;cursor:pointer}
-  #where{position:fixed;top:16px;right:16px;padding:6px 12px;font-size:12.5px;color:#c5ced8;display:none} body.walk #where{display:block}
-  #dip{position:fixed;inset:0;background:#14171c;opacity:0;pointer-events:none;transition:opacity .18s}
-  .card .back{display:inline-block;margin:0 0 8px;color:#ffb02e;text-decoration:none;font-size:13px} .card .back:hover{text-decoration:underline}
-  .card{z-index:2} /* above the loading cover, so the way back works while the scan loads or if it fails */
+  /* Light chrome to match Atlas (web/styles.css): white sidebar on the left, a soft grey stage for the model */
+  :root{--surface:#fff;--wash:#f1f3f5;--stage:#eceef1;--ink:#17212b;--muted:#5d6975;--faint:#8a95a1;--rule:#d8dde2;--link:#1d4fd7;--ok:#1c8a68;--warn:#b26b00;--bad:#c2410c;--side:384px;
+    font-family:"Archivo",system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.45;color:var(--ink);font-variant-numeric:tabular-nums}
+  *{box-sizing:border-box} html,body{margin:0;height:100%;overflow:hidden;background:var(--stage)}
+  h1,h2,h3,p,ol,ul,dl,dd{margin:0;padding:0} ol,ul{list-style:none} button,input,textarea{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--link);outline-offset:2px} [hidden]{display:none!important}
+  body{display:grid;grid-template-columns:var(--side) 1fr}
+  #side{display:flex;flex-direction:column;min-height:0;height:100vh;background:var(--surface);border-right:1px solid var(--rule);z-index:3}
+  .s-head{padding:18px 22px 14px;border-bottom:1px solid var(--rule)}
+  .crumbs{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:13px;margin-bottom:10px;color:var(--faint)}
+  .crumbs a{color:var(--link);text-decoration:none} .crumbs a:hover{text-decoration:underline}
+  .crumbs-off{font-size:12px;color:var(--muted);margin-bottom:10px} .crumbs-off code{font-size:11.5px}
+  .floor-pick{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:8px}
+  .floor-pick select{flex:1;min-width:0;border:1px solid var(--rule);border-radius:6px;padding:5px 8px;background:var(--surface);font-size:13px;color:var(--ink)}
+  .eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .s-head h1{font-size:24px;line-height:1.12;font-weight:700;font-stretch:82%;margin-top:4px}
+  .s-head .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-top:14px} .facts dt{color:var(--muted);font-size:12px} .facts dd{font-size:17px;font-weight:600;font-stretch:88%}
+  .s-scroll{flex:1;min-height:0;overflow-y:auto}
+  .s-scroll section{padding:16px 22px;border-bottom:1px solid var(--rule)}
+  h2{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+  .sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px} .sec-head h2{margin:0}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--wash);border-radius:8px;padding:3px;gap:3px}
+  .seg button{border:0;background:none;padding:7px 6px;border-radius:6px;cursor:pointer;color:var(--muted);font-weight:500;font-size:13px}
+  .seg button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(23,33,43,.12);font-weight:600}
+  .seg button[disabled]{opacity:.4;cursor:default}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+  .steps button{border:1px solid var(--rule);background:var(--surface);border-radius:8px;padding:8px 8px 7px;text-align:left;cursor:pointer;font-size:12.5px;color:var(--muted);line-height:1.25}
+  .steps button b{display:block;color:var(--ink);font-size:13px;font-weight:600}
+  .steps button[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)} .steps button[disabled]{opacity:.45;cursor:default}
+  .check{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;cursor:pointer}
+  .legend{margin-top:8px;font-size:12.5px;color:var(--muted)} .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .btn{border:1px solid var(--ink);background:var(--surface);border-radius:7px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+  .btn.primary{background:var(--ink);color:#fff} .btn[disabled]{opacity:.4;cursor:default}
+  .submit{width:100%;margin-top:12px;padding:10px 14px;font-size:14px;background:var(--ink);color:#fff}
+  /* agents */
+  .agent{border:1px solid var(--rule);border-radius:10px;margin-bottom:8px;overflow:hidden;background:var(--surface)}
+  .agent>button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;width:100%;padding:10px 12px;cursor:pointer}
+  .agent>button:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+  .agent .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--wash);color:var(--muted)}
+  .agent .nm{font-weight:600;font-size:13.5px} .agent .st{font-size:12px;color:var(--muted)}
+  .agent .head-num{font-weight:600;font-size:13px;text-align:right}
+  .agent[data-state=working] .av{background:#e8eefc;color:var(--link)} .agent[data-state=working] .av::after{content:"";position:absolute;width:28px;height:28px;border-radius:50%;border:2px solid var(--link);border-right-color:transparent;animation:spin .9s linear infinite}
+  .agent .av{position:relative} @keyframes spin{to{transform:rotate(360deg)}}
+  .agent[data-state=done] .av{background:#e3f3ec;color:var(--ok)}
+  .agent .log{padding:0 12px 10px 50px;font-size:12.5px;color:var(--muted);display:grid;gap:3px}
+  .agent .log div{animation:fadein .25s ease both} @keyframes fadein{from{opacity:0;transform:translateY(2px)}}
+  .agent .log .ok::before{content:"✓ ";color:var(--ok);font-weight:700} .agent .log .flag::before{content:"! ";color:var(--warn);font-weight:700}
+  .agent .file{margin:2px 12px 12px 50px;border:1px solid var(--rule);border-radius:8px;background:var(--wash);padding:8px 10px;font-size:12.5px}
+  .agent .file .fn{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between}
+  .agent .file .fn a{font-family:"Archivo",system-ui,sans-serif;color:var(--link);text-decoration:none}
+  .agent .file .row{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-top:1px solid var(--rule)} .agent .file .row:first-of-type{border-top:0}
+  .agent .file .row span:last-child{text-align:right;font-weight:600}
+  .agent:not(.open) .log,.agent:not(.open) .file{display:none}
+  .muted{color:var(--muted)} .ok{color:var(--ok)} .warn{color:var(--warn)}
+  /* chat */
+  .chat{border-top:1px solid var(--rule);display:flex;flex-direction:column;max-height:42vh;background:var(--surface)}
+  #chat-log{overflow-y:auto;padding:10px 22px 4px;display:grid;gap:8px;font-size:13px;min-height:0}
+  #chat-log .q{justify-self:end;background:var(--ink);color:#fff;padding:6px 10px;border-radius:12px 12px 2px 12px;max-width:85%}
+  #chat-log .a{background:var(--wash);padding:7px 10px;border-radius:12px 12px 12px 2px;max-width:92%;white-space:pre-wrap}
+  #chat-log .step{color:var(--muted);font-size:12px}
+  #cmd{display:flex;gap:8px;padding:10px 14px 14px 22px;align-items:flex-end}
+  #cmd textarea{flex:1;resize:none;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;max-height:120px;background:var(--surface)}
+  #cmd textarea::placeholder{color:var(--faint)}
+  /* stage */
+  #stage{position:relative;min-width:0;height:100vh;background:radial-gradient(ellipse at 50% 40%,#f7f8f9 0%,#eceef1 55%,#e2e5e9 100%)}
+  canvas#c{display:block;width:100%;height:100%;cursor:grab;touch-action:none} canvas#c.drag{cursor:grabbing} canvas#c.point{cursor:pointer}
+  .panel{background:rgba(255,255,255,.92);border:1px solid var(--rule);border-radius:10px;box-shadow:0 2px 10px rgba(23,33,43,.08);backdrop-filter:blur(8px)}
+  .hint{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);margin:0;padding:5px 14px;border-radius:14px;font-size:12.5px;color:var(--muted);width:max-content;max-width:calc(100% - 32px);text-align:center}
+  body.walk .hint{bottom:auto;top:16px} /* the mini-map takes the bottom-left while walking */
+  #mini{position:absolute;left:16px;bottom:16px;padding:8px;display:none} body.walk #mini{display:block} #mini canvas{display:block;cursor:pointer}
+  #where{position:absolute;bottom:16px;right:16px;padding:6px 12px;font-size:12.5px;color:var(--muted);display:none} body.walk #where{display:block}
+  #dip{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .18s}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--stage);font-size:15px;color:var(--muted);text-align:center;z-index:2}
   @view-transition{navigation:auto} /* fades in from the building's 3-D model, and back (web/styles.css has the same) */
   ::view-transition-new(root){animation:420ms cubic-bezier(.2,0,0,1) both wt-in} @keyframes wt-in{from{opacity:0}}
   @media (prefers-reduced-motion:reduce){::view-transition-new(root),::view-transition-old(root){animation:none}}
-  .fallback{max-width:520px;padding:24px;text-align:left;color:#c5ced8} .fallback h2{font-size:18px;color:#e9edf2;margin:0 0 10px}
-  .fallback code{color:#e9edf2} .fallback p{margin:0 0 14px}
-  .fallback a{display:inline-block;margin:4px 10px 0 0;padding:9px 14px;border-radius:999px;text-decoration:none;font-weight:600}
-  .fb-tour{background:#ffb02e;color:#14171c} .fb-back{border:1px solid #3a4350;color:#e9edf2}
-  #apt-sum{position:fixed;top:16px;right:16px;padding:10px 14px;font-size:12.5px;max-width:260px} body.walk #apt-sum{top:52px}
-  #apt-sum b{font-variant-numeric:tabular-nums} #apt-sum .note{color:#8e9aa7;margin-top:6px}
-  #loading{position:fixed;inset:0;display:grid;place-items:center;background:#14171c;font-size:15px;color:#9aa6b4;text-align:center}
+  .fallback{max-width:520px;padding:24px;text-align:left;color:var(--muted)} .fallback h2{font-size:18px;color:var(--ink);margin:0 0 10px;text-transform:none;letter-spacing:0}
+  .fallback code{color:var(--ink)} .fallback p{margin:0 0 14px}
+  .fallback a{display:inline-block;margin:4px 10px 0 0;padding:9px 14px;border-radius:8px;text-decoration:none;font-weight:600}
+  .fb-tour{background:var(--ink);color:#fff} .fb-back{border:1px solid var(--rule);color:var(--ink)}
+  @media (max-height:780px){.s-head{padding:12px 22px 10px} .s-head h1{font-size:20px} .facts{grid-template-columns:repeat(4,auto);gap:4px 12px;margin-top:8px} .facts dt{font-size:11px} .facts dd{font-size:14px}
+    .s-scroll section{padding:12px 22px} .chat{max-height:30vh} #chat-log{padding-top:6px}}
+  @media (max-width:760px){body{grid-template-columns:1fr;grid-template-rows:50vh 50vh} #side{height:50vh;order:2} #stage{height:50vh}}
 </style>
 <script>/* a page transition the browser skips (an unsupported case, a fast click) must not surface as an error */
 for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v = e.viewTransition; if (v) for (const p of [v.ready, v.finished, v.updateCallbackDone]) p?.catch(() => {}); });
     addEventListener('unhandledrejection', (e) => { if (e.reason?.name === 'InvalidStateError' && /Transition was aborted/.test(e.reason.message)) e.preventDefault(); });</script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js", "three-mesh-bvh": "./vendor/three-mesh-bvh.module.js" } }</script>
 </head><body>
-<canvas id="c"></canvas>
-<div class="card panel">
-  <a class="back" id="back" hidden>&larr; Back to the building</a>
-  <h1 id="card-title">Floor walkthrough</h1>
-  <p class="sub" id="card-sub"></p>
-  <dl>
-    <dt>Scanned floor area</dt><dd id="s-area"></dd>
-    <dt>Listed size</dt><dd id="s-listed"></dd>
-    <dt>Ceiling height</dt><dd id="s-ceiling"></dd>
-    <dt>Capture points</dt><dd id="s-panos"></dd>
-  </dl>
-  <p class="src">Matterport scan: 360° photos for the walkthrough, 3-D mesh for the dollhouse. Building facts from CoStar.</p>
-</div>
-<div class="legend panel" id="legend" hidden>
-  <div><i style="background:#ffb02e"></i>Within 30 ft of the outer wall: <b id="s-share"></b> of the scanned floor</div>
-  <div style="margin-top:4px"><i style="background:#2e568c"></i>Deeper than 30 ft</div>
-  <div style="color:#6f7b89;margin-top:6px">Rough guide to where apartments could get daylight. Measured from the scan's outline, not from window positions.</div>
-</div>
-<div id="where" class="panel"></div>
-<div id="mini" class="panel"><canvas width="520" height="300" style="width:260px;height:150px"></canvas></div>
-<p class="hint" id="hint"></p>
-<div class="bar panel">
-  <button type="button" data-mode="doll" aria-pressed="true">Dollhouse</button>
-  <button type="button" data-mode="plan" aria-pressed="false">Floor plan</button>
-  <button type="button" data-mode="walk" aria-pressed="false">Walk inside</button>
-  <label><input type="checkbox" id="band"> Daylight zone</label>
-  <button type="button" class="act" id="walls" aria-pressed="false">Remove walls</button>
-  <button type="button" class="act" id="apts" aria-pressed="false">Apartment layout</button>
-</div>
-<div id="apt-sum" class="panel" hidden></div>
-<form id="cmd" class="panel"><input id="cmd-in" type="text" autocomplete="off" placeholder="Type a command: remove all the walls" aria-label="Command"></form>
-<div id="dip"></div>
-<div id="loading">Loading the scan…</div>
+<aside id="side" aria-label="Floor and agents">
+  <header class="s-head">
+    <nav class="crumbs" id="crumbs" aria-label="Where you are">
+      <a href="/#/los-angeles">Atlas</a><span aria-hidden="true">›</span><a href="/#/los-angeles/office-to-housing">LA office to housing</a><span aria-hidden="true">›</span><a class="back" id="back" href="/#/los-angeles">Building</a>
+    </nav>
+    <p class="crumbs-off" id="crumbs-off" hidden>Atlas isn't running on this server, so the map and buildings aren't reachable from here. Open the floor through Atlas (<code>python server.py</code>, port 5190).</p>
+    <label class="floor-pick">Floor <select id="floor-pick" aria-label="Switch floor"></select></label>
+    <p class="eyebrow">Office to housing</p>
+    <h1 id="card-title">Floor walkthrough</h1>
+    <p class="sub" id="card-sub"></p>
+    <dl class="facts">
+      <div><dt>Scanned floor</dt><dd id="s-area"></dd></div>
+      <div><dt>Listed size</dt><dd id="s-listed"></dd></div>
+      <div><dt>Ceiling height</dt><dd id="s-ceiling"></dd></div>
+      <div><dt>Capture points</dt><dd id="s-panos"></dd></div>
+    </dl>
+  </header>
+  <div class="s-scroll">
+    <section aria-labelledby="h-view">
+      <h2 id="h-view">View</h2>
+      <div class="seg" id="view-modes" role="group" aria-label="Camera">
+        <button type="button" data-mode="doll" aria-pressed="true">Dollhouse</button>
+        <button type="button" data-mode="plan" aria-pressed="false">Floor plan</button>
+        <button type="button" data-mode="walk" aria-pressed="false">Walk inside</button>
+      </div>
+      <div class="steps" id="state" role="group" aria-label="Floor state">
+        <button type="button" data-state="office" aria-pressed="true"><b>1 · Office</b>as scanned</button>
+        <button type="button" data-state="empty" aria-pressed="false" id="walls"><b>2 · Empty</b>walls removed</button>
+        <button type="button" data-state="apts" aria-pressed="false" id="apts"><b>3 · Homes</b>agents' layout</button>
+      </div>
+      <label class="check"><input type="checkbox" id="band"> Show the daylight zone</label>
+      <div class="legend" id="legend" hidden>
+        <div><i style="background:#ffb02e"></i>Within 30 ft of the outer wall: <b id="s-share"></b> of the scanned floor</div>
+        <div><i style="background:#2e568c"></i>Deeper than 30 ft</div>
+        <div style="margin-top:4px">A rough guide to where homes get daylight, measured from the scan's outline.</div>
+      </div>
+    </section>
+    <section aria-labelledby="h-agents">
+      <div class="sec-head"><h2 id="h-agents">Agents</h2><button type="button" class="btn primary" id="run-agents">Design apartments</button></div>
+      <ol id="agents"></ol>
+      <button type="button" class="btn submit" id="submit" disabled>Submit for review</button>
+    </section>
+  </div>
+  <section class="chat" aria-label="Chat with the agents">
+    <div id="chat-log" aria-live="polite"></div>
+    <form id="cmd"><textarea id="cmd-in" rows="1" autocomplete="off" placeholder="Ask the agents, or say &ldquo;remove the walls&rdquo;" aria-label="Message"></textarea><button type="submit" class="btn primary">Send</button></form>
+  </section>
+</aside>
+<main id="stage">
+  <canvas id="c"></canvas>
+  <div id="where" class="panel"></div>
+  <div id="mini" class="panel"><canvas width="520" height="300" style="width:260px;height:150px"></canvas></div>
+  <p class="hint panel" id="hint"></p>
+  <div id="dip"></div>
+  <div id="loading">Loading the scan…</div>
+</main>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/controls/OrbitControls.js';
 import { computeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
+import { buildApartments } from './js/apartments.js';
+import { setUpSidebar } from './js/sidebar.js';
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
 const loadingEl = $('loading');
-// opened from Atlas's 3-D model of the building (?building=<CoStar id>): offer the way back to it
-if (/^\d+$/.test(Q.get('building') || '')) { $('back').href = `/#/los-angeles/commercial/${Q.get('building')}`; $('back').hidden = false; }
-// going back: tell the building page to start dark, as this page is, and fade to its scene (web/index.html)
-document.addEventListener('click', (e) => { if (e.target.closest('#back, .fb-back')) { try { sessionStorage.setItem('atlas:fromWalk', '1'); } catch (err) {} } }, true);
 const fail = (msg) => { loadingEl.textContent = msg; throw new Error(msg); };
 if (location.protocol === 'file:') fail('Open this through the local server (run start.command, or "python3 -m http.server 8123" in this folder, then visit http://localhost:8123).');
 
 // Which floor: ?scan=<Matterport model id> (floors.json lists the baked ones); Suite 1600 of 10880 Wilshire by default.
 const SCAN = /^[A-Za-z0-9]{11}$/.test(Q.get('scan') || '') ? Q.get('scan') : 'cEvQ8q5GKZd';
 // The card: real facts only, from floors.json (CoStar for the building and listed size, Matterport for the ceiling)
-const FLOOR = await fetch('floors.json').then((r) => (r.ok ? r.json() : null)).then((j) => j?.floors?.[SCAN] || null).catch(() => null);
+const FLOORS = await fetch('floors.json').then((r) => (r.ok ? r.json() : null)).then((j) => j?.floors || {}).catch(() => ({}));
+const FLOOR = FLOORS[SCAN] || null;
+// The way out, always in the sidebar: Atlas › office to housing › this building, and a switch to the other baked floors.
+// Atlas is the site served by server.py; the walkthrough sits at /walkthrough/ under it. Served on its own (python -m
+// http.server in this folder), there is no Atlas to go back to, so the links give way to a note saying so.
+const BUILDING = /^\d+$/.test(Q.get('building') || '') ? Q.get('building') : FLOOR?.propertyId ? String(FLOOR.propertyId) : null;
+$('back').href = BUILDING ? `/#/los-angeles/commercial/${BUILDING}` : '/#/los-angeles/office-to-housing';
+$('back').textContent = FLOOR?.building || (BUILDING ? 'This building' : 'Buildings');
+fetch('/api/status').then((r) => r.ok && /json/.test(r.headers.get('content-type') || '')).catch(() => false)
+  .then((atlas) => { if (!atlas) { $('crumbs').hidden = true; $('crumbs-off').hidden = false; } });
+{
+  const pick = $('floor-pick'), ids = Object.keys(FLOORS);
+  if (!ids.includes(SCAN)) ids.unshift(SCAN);
+  for (const id of ids) { const f = FLOORS[id]; const o = new Option(f ? `${f.building} · floor ${f.floor}` : `Scan ${id}`, id); o.selected = id === SCAN; pick.add(o); }
+  pick.addEventListener('change', () => { const f = FLOORS[pick.value]; location.href = `?scan=${pick.value}${f?.propertyId ? `&building=${f.propertyId}` : ''}`; });
+}
 if (FLOOR) {
   const ftIn = (m) => { const inches = Math.round(m * 39.3701); return `${Math.floor(inches / 12)} ft ${inches % 12} in`; };
   $('card-title').textContent = FLOOR.title;
@@ -135,9 +223,13 @@ $('s-panos').textContent = S.panos.length;
 $('s-share').textContent = Math.round(S.share * 100) + '%';
 
 const canvas = $('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-const scene = new THREE.Scene(); scene.background = new THREE.Color(0x14171c);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });   // transparent: the stage's light grey shows through
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
+const scene = new THREE.Scene();
+// lights only touch the lit materials (the plate and the apartments); the scan, shell and ceiling are unlit shaders
+scene.add(new THREE.HemisphereLight(0xffffff, 0xe4ded4, 2.2), new THREE.AmbientLight(0xffffff, 0.35));
+const sun = new THREE.DirectionalLight(0xfff3e2, 1.5); sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02; scene.add(sun, sun.target);
 const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 800);
 camera.rotation.order = 'YXZ';
 
@@ -226,6 +318,8 @@ if (Q.get('dbg')) meshes.forEach((m) => scene.add(new THREE.Mesh(m.geometry, new
 const pb = new THREE.Box3(); panos.forEach((p) => pb.expandByPoint(p.pos));
 const centre = pb.getCenter(new THREE.Vector3()); centre.y = S.floorY;
 const span = Math.max(pb.max.x - pb.min.x, pb.max.z - pb.min.z);
+sun.position.copy(centre).add(new THREE.Vector3(-span * 0.35, span * 0.7, span * 0.45)); sun.target.position.copy(centre);
+Object.assign(sun.shadow.camera, { left: -span * 0.65, right: span * 0.65, top: span * 0.65, bottom: -span * 0.65, near: 1, far: span * 2.5 }); sun.shadow.camera.updateProjectionMatrix();
 
 // glass ribbon along the outer wall, so window gaps read as glass in the dollhouse
 {
@@ -254,7 +348,9 @@ const fill = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), new THREE.ShaderMat
     void main(){ vec4 t = texture2D(map, vUv); if (t.a < 0.5) discard; vec2 g = vW.xz * 140.0; vec2 i = floor(g), f = fract(g); f = f * f * (3.0 - 2.0 * f);
       float n = mix(mix(h(i), h(i + vec2(1,0)), f.x), mix(h(i + vec2(0,1)), h(i + vec2(1,1)), f.x), f.y);
       float near = clamp(1.0 - distance(vW, cameraPosition) / 7.0, 0.0, 1.0); float dw = min(min(vW.x - uRect.x, uRect.y - vW.x), min(vW.z - uRect.z, uRect.w - vW.z)); float day = uRect.y > uRect.x ? 0.9 + 0.2 * exp(-max(dw, 0.0) / 3.5) : 1.0;
-      gl_FragColor = vec4(t.rgb * day * (1.0 + (n - 0.5) * 0.06 * near), 1.0); }`,
+      // the bake paints the unscanned core rgb(52,58,66); on the light stage it reads as a navy hole, so show it as pale concrete
+      vec3 base = t.rgb; float core = 1.0 - smoothstep(0.03, 0.09, distance(base, vec3(52.0, 58.0, 66.0) / 255.0)); base = mix(base, vec3(0.86, 0.86, 0.85), core);
+      gl_FragColor = vec4(base * day * (1.0 + (n - 0.5) * 0.06 * near), 1.0); }`,
 }));
 fill.rotation.x = -Math.PI / 2; fill.position.set(bx + bw / 2, S.floorY - 0.035, -(by + bh / 2)); scene.add(fill);
 U.uFloor.value = S.floorY; U.uMaxD.value = span * 0.8;
@@ -282,11 +378,29 @@ const shellWalls = (() => {
   const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: wallTex, transparent: true, opacity: 0 })); m.visible = false; m.renderOrder = 1; scene.add(m); return m;
 })();
 const [rx0, rx1, ry0, ry1] = SH.rect;
+// the base plate: the floor slab drawn as a solid architectural-model base with a thin raised border, on a soft shadow
+{
+  const M = 1.1, TH = 1.3, top = S.floorY - 0.15;   // top 15 cm under the floor fill: any closer and the two flicker (z-fighting) from dollhouse distance   // margin past the outer wall and slab depth, in metres: chunky enough to read as a base from far off
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(rx1 - rx0 + 2 * M, TH, ry1 - ry0 + 2 * M), new THREE.MeshStandardMaterial({ color: 0xf3f2ef, roughness: 0.85 }));
+  slab.position.set((rx0 + rx1) / 2, top - TH / 2, -(ry0 + ry1) / 2); slab.receiveShadow = true; scene.add(slab);
+  const edge = new THREE.MeshStandardMaterial({ color: 0xdedbd5, roughness: 0.7 }), LIP = 0.14, LH = 0.12;
+  for (const [w, d, x, z] of [[rx1 - rx0 + 2 * M, LIP, (rx0 + rx1) / 2, -(ry0 - M + LIP / 2)], [rx1 - rx0 + 2 * M, LIP, (rx0 + rx1) / 2, -(ry1 + M - LIP / 2)],
+    [LIP, ry1 - ry0 + 2 * M, rx0 - M + LIP / 2, -(ry0 + ry1) / 2], [LIP, ry1 - ry0 + 2 * M, rx1 + M - LIP / 2, -(ry0 + ry1) / 2]]) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w, LH, d), edge); b.position.set(x, top + LH / 2, z); scene.add(b);
+  }
+  const band2 = new THREE.Mesh(new THREE.BoxGeometry(rx1 - rx0 + 2 * M + 0.01, 0.05, ry1 - ry0 + 2 * M + 0.01), new THREE.MeshStandardMaterial({ color: 0xc9c6bf, roughness: 0.9 }));
+  band2.scale.y = 3; band2.position.set((rx0 + rx1) / 2, top - TH + 0.075, -(ry0 + ry1) / 2); scene.add(band2);   // a darker foot so the plate reads as lifted
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256; const c = cv.getContext('2d');
+  const gr = c.createRadialGradient(128, 128, 30, 128, 128, 128); gr.addColorStop(0, 'rgba(23,33,43,.28)'); gr.addColorStop(0.6, 'rgba(23,33,43,.10)'); gr.addColorStop(1, 'rgba(23,33,43,0)');
+  c.fillStyle = gr; c.fillRect(0, 0, 256, 256);
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry((rx1 - rx0) * 1.5, (ry1 - ry0) * 1.9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.set((rx0 + rx1) / 2 + 1.5, top - TH - 0.02, -(ry0 + ry1) / 2 - 1.5); shadow.renderOrder = -2; scene.add(shadow);
+}
 fill.material.uniforms.uRect.value.set(rx0, rx1, -ry1, -ry0);
 // drawn ceiling: 2 ft tiles on a grid with recessed light panels
 const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(rx1 - rx0, ry1 - ry0), new THREE.ShaderMaterial({
-  uniforms: { uRect: { value: new THREE.Vector4(rx0, rx1, -ry1, -ry0) } }, vertexShader: VERT,
-  fragmentShader: `uniform vec4 uRect; varying vec3 vW;
+  uniforms: { uRect: { value: new THREE.Vector4(rx0, rx1, -ry1, -ry0) }, uPlain: { value: 0 } }, vertexShader: VERT,
+  fragmentShader: `uniform vec4 uRect; uniform float uPlain; varying vec3 vW;
     float h(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
     void main(){ float T = 0.6096; vec2 g = (vW.xz - uRect.xz) / T; vec2 i = floor(g), f = fract(g);
       float edge = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)) * T; float aa = max(fwidth(g.x), fwidth(g.y)) * T;
@@ -296,6 +410,7 @@ const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(rx1 - rx0, ry1 - ry0), ne
       vec2 c = mod(i, vec2(4.0, 6.0)); bool lit = c.x == 1.0 && (c.y == 2.0 || c.y == 3.0);
       if (lit) { vec2 q = vec2(f.x, (c.y - 2.0 + f.y) * 0.5); float rim = min(min(q.x, 1.0 - q.x) * T, min(q.y, 1.0 - q.y) * 2.0 * T); col = mix(vec3(0.55, 0.55, 0.54), vec3(1.0, 0.99, 0.95), smoothstep(0.015, 0.04, rim)); }
       float dw = min(min(vW.x - uRect.x, uRect.y - vW.x), min(vW.z - uRect.z, uRect.w - vW.z)); if (!lit) col *= 0.93 + 0.12 * exp(-max(dw, 0.0) / 3.0);
+      col = mix(col, vec3(0.955, 0.95, 0.94) * (0.94 + 0.08 * exp(-max(dw, 0.0) / 3.0)), uPlain);   // homes get a plain painted ceiling
       gl_FragColor = vec4(col, 1.0); }`,
 }));
 ceiling.rotation.x = Math.PI / 2; ceiling.position.set((rx0 + rx1) / 2, SH.z1 - 0.005, -(ry0 + ry1) / 2); scene.add(ceiling);   // faces down, so it never shows from above
@@ -311,7 +426,7 @@ const coreMat = new THREE.ShaderMaterial({
       if (hh < 0.10) col = vec3(0.40, 0.23, 0.10); else if (hh < 0.112) col = vec3(0.25, 0.14, 0.06);       // baseboard
       gl_FragColor = vec4(col, uOpacity); }`,
 });
-const capMat = new THREE.MeshBasicMaterial({ color: 0x3a4049, transparent: true });
+const capMat = new THREE.MeshBasicMaterial({ color: 0xc9cdd2, transparent: true });   // the core's roof, light on the light stage
 // Probable structural columns: free-standing footprints in the scan that run floor to ceiling, drawn as white columns.
 // They rise out of the floor as the walls go down. Sizes are the drywall wrap, so slightly larger than the steel inside.
 const colGroup = new THREE.Group(); colGroup.visible = false; scene.add(colGroup);
@@ -346,7 +461,8 @@ const walkMask = !HAS_SHELL ? null : await (async () => {
   const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
   const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0); return { w: im.width, h: im.height, d: cx.getImageData(0, 0, im.width, im.height).data };
 })();
-const walkable = (x, z) => { if (!walkMask) return x > SH.rect[0] && x < SH.rect[1] && -z > SH.rect[2] && -z < SH.rect[3];   // no mask: the whole plate
+let extraBlock = null;   // the apartments' walls and furniture, while they are shown
+const walkable = (x, z) => { if (extraBlock && extraBlock(x, z)) return false; if (!walkMask) return x > SH.rect[0] && x < SH.rect[1] && -z > SH.rect[2] && -z < SH.rect[3];   // no mask: the whole plate
   const px = Math.floor((x - bx) / bw * walkMask.w), py = Math.floor((by + bh + z) / bh * walkMask.h); if (!(px >= 0 && py >= 0 && px < walkMask.w && py < walkMask.h && walkMask.d[(py * walkMask.w + px) * 4] > 127)) return false;
   for (const c of SH.columns || []) if (Math.abs(x - c.x) < c.size / 2 + 0.3 && Math.abs(z + c.y) < c.size / 2 + 0.3) return false; return true; };
 const EYE = S.floorY + SH.eye;
@@ -377,13 +493,16 @@ const hints = {
   plan: 'Drag to pan · scroll to zoom · double-click a spot to stand there',
   walk: 'Drag to look around · click where you want to go · scroll to zoom · Esc for the dollhouse',
   shell: 'Empty floor · drag to look · click the floor to move · W A S D to walk · Esc for the dollhouse',
+  homes: 'Inside the homes · drag to look · click the floor to move · W A S D to walk · Esc for the dollhouse',
 };
 function setUi(m) {
   document.body.classList.toggle('walk', m === 'walk' || m === 'shell');
-  document.querySelectorAll('.bar button[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (m === 'shell' ? 'walk' : m))));
-  $('hint').textContent = removed && (m === 'doll' || m === 'plan') ? 'Interior walls down · white columns are probable structural columns found in the scan · click Walk inside' : hints[m];
-  if (m === 'shell') $('where').textContent = 'Empty floor · walk anywhere';
+  document.querySelectorAll('#view-modes button[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (m === 'shell' ? 'walk' : m))));
+  $('hint').textContent = aptsOn && (m === 'doll' || m === 'plan') ? `${(LAY.units || []).length} homes laid out by the agents · drag to look around · Walk inside to tour them`
+    : removed && (m === 'doll' || m === 'plan') ? 'Interior walls down · white columns are probable structural columns found in the scan · click Walk inside' : hints[m === 'shell' && aptsOn ? 'homes' : m];
+  if (m === 'shell') $('where').textContent = aptsOn ? 'Apartments · walk through the homes' : 'Empty floor · walk anywhere';
   const flat = m !== 'walk' && m !== 'shell';
+  if (APT) { APT.labels.visible = m === 'plan'; APT.setCut(m !== 'walk' && m !== 'shell'); }
   glass.visible = flat && !removed; band.visible = flat && $('band').checked; $('legend').hidden = !(flat && $('band').checked);
 }
 function setA(p) { cur = p; U.uA.value = (hiFor === p && hi) ? hi : p.lo; U.uMA.value = p.M; U.uPA.value = p.pos; U.uT.value = 0; $('where').textContent = `Capture point ${p.i + 1} of ${panos.length}`; }
@@ -482,7 +601,7 @@ async function setWalls(down) {
   if (!down && aptsOn) await setApts(false);
   if (mode === 'walk' || mode === 'shell') { await leaveWalk('doll'); }
   dropping = true; removed = down; setUi(mode);
-  $('walls').setAttribute('aria-pressed', String(down)); $('walls').textContent = down ? 'Bring walls back' : 'Remove walls';
+  syncState();
   const total = U.uSpread.value + U.uDur.value;
   if (down) U.uOrigin.value.set(orbit.target.x, orbit.target.z);
   shellWalls.visible = true; coreGroup.visible = true; colGroup.visible = true;
@@ -494,87 +613,82 @@ async function setWalls(down) {
   shellWalls.visible = down; coreGroup.visible = down; colGroup.visible = down; shellWalls.material.opacity = down ? 1 : 0; columns.forEach((m) => { m.scale.y = down ? 1 : 0.001; }); setUi(mode);
   dropping = false;
 }
-$('walls').addEventListener('click', () => setWalls(!removed));
+// the three floor states in the sidebar: office as scanned, empty shell, apartments
+function syncState() {
+  const st = aptsOn ? 'apts' : removed ? 'empty' : 'office';
+  document.querySelectorAll('#state button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.state === st)));
+}
+async function setFloorState(st) {
+  if (st === 'office') { if (aptsOn) await setApts(false); await setWalls(false); }
+  else if (st === 'empty') { if (aptsOn) await setApts(false); else await setWalls(true); }
+  else if (st === 'apts') await (sidebar ? sidebar.runAgents() : setApts(true));
+}
+document.querySelectorAll('#state button').forEach((b) => b.addEventListener('click', () => setFloorState(b.dataset.state)));
 if (!HAS_SHELL) { $('walls').disabled = true; $('walls').title = 'This floor has no empty-floor bake yet'; }
-$('cmd').addEventListener('submit', (e) => {
-  e.preventDefault(); const t = $('cmd-in').value.toLowerCase().trim(); $('cmd-in').value = ''; if (!t) return;
-  if (/apartment|layout|units?\b/.test(t)) { /(hide|remove|off|clear|close)/.test(t) ? setApts(false) : setApts(true); return; }
-  const wall = /wall|partition|interior/.test(t);
-  if (wall && /(bring|put|restore|add|raise|show|back|undo)/.test(t)) { removed ? setWalls(false) : say('The walls are already up.'); }
-  else if (wall && /(remove|drop|clear|hide|delete|lower|take|get rid|strip|empty)/.test(t)) { removed ? say('The walls are already down.') : setWalls(true); }
-  else if (/empty|shell/.test(t)) setWalls(true);
-  else if (/doll/.test(t)) setMode('doll'); else if (/plan|top/.test(t)) setMode('plan'); else if (/walk|inside/.test(t)) setMode('walk');
-  else say('Try: "remove all the walls", "show apartments", "bring the walls back", "floor plan", "walk inside".');
-});
+// typed commands from the sidebar chat; returns what was done, or null when the text is a question for the agents
+function runCommand(raw) {
+  const t = raw.toLowerCase().trim().replace(/[.!?]+$/, ''); if (!t) return null;
+  const short = t.split(/\s+/).length <= 7, wall = /\bwalls?\b|partition/.test(t);
+  if (short && /\b(apartments?|homes|units|layout)\b/.test(t) && /^(show|hide|bring|lay|design|build|put|add|remove|clear|close|apartments|homes|layout|the)/.test(t)) {
+    if (/(hide|remove|off|clear|close)/.test(t)) { setApts(false); return 'Apartments hidden.'; }
+    setFloorState('apts'); return 'Designing the apartments.';
+  }
+  if (wall && /(bring|put|restore|add|raise|show|back|undo)/.test(t)) { if (!removed) return 'The walls are already up.'; setFloorState('office'); return 'Bringing the office walls back.'; }
+  if (wall && /(remove|drop|clear|hide|delete|lower|take|get rid|strip|empty)/.test(t)) { if (removed && !aptsOn) return 'The walls are already down.'; setFloorState('empty'); return 'Removing the interior walls.'; }
+  if (short && /^(show |go to |switch to |open )?(the )?(empty|shell|empty floor|empty shell)$/.test(t)) { setFloorState('empty'); return 'Showing the empty floor.'; }
+  if (short && /^(show |go to |switch to |open )?(the )?(doll ?house)( view)?$/.test(t)) { setMode('doll'); return 'Dollhouse view.'; }
+  if (short && /^(show |go to |switch to |open )?(the )?(floor ?plan|plan|top( view)?)( view)?$/.test(t)) { setMode('plan'); return 'Floor plan view.'; }
+  if (short && /^(go |let'?s )?(walk|go)( inside| in)?$|^walk inside/.test(t)) { setMode('walk'); return 'Walking inside.'; }
+  return null;
+}
 
-// ---------- apartment layout: the agent's new walls, in the same scan metres as the shell ----------
-// data/layout.json (written by the conversion agent): walls [{a:[x,y], b:[x,y], kind}], units [{type, area_sf, polygon, label_at}],
-// structure {columns [{x,y,confidence}], exits [{x,y,kind,confidence}]}, summary. Scan (x, y) lands on world (x, -y), like SH.pieces.
-const LAY = await fetch(dataFile('layout.json')).then((r) => (r.ok && /json/.test(r.headers.get('content-type') || '') ? r.json() : null)).catch(() => null);
-let aptsOn = false;
+// ---------- apartments ----------
+// layouts/<scan>.json ("rooms-v1", scripts/layout_v4_to_viewer.py): units with their rooms, walls with door gaps, corridor,
+// columns, compliance self-score and the cost model; drawn with real finishes by js/apartments.js. Without it, fall back to
+// data/layout.json from the conversion agent (walls and unit outlines only), drawn as plain white walls.
+// Scan (x, y) lands on world (x, -y), like SH.pieces.
+const isRooms = (j) => j && j.format === 'rooms-v1' && Array.isArray(j.units);
+const LAY = await fetch(`layouts/${SCAN}.json`).then((r) => (isJson(r) ? r.json() : null)).then((j) => (isRooms(j) ? j : null)).catch(() => null)
+  || await fetch(dataFile('layout.json')).then((r) => (isJson(r) ? r.json() : null)).catch(() => null);
+let aptsOn = false, sidebar = null;
 const aptGroup = new THREE.Group(); aptGroup.visible = false; scene.add(aptGroup);
 const aptRise = new THREE.Group(); aptRise.position.y = SH.z0; aptGroup.add(aptRise);   // scaled up from the floor as the walls rise
-const aptMat = (hex, op) => new THREE.ShaderMaterial({
-  uniforms: { uColor: { value: new THREE.Color(hex) }, uOpacity: { value: op }, uFade: { value: 1 } }, transparent: true, side: THREE.DoubleSide,
-  vertexShader: `varying vec3 vN; void main(){ vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform vec3 uColor; uniform float uOpacity, uFade; varying vec3 vN; void main(){ float l = 0.78 + 0.22 * abs(dot(vN, normalize(vec3(0.55, 0.6, 0.83)))); gl_FragColor = vec4(uColor * l, uOpacity * uFade); }`,
-});
 const aptMats = [];
-const labelSprite = (lines, color) => {
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160; const c = cv.getContext('2d');
-  c.fillStyle = 'rgba(20,23,28,.82)'; c.beginPath(); c.roundRect(4, 4, 504, 152, 26); c.fill();
-  c.textAlign = 'center'; c.fillStyle = color; c.font = '600 58px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'; c.fillText(lines[0], 256, 72);
-  c.fillStyle = '#c5ced8'; c.font = '44px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'; c.fillText(lines[1] || '', 256, 130);
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, opacity: 0 }); aptMats.push(m);
-  const sp = new THREE.Sprite(m); sp.scale.set(3.2, 1.0, 1); sp.renderOrder = 6; return sp;
-};
-if (LAY) {
-  const H = SH.z1 - SH.z0;
-  const wallMat = aptMat(0x2fb3a5, 0.92), corridorMat = aptMat(0x7fc8ff, 0.92), colMat = aptMat(0xe5484d, 0.55);
-  aptMats.push(wallMat, corridorMat, colMat);
+let APT = null;
+if (isRooms(LAY)) {
+  APT = await buildApartments({ LAY, SH, renderer, z0: SH.z0, z1: SH.z1 });
+  APT.floorGroup.position.y = SH.z0; aptGroup.add(APT.floorGroup); aptRise.add(APT.riseGroup);
+  APT.labels.position.y = SH.z0; APT.labels.visible = false; aptGroup.add(APT.labels);
+  // dollhouse cutaway: from above, walls and tall furniture stop at 1.5 m so the rooms can be seen; full height inside
+  renderer.localClippingEnabled = true;
+  const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), SH.z0 + 1.5);
+  for (const [k, m] of Object.entries(APT.materials)) if (!['oak', 'tile', 'corridor', 'core'].includes(k)) m.clippingPlanes = [cutPlane];
+  APT.setCut = (on) => { cutPlane.constant = on ? SH.z0 + 1.5 : 1e4; renderer.shadowMap.needsUpdate = true; };
+} else if (LAY) {
+  const H = SH.z1 - SH.z0, wallMat = new THREE.MeshStandardMaterial({ color: 0xfbfaf7, roughness: 0.9, transparent: true });
+  aptMats.push(wallMat);
   for (const w of LAY.walls || []) {
     const ax = w.a[0], az = -w.a[1], bx2 = w.b[0], bz = -w.b[1], L = Math.hypot(bx2 - ax, bz - az); if (L < 0.05) continue;
-    const m = new THREE.Mesh(new THREE.BoxGeometry(L, H, 0.14), w.kind === 'corridor' ? corridorMat : wallMat);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(L, H, w.kind === 'interior' ? 0.1 : 0.15), wallMat); m.castShadow = m.receiveShadow = true;
     m.position.set((ax + bx2) / 2, H / 2, (az + bz) / 2); m.rotation.y = Math.atan2(-(bz - az), bx2 - ax); aptRise.add(m);   // box length runs from a to b
   }
-  const tint = { studio: 0x7fc8ff, '1br': 0x2fb3a5, '2br': 0xffb02e, '3br': 0xc58bf2 };
-  for (const u of LAY.units || []) {
-    if (u.polygon && u.polygon.length > 2) {
-      const mat = new THREE.MeshBasicMaterial({ color: tint[String(u.type).toLowerCase()] || 0x9aa6b4, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
-      mat.userData.max = 0.28; aptMats.push(mat);
-      const f = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(u.polygon.map(([x, y]) => new THREE.Vector2(x, y)))), mat);
-      f.rotation.x = -Math.PI / 2; f.position.y = S.floorY + 0.03; f.renderOrder = 2; aptGroup.add(f);   // shape (x, y) lands on world (x, -y)
-    }
-    const at = u.label_at || (u.polygon && [u.polygon.reduce((a, p) => a + p[0], 0) / u.polygon.length, u.polygon.reduce((a, p) => a + p[1], 0) / u.polygon.length]);
-    if (!at) continue;
-    const sp = labelSprite([String(u.type || 'Unit').toUpperCase(), u.area_sf ? `${Math.round(u.area_sf).toLocaleString('en-US')} sq ft` : ''], '#e9edf2');
-    sp.position.set(at[0], SH.z1 + 0.7, -at[1]); aptGroup.add(sp);
-  }
-  const st = LAY.structure || {};
-  for (const c of st.columns || []) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.45, H, 0.45), colMat); m.position.set(c.x, H / 2, -c.y); aptRise.add(m); }
-  for (const e of st.exits || []) {
-    const mat = new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }); mat.userData.max = 0.9; aptMats.push(mat);
-    const r = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.55, 40).rotateX(-Math.PI / 2), mat); r.position.set(e.x, S.floorY + 0.05, -e.y); r.renderOrder = 3; aptGroup.add(r);
-    const sp = labelSprite(['EXIT', /assum/i.test(`${e.confidence || ''} ${e.kind || ''}`) ? 'assumed' : (e.kind || '')], '#3ddc84'); sp.scale.set(1.9, 0.6, 1); sp.position.set(e.x, SH.z1 + 0.4, -e.y); aptGroup.add(sp);
-  }
-  const sm = LAY.summary || {};
-  $('apt-sum').innerHTML = `<div><b>${sm.units ?? (LAY.units || []).length}</b> apartments${sm.rentable_sf ? ` · <b>${Math.round(sm.rentable_sf).toLocaleString('en-US')}</b> sq ft` : ''}</div>`
-    + (sm.monthly_rent_usd ? `<div>About <b>$${Math.round(sm.monthly_rent_usd).toLocaleString('en-US')}</b> a month in rent</div>` : '')
-    + `<div class="note">Rough draft by the layout agent. Red: possible columns (low confidence). Green: exits${(st.exits || []).some((e) => /assum/i.test(e.confidence || '')) ? ', assumed' : ''}.</div>`;
 } else { $('apts').disabled = true; $('apts').title = 'No apartment layout for this floor yet'; }
-function aptFade(q) { aptRise.scale.y = Math.max(0.001, q); for (const m of aptMats) { if (m.uniforms) m.uniforms.uFade.value = Math.min(1, q * 1.5); else m.opacity = (m.userData.max ?? 1) * THREE.MathUtils.smoothstep(q, 0.4, 1); } }
+function aptFade(q) {
+  aptRise.scale.y = Math.max(0.001, q); renderer.shadowMap.needsUpdate = true;
+  if (APT) APT.setFloorOpacity(Math.min(1, q * 1.6));
+  for (const m of aptMats) m.opacity = Math.min(1, q * 1.5);
+  ceiling.material.uniforms.uPlain.value = q;
+}
 async function setApts(on) {
   if (!LAY) { say('No apartment layout has been made for this floor yet.'); return; }
   if (on === aptsOn || dropping) return;
   if (on && !removed) await setWalls(true);
   if (on && !removed) return;   // the office walls could not come down (another move was running)
-  aptsOn = on; $('apts').setAttribute('aria-pressed', String(on)); $('apts').textContent = on ? 'Hide apartments' : 'Apartment layout';
-  aptGroup.visible = true; $('apt-sum').hidden = !on; if (on) $('legend').hidden = true;
-  await tween(on ? 1600 : 700, (e) => aptFade(on ? e : 1 - e));
-  aptGroup.visible = on;
+  aptsOn = on; syncState(); extraBlock = on && APT ? APT.blocked : null;
+  aptGroup.visible = true; if (on) { $('band').checked = false; setUi(mode); }
+  await tween(on ? 1800 : 700, (e) => aptFade(on ? e : 1 - e));
+  aptGroup.visible = on; renderer.shadowMap.needsUpdate = true; setUi(mode); drawMini();
 }
-$('apts').addEventListener('click', () => setApts(!aptsOn));
 
 // ---------- picking ----------
 const ray = new THREE.Raycaster(); ray.firstHitOnly = true; const ndc = new THREE.Vector2();
@@ -619,7 +733,7 @@ canvas.addEventListener('pointerup', (e) => {
 canvas.addEventListener('dblclick', (e) => { if (mode === 'walk' || mode === 'shell' || busy || dropping) return; if (removed) { const fp = floorPoint(e); if (fp) enterShell(fp); return; } const h = pick(e); if (h) enterWalk(nearest(h.point)); });
 canvas.addEventListener('wheel', (e) => { if (mode !== 'walk' && mode !== 'shell') return; e.preventDefault(); camera.fov = THREE.MathUtils.clamp(camera.fov + e.deltaY * 0.03, 32, 85); camera.updateProjectionMatrix(); }, { passive: false });
 addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT') return; keys.add(e.key.toLowerCase());
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; keys.add(e.key.toLowerCase());
   if (mode === 'shell') { if (e.key === 'Escape') setMode('doll'); return; }
   if (mode !== 'walk') return; const k = e.key.toLowerCase();
   if (k === 'escape') setMode('doll');
@@ -628,7 +742,7 @@ addEventListener('keydown', (e) => {
   else if (k === 'a') goTo(along(yaw + Math.PI / 2)); else if (k === 'd') goTo(along(yaw - Math.PI / 2));
   else if (k === 'arrowleft') { yaw += 0.26; applyLook(); drawMini(); } else if (k === 'arrowright') { yaw -= 0.26; applyLook(); drawMini(); }
 });
-document.querySelectorAll('.bar button[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+document.querySelectorAll('#view-modes button[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
 $('band').addEventListener('change', () => setUi(mode));
 
 // ---------- mini map ----------
@@ -641,6 +755,7 @@ function drawMini() {
   mctx.clearRect(0, 0, mini.width, mini.height);
   mctx.strokeStyle = '#5b6878'; mctx.lineWidth = 2; mctx.beginPath();
   for (const [x1, y1, x2, y2] of S.outline) { mctx.moveTo(mx(x1), mz(-y1)); mctx.lineTo(mx(x2), mz(-y2)); } mctx.stroke();
+  if (inShell && aptsOn && LAY) { mctx.strokeStyle = '#9aa4ae'; mctx.lineWidth = 1.2; mctx.beginPath(); for (const w of LAY.walls || []) { mctx.moveTo(mx(w.a[0]), mz(-w.a[1])); mctx.lineTo(mx(w.b[0]), mz(-w.b[1])); } mctx.stroke(); }
   mctx.fillStyle = '#6f7b89'; if (!inShell) for (const p of panos) { mctx.beginPath(); mctx.arc(mx(p.pos.x), mz(p.pos.z), 3, 0, 7); mctx.fill(); }
   const cx = mx(here.x), cz = mz(here.z), a = Math.atan2(-Math.cos(yaw), -Math.sin(yaw)), half = THREE.MathUtils.degToRad(camera.fov * camera.aspect) / 2 * 0.8;
   mctx.fillStyle = 'rgba(255,176,46,.35)'; mctx.beginPath(); mctx.moveTo(cx, cz); mctx.arc(cx, cz, 46, a - half, a + half); mctx.closePath(); mctx.fill();
@@ -654,8 +769,8 @@ mini.addEventListener('click', (e) => {
 });
 
 // ---------- loop ----------
-function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-addEventListener('resize', resize); resize();
+function resize() { const st = $('stage'), w = st.clientWidth || 1, h = st.clientHeight || 1; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe($('stage')); resize();
 let lastPick = 0, lastT = performance.now();
 renderer.setAnimationLoop((now) => {
   tweens.forEach((t) => t(now));
@@ -675,7 +790,9 @@ renderer.setAnimationLoop((now) => {
     if (keys.has('arrowleft')) { yaw += dt * 1.5; applyLook(); } if (keys.has('arrowright')) { yaw -= dt * 1.5; applyLook(); }
     if (f || sd) {
       const v = 3.4 * dt / Math.hypot(f, sd), dx = (-Math.sin(yaw) * f + Math.cos(yaw) * sd) * v, dz = (-Math.cos(yaw) * f - Math.sin(yaw) * sd) * v, p = camera.position;
-      if (walkable(p.x + dx, p.z + dz)) { p.x += dx; p.z += dz; } else if (walkable(p.x + dx, p.z)) p.x += dx; else if (walkable(p.x, p.z + dz)) p.z += dz;   // slide along walls
+      // standing inside furniture or a wall's margin (a mini-map jump can land there): let any move out that stays on the floor
+      const stuck = !walkable(p.x, p.z), ok = (x, z) => walkable(x, z) || (stuck && (extraBlock ? (() => { const e = extraBlock; extraBlock = null; const r = walkable(x, z); extraBlock = e; return r; })() : false));
+      if (ok(p.x + dx, p.z + dz)) { p.x += dx; p.z += dz; } else if (ok(p.x + dx, p.z)) p.x += dx; else if (ok(p.x, p.z + dz)) p.z += dz;   // slide along walls
       drawMini();
     }
     if (moveEv && !down) { const fp = floorPoint(moveEv); if (fp && walkable(fp.x, fp.z)) { reticle.visible = true; reticle.position.set(fp.x, S.floorY + 0.02, fp.z); reticle.rotation.set(-Math.PI / 2, 0, 0); reticle.scale.setScalar(THREE.MathUtils.clamp(fp.distanceTo(camera.position) / 5, 0.5, 2.2)); } else reticle.visible = false; moveEv = null; }
@@ -684,8 +801,9 @@ renderer.setAnimationLoop((now) => {
   sky.position.copy(camera.position);
   renderer.render(scene, camera);
 });
-setUi('doll'); orbit.enabled = true; loadingEl.remove();
-window.__app = { panos, setMode, goTo, enterWalk, enterShell, setWalls, setApts, camera, look: (y, p) => { yaw = y; pitch = p; applyLook(); drawMini(); }, state: () => ({ mode, busy, removed, dropping, cur: cur && cur.i, hd: hiFor === cur && !!hi, yaw, pitch }) };
+setUi('doll'); orbit.enabled = true; loadingEl.remove(); renderer.shadowMap.needsUpdate = true;
+sidebar = setUpSidebar({ LAY: isRooms(LAY) ? LAY : null, S, SH, SCAN, FLOOR, building: BUILDING, setApts, runCommand, state: () => ({ mode, removed, aptsOn, busy, dropping }) });
+window.__app = { panos, setMode, goTo, enterWalk, enterShell, setWalls, setApts, setFloorState, runCommand, sidebar, camera, look: (y, p) => { yaw = y; pitch = p; applyLook(); drawMini(); }, state: () => ({ mode, busy, removed, dropping, cur: cur && cur.i, hd: hiFor === cur && !!hi, yaw, pitch }) };
 window.__U = U; window.__ready = true;
 </script>
 </body></html>
