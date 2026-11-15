@@ -60,6 +60,8 @@ At most 20 camera positions per space have photos; a room with pano_selected 0 h
 adjacent rooms share a wall; that does not mean a door connects them.
 When you look at a pano, write what you saw as a claim on that pano (predicate pano.caption) and on the room or space
 when it supports a fact (predicates interior.*). Use the evidence_id returned with the image or the caption.
+File what a room or space contains under interior.amenity_present (one claim per amenity, equipment listed in the
+statement) and layout facts under interior.layout_note. Use note.* only when no interior.* predicate fits.
 Areas come in square metres. Report both m2 and sq ft (1 m2 = 10.764 sq ft).
 Write notes to /runs/<run_id>/notes/interior-inspector.md. Return the result schema.
 """ + COMMON

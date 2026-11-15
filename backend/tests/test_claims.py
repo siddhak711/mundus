@@ -118,3 +118,12 @@ def test_card_has_machine_readable_coverage(world):
     card = render_card(world.db, world.claims, PLACE)
     assert "coverage: market=fresh(3) interior=none aerial=none surroundings=none" in card
     assert "[claim:" in card
+
+
+def test_room_notes_count_toward_interior_coverage():
+    from mundus_world.service.claims import coverage
+    mk = lambda subj, pred: {"subject_id": subj, "predicate": pred, "status": "active"}  # noqa: E731
+    cov = coverage([mk("room:X:a", "note.equipment"), mk("space:X", "note.amenity"), mk("pano:X:p", "pano.caption"),
+                    mk("place:costar:1", "note.general")])
+    assert cov["interior"]["state"] == "fresh" and cov["interior"]["fresh"] == 3
+    assert cov["market"]["state"] == "none"

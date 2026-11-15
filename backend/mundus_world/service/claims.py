@@ -330,11 +330,19 @@ class Claims:
 FACETS = ("market", "interior", "aerial", "surroundings")
 
 
+def _facet_of(c: dict[str, Any]) -> str:
+    """Facet a claim counts toward. A free-form note about a room, space or pano is interior knowledge: without this,
+    an agent that files what it saw under note.* leaves the interior facet looking empty and the work is redone."""
+    ns = c["predicate"].split(".")[0]
+    if ns == "pano" or (ns == "note" and str(c.get("subject_id") or "").startswith(("room:", "space:", "pano:"))):
+        return "interior"
+    return ns
+
+
 def coverage(claims: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     out = {f: {"fresh": 0, "stale": 0} for f in FACETS}
     for c in claims:
-        ns = c["predicate"].split(".")[0]
-        ns = "interior" if ns == "pano" else ns
+        ns = _facet_of(c)
         if ns in out:
             if c["status"] == "active":
                 out[ns]["fresh"] += 1
@@ -371,7 +379,7 @@ def render_card(db: Database, claims_svc: Claims, place_id: str) -> str:
              f"updated: {max((c['updated_at'] for c in allc), default=now_iso())} · claims: {len(active)} active, {len(disputed)} disputed", ""]
     ev_types = {r[0]: r[1] for r in db.q("SELECT evidence_id, type FROM evidence WHERE place_id=?", (place_id,))}
     for facet in (*FACETS, "synthesis", "note"):
-        rows = [c for c in active if (c["predicate"].split(".")[0] if c["predicate"].split(".")[0] != "pano" else "interior") == facet]
+        rows = [c for c in active if _facet_of(c) == facet]
         if not rows:
             continue
         lines.append(f"## {facet}")
