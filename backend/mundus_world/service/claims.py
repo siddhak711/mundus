@@ -90,11 +90,16 @@ class Claims:
         if value is None:
             raise ApiError("invalid_argument", "value is required")
         if not self._is_free(predicate) and predicate not in self.vocab:
-            raise ApiError("invalid_argument", f"Unknown predicate '{predicate}'. Use one from the claims vocabulary, "
-                           "or a free-form note.* or synthesis.* predicate.",
-                           {"allowed_namespaces": sorted({p.split('.')[0] for p in self.vocab}) + ["note", "synthesis"]})
+            ns = predicate.split(".")[0]
+            same_ns = sorted(p for p in self.vocab if p.split(".")[0] == ns)
+            raise ApiError("invalid_argument", f"Unknown predicate '{predicate}' (field: predicate). "
+                           + (f"Valid {ns}.* predicates are listed in valid_predicates. " if same_ns else "")
+                           + "Otherwise use a free-form note.* or synthesis.* predicate.",
+                           {"field": "predicate", "valid_predicates": same_ns,
+                            "allowed_namespaces": sorted({p.split('.')[0] for p in self.vocab}) + ["note", "synthesis"]})
         if not graph.node_exists(self.db, subject_id):
-            raise ApiError("invalid_argument", f"subject_id {subject_id} is not a known node")
+            raise ApiError("invalid_argument", f"subject_id {subject_id} is not a known node (field: subject_id). Use a "
+                           "place, space, room or pano id exactly as a tool returned it.", {"field": "subject_id"})
         if not evidence_ids and not derived_from:
             raise ApiError("invalid_argument", "A claim needs at least one evidence_id you received from a tool, "
                            "or derived_from claim ids.")
@@ -104,8 +109,9 @@ class Claims:
                 evidence_ids)}
             unknown = [e for e in evidence_ids if e not in found]
             if unknown:
-                raise ApiError("invalid_argument", "Unknown evidence ids. Cite only ids returned by a tool.",
-                               {"unknown_evidence_ids": unknown})
+                raise ApiError("invalid_argument", "Unknown evidence ids (field: evidence_ids). An evidence id starts "
+                               "with ev: and must be copied exactly from a tool result; a claim id, row id or node id "
+                               "is not an evidence id.", {"field": "evidence_ids", "unknown_evidence_ids": unknown})
         else:
             found = {}
         if derived_from:

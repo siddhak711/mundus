@@ -41,9 +41,10 @@ class Config:
     max_aerial_images: int = 4
     orch_model_calls: int = 25
     orch_tool_calls: int = 60
-    sub_model_calls: int = 12
-    sub_tool_calls: int = 30
+    sub_model_calls: int = 16
+    sub_tool_calls: int = 40
     coverage_min_claims: int = 3
+    sub_context_trigger_tokens: int = 50000   # older tool results are cleared from a subagent's history beyond this
 
 
 def use_mundus_anthropic_key() -> None:
