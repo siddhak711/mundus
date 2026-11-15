@@ -90,7 +90,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         try:
-            for event in ask.run(body.get("question", ""), body.get("thread_id"), body.get("context", {})):
+            for event in ask.run(body.get("question", ""), body.get("threads") or body.get("thread_id"), body.get("context", {}), body.get("agent")):
                 self.wfile.write(f"data: {json.dumps(event)}\n\n".encode("utf-8"))
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
