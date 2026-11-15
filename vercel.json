@@ -2,32 +2,20 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "",
-  "buildCommand": "rm -rf public && cp -r web public",
+  "buildCommand": "bash scripts/deploy/vercel_build.sh",
   "outputDirectory": "public",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/api/:path*"
-    },
-    {
-      "source": "/cache/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/cache/:path*"
-    },
-    {
-      "source": "/data/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/data/:path*"
-    },
-    {
-      "source": "/walkthrough/floors/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/floors/:path*"
-    },
-    {
-      "source": "/walkthrough/data/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/data/:path*"
-    },
-    {
-      "source": "/walkthrough/pano/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/pano/:path*"
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 300,
+      "memory": 2048,
+      "includeFiles": "{server.py,pipeline/**,data/property/**,data/home/**}",
+      "excludeFiles": "{public/**,web/**,raw/**,cache/**}"
     }
+  },
+  "rewrites": [
+    { "source": "/api/agent", "destination": "https://34-132-39-199.sslip.io/atlas/api/agent" },
+    { "source": "/api/:route*", "destination": "/api/index?__route=:route*" },
+    { "source": "/cache/:path*", "destination": "https://34-132-39-199.sslip.io/atlas/cache/:path*" },
+    { "source": "/walkthrough/floors/:path*", "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/floors/:path*" }
   ]
 }
