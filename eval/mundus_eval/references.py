@@ -55,6 +55,7 @@ def collect_images(spec: dict[str, Any], client: httpx.Client) -> list[tuple[str
 
 def build_reference(task: dict[str, Any], world: httpx.Client, client: Any = None) -> dict[str, Any]:
     import anthropic
+    from mundus_harness.tracing import traceable_llm
 
     client = client or anthropic.Anthropic()
     images = collect_images(task["reference_images"], world)
@@ -64,12 +65,16 @@ def build_reference(task: dict[str, Any], world: httpx.Client, client: Any = Non
     for label, data in images:
         content += [{"type": "text", "text": label}, _b64(data)]
     content.append({"type": "text", "text": f"The evaluation question is: {task['question']}\nWrite the visual reference."})
+
+    def call(**kw: Any) -> Any:  # beta.messages.stream is not patched by wrap_anthropic, so trace it here
+        with client.beta.messages.stream(**kw) as stream:
+            return stream.get_final_message()
+
     try:
-        with client.beta.messages.stream(
-                model=GRADER_MODEL, max_tokens=32000, system=REFERENCE_SYSTEM, output_config={"effort": "medium"},
-                betas=["server-side-fallback-2026-07-01"], fallbacks="default",
-                messages=[{"role": "user", "content": content}]) as stream:
-            resp = stream.get_final_message()
+        resp = traceable_llm(call, "reference")(
+            model=GRADER_MODEL, max_tokens=32000, system=REFERENCE_SYSTEM, output_config={"effort": "medium"},
+            betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+            messages=[{"role": "user", "content": content}])
     except anthropic.APIStatusError as e:
         return {"task_id": task["id"], "error": f"reference call failed: {e.status_code}", "text": None}
     except anthropic.APIConnectionError:

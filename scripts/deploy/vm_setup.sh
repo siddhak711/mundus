@@ -32,6 +32,10 @@ grep -q '^AGENT_TOKEN=.'       .env || echo "AGENT_TOKEN=$(openssl rand -hex 16)
 grep -q '^WORLD_DATA_DIR='     .env || echo "WORLD_DATA_DIR=$ROOT/backend/data" >> .env
 grep -q '^WORLD_REST_URL='     .env || echo "WORLD_REST_URL=http://127.0.0.1:8000" >> .env
 grep -q '^CORS_ORIGINS='       .env || echo "CORS_ORIGINS=*" >> .env
+if grep -q '^LANGSMITH_API_KEY=.' .env; then   # traces for the agent server, captions and eval go to LangSmith
+  grep -q '^LANGSMITH_TRACING=' .env || echo "LANGSMITH_TRACING=true" >> .env
+  grep -q '^LANGSMITH_PROJECT=' .env || echo "LANGSMITH_PROJECT=mundus" >> .env
+fi
 
 echo "== system packages"
 sudo apt-get update -qq
