@@ -170,7 +170,8 @@ export class Viewer {
     const width = (this.rect?.width || this.canvas.clientWidth || 1000) * metresPerPixel;
     const halfFov = THREE.MathUtils.degToRad(this.camera.fov / 2);
     const height = width / (2 * Math.tan(halfFov) * (this.camera.aspect || 1.5));
-    return { position: new THREE.Vector3(0, height, height * 0.001), target: new THREE.Vector3(0, 0, 0) };
+    // about a degree off vertical: straight down, lookAt is unstable and the first frames of the tilt can roll
+    return { position: new THREE.Vector3(0, height, height * 0.02), target: new THREE.Vector3(0, 0, 0) };
   }
 
   /**
@@ -213,6 +214,9 @@ export class Viewer {
   setView(view) {
     this.view = view;
     this.building.setLayout(view);
+    // During the opening reveal, steer the reveal to this view rather than starting a second camera move: two moves at
+    // once fought over the camera, landing it early and then pulling it back up.
+    if (this.reveal && !this.flight) { this.reveal.to = this.cameraFor(view); return; }
     this.flyTo(this.cameraFor(view));
   }
 
@@ -355,12 +359,14 @@ export class Viewer {
   stepReveal(now) {
     const t = clamp01((now - this.reveal.start) / (REVEAL_SECONDS * 1000));
     const move = easeInOut(clamp01((t - 0.08) / 0.8));
-    orbitLerp(this.camera, this.controls, this.reveal.from, this.reveal.to, move);   // tilts down from overhead
+    // tilts down from overhead; a flight the user starts meanwhile takes the camera, and the reveal keeps only the growth
+    if (!this.flight) orbitLerp(this.camera, this.controls, this.reveal.from, this.reveal.to, move);
     this.plate.uniforms.uGrow.value = easeInOut(clamp01((t - 0.1) / 0.45));     // the neighbours rise
     this.building.setBuilt(clamp01((t - 0.5) / 0.45));
     if (t >= 1) {
       this.reveal = null;
       this.controls.enabled = true;
+      this.lastInput = performance.now();        // the idle drift waits from when the camera lands, not from load
     }
   }
 
