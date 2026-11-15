@@ -12,6 +12,7 @@ import numpy as np
 from mundus_world.config.settings import Settings
 from mundus_world.providers.embedder import Embedder
 from mundus_world.repo.db import Database
+from mundus_world.types.ctx import CLAIM_SCOPE
 from mundus_world.types.errors import ApiError
 from mundus_world.types.ids import haversine_m, now_iso, sha256_hex
 
@@ -130,7 +131,10 @@ class Search:
             elif d["doc_type"] == "room":
                 h["room_id"] = doc_id
             elif d["doc_type"] == "claim":
-                h["subject_id"] = self.db.scalar("SELECT subject_id FROM claim WHERE claim_id=?", (doc_id,))
+                cl = self.db.one("SELECT subject_id, scope FROM claim WHERE claim_id=?", (doc_id,))
+                if not cl or cl["scope"] != CLAIM_SCOPE.get():
+                    continue              # another run's private memory
+                h["subject_id"] = cl["subject_id"]
             hits.append(h)
             if len(hits) >= limit:
                 break

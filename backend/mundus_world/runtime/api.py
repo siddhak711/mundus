@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from mundus_world.config.settings import Settings
 from mundus_world.runtime.container import Container, build
 from mundus_world.runtime.tools import Ops
+from mundus_world.types.ctx import CLAIM_SCOPE
 from mundus_world.types.errors import ApiError
 
 RUN_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar("run_id", default=None)
@@ -33,6 +34,8 @@ class AuthAndContext:
         headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
         path = scope.get("path", "")
         RUN_ID.set(headers.get("x-run-id"))
+        # X-Claim-Scope: run gives this run a private claim memory, keyed by its run id (used by parallel evals)
+        CLAIM_SCOPE.set((headers.get("x-run-id") or "") if headers.get("x-claim-scope") == "run" else "")
         CALLER.set(headers.get("x-caller") or ("mcp" if path.startswith("/mcp") else "rest"))
         if scope.get("method") == "OPTIONS" or path in ("/healthz", "/docs", "/openapi.json"):
             return await self.app(scope, receive, send)
@@ -124,10 +127,6 @@ def create_app(container: Container | None = None) -> FastAPI:
     def aerial_image(place_id: str, kind: str = "ortho", size_m: int | None = None):
         path, evid, sha = c.world.aerial_image(place_id, kind, size_m)
         return FileResponse(path, media_type="image/jpeg", headers=_img_headers(evid, sha))
-
-    @app.get("/v1/aerial/{place_id}", name="get_aerial_facts")
-    def aerial_facts(place_id: str):
-        return ops.get_aerial_facts(place_id)
 
     @app.post("/v1/aerial/search", name="aerial_semantic_search")
     def aerial_search(body: dict = Body(...)):
@@ -251,6 +250,10 @@ def create_app(container: Container | None = None) -> FastAPI:
         out = c.claims.reset(body.get("mode", "empty"), body.get("name"), bool(body.get("clear_caches")))
         c.world.invalidate()
         return out
+
+    @app.post("/v1/admin/claims/purge-scoped", name="claims_purge_scoped")
+    def claims_purge_scoped():
+        return c.claims.purge_scoped()
 
     @app.post("/v1/admin/claims/snapshot", name="claims_snapshot")
     def claims_snapshot(body: dict = Body(...)):

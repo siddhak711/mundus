@@ -82,6 +82,8 @@ class WorldGuardMiddleware(AgentMiddleware):
             rec = runctx.record(runctx.run_id_from_config())
             with runctx.lock():
                 rec["claims_written"] += 1
+                rec.setdefault("claims_by_agent", {}).setdefault(self.agent, []).append(
+                    {"claim_id": c["id"], "statement": c["statement"]})
             events.emit("claim", agent=self.agent, claim_id=c["id"], subject_id=c["subject_id"], place_id=c.get("place_id"),
                         predicate=c["predicate"], statement=c["statement"], evidence_ids=c["evidence_ids"],
                         confidence=c["confidence"], outcome=data.get("outcome"))

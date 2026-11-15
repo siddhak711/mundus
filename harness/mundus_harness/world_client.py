@@ -1,4 +1,4 @@
-"""REST client for the World API. All calls share one semaphore (4) and a 20 s timeout."""
+"""REST client for the World API. All calls share one semaphore (16) and a 20 s timeout."""
 from __future__ import annotations
 
 import threading
@@ -9,7 +9,7 @@ import httpx
 from mundus_harness.config import Config
 from mundus_harness.runctx import run_id_from_config
 
-_SEM = threading.Semaphore(4)
+_SEM = threading.Semaphore(16)
 
 
 class WorldError(Exception):
@@ -28,6 +28,8 @@ class WorldClient:
 
     def _headers(self, agent: str | None = None) -> dict[str, str]:
         h = {"X-Run-Id": run_id_from_config()}
+        if self.cfg.claim_scope_run:
+            h["X-Claim-Scope"] = "run"
         if agent:
             h["X-Caller"] = agent
         return h

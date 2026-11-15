@@ -6,7 +6,13 @@ from typing import Any
 from deepagents import create_deep_agent
 from deepagents.backends import CompositeBackend, FilesystemBackend, StateBackend
 from deepagents.middleware.filesystem import FilesystemPermission
-from langchain.agents.middleware import ModelCallLimitMiddleware, TodoListMiddleware, ToolCallLimitMiddleware
+from langchain.agents.middleware import (
+    ClearToolUsesEdit,
+    ContextEditingMiddleware,
+    ModelCallLimitMiddleware,
+    TodoListMiddleware,
+    ToolCallLimitMiddleware,
+)
 from langchain.chat_models import init_chat_model
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.interceptors import MCPToolCallRequest
@@ -15,6 +21,7 @@ from typing_extensions import TypedDict
 from mundus_harness import prompts, runctx
 from mundus_harness.config import HARNESS_DIR, Config, load_config
 from mundus_harness.middleware.answer import AnswerMiddleware
+from mundus_harness.middleware.budget import BudgetMiddleware
 from mundus_harness.middleware.guard import WorldGuardMiddleware
 from mundus_harness.middleware.metrics import MetricsMiddleware
 from mundus_harness.middleware.router import RouterMiddleware
@@ -22,13 +29,13 @@ from mundus_harness.tools_local import build_local_tools
 from mundus_harness.world_backend import WorldBackend
 from mundus_harness.world_client import WorldClient
 
-WORLD_TOOLS = ["search_places", "get_place", "get_space", "get_room", "search_interiors", "get_aerial_facts",
+WORLD_TOOLS = ["search_places", "get_place", "get_space", "get_room", "search_interiors",
                "aerial_semantic_search", "describe_market", "query_market", "get_neighbors", "get_claims", "put_claim",
                "get_evidence"]
 SUBAGENT_TOOLS = {
     "market-analyst": ["get_place", "describe_market", "query_market", "get_neighbors", "get_claims", "put_claim", "set_focus"],
     "interior-inspector": ["get_space", "get_room", "search_interiors", "look_at_pano", "get_claims", "put_claim", "set_focus"],
-    "aerial-analyst": ["get_aerial_facts", "look_at_aerial", "aerial_semantic_search", "get_neighbors", "get_claims",
+    "aerial-analyst": ["look_at_aerial", "aerial_semantic_search", "get_neighbors", "get_claims",
                        "put_claim", "set_focus"],
 }
 ORCH_TOOLS = ["resolve_place", "get_neighbors", "get_claims", "put_claim", "set_focus"]
@@ -47,6 +54,8 @@ async def load_world_tools(cfg: Config) -> dict[str, Any]:
     async def tag_run(request: MCPToolCallRequest, handler):
         h = dict(request.headers or {})
         h["X-Run-Id"] = runctx.run_id_from_config()
+        if cfg.claim_scope_run:
+            h["X-Claim-Scope"] = "run"
         return await handler(request.override(headers=h))
 
     client = MultiServerMCPClient({"world": {"transport": "streamable_http", "url": cfg.world_mcp_url, "headers": headers}},
@@ -67,6 +76,24 @@ def build_backend(cfg: Config, client: WorldClient) -> CompositeBackend:
     })
 
 
+def market_schema_note(client: WorldClient) -> str:
+    """The market tables and their columns, read once when the agent is built, so the market analyst does not spend
+    model calls discovering them."""
+    try:
+        doc = client.get_json("/v1/market/schema")
+    except Exception:  # noqa: BLE001 - the note is an optimisation; the describe_market tool still works
+        return ""
+    lines = []
+    for t in doc.get("tables") or []:
+        names = [c if isinstance(c, str) else str(c.get("name", "")) for c in t.get("columns") or []]
+        cols = [c for c in names if c and (not c.startswith("address_") or c in ("address_city", "address_post_code"))]
+        lines.append(f"- {t['name']} ({t.get('rows')} rows): " + ", ".join(cols[:60]) + (" ..." if len(cols) > 60 else ""))
+    if not lines:
+        return ""
+    return ("\nMarket tables and columns (SQLite; filter by place_id; every table has evidence_id). You already have "
+            "this schema: call describe_market only for sample values of one table.\n" + "\n".join(lines) + "\n")
+
+
 def build_agent(cfg: Config, world_tools: dict[str, Any], orch_model: Any = None, worker_model: Any = None,
                 client: WorldClient | None = None, checkpointer: Any = None):
     client = client or WorldClient(cfg)
@@ -82,14 +109,20 @@ def build_agent(cfg: Config, world_tools: dict[str, Any], orch_model: Any = None
     def stack(agent: str, is_root: bool) -> list[Any]:
         mw: list[Any] = [MetricsMiddleware(cfg, agent, is_root=is_root), WorldGuardMiddleware(agent, world_names),
                          ModelCallLimitMiddleware(run_limit=cfg.orch_model_calls if is_root else cfg.sub_model_calls),
-                         ToolCallLimitMiddleware(run_limit=cfg.orch_tool_calls if is_root else cfg.sub_tool_calls)]
+                         ToolCallLimitMiddleware(run_limit=cfg.orch_tool_calls if is_root else cfg.sub_tool_calls),
+                         BudgetMiddleware(agent, cfg.orch_model_calls if is_root else cfg.sub_model_calls, is_root)]
+        if not is_root:
+            # a subagent resends its whole tool history on every call: clear old tool results once it grows large
+            mw.append(ContextEditingMiddleware(edits=[ClearToolUsesEdit(
+                trigger=cfg.sub_context_trigger_tokens, keep=6, exclude_tools=("put_claim",),
+                placeholder="[older tool result cleared to save context; call the tool again if you need it]")]))
         return mw
 
-    sys = {"market-analyst": prompts.MARKET, "interior-inspector": prompts.INTERIOR, "aerial-analyst": prompts.AERIAL}
+    sys = {"market-analyst": prompts.MARKET + market_schema_note(client), "interior-inspector": prompts.INTERIOR, "aerial-analyst": prompts.AERIAL}
     desc = {
         "market-analyst": "Market facts for one place from CoStar records: building basics, listings and rents, tenants and leases, sales.",
         "interior-inspector": "What the inside of a place is like: spaces, rooms, sizes, layout, appearance from photos and captions.",
-        "aerial-analyst": "What a place looks like from above and what surrounds it: footprint, roof, parking, pool, neighbours.",
+        "aerial-analyst": "What a place looks like from above and what surrounds it, read from aerial photos: roof, parking, loading, pool, neighbours.",
     }
     subagents = [{"name": n, "description": desc[n], "system_prompt": sys[n], "model": worker,
                   "tools": [tools[t] for t in SUBAGENT_TOOLS[n]], "middleware": stack(n, False),

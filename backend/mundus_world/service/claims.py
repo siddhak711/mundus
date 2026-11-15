@@ -12,8 +12,9 @@ import yaml
 from mundus_world.repo.db import Database
 from mundus_world.service import evidence as ev
 from mundus_world.service import graph
+from mundus_world.types.ctx import CLAIM_SCOPE
 from mundus_world.types.errors import ApiError
-from mundus_world.types.ids import claim_id, node_kind, normalize_value, now_iso
+from mundus_world.types.ids import claim_id, node_kind, normalize_value, now_iso, sha256_hex
 
 FREE_NAMESPACES = ("note.", "synthesis.")
 MARKET_TTL = timedelta(days=7)
@@ -89,11 +90,16 @@ class Claims:
         if value is None:
             raise ApiError("invalid_argument", "value is required")
         if not self._is_free(predicate) and predicate not in self.vocab:
-            raise ApiError("invalid_argument", f"Unknown predicate '{predicate}'. Use one from the claims vocabulary, "
-                           "or a free-form note.* or synthesis.* predicate.",
-                           {"allowed_namespaces": sorted({p.split('.')[0] for p in self.vocab}) + ["note", "synthesis"]})
+            ns = predicate.split(".")[0]
+            same_ns = sorted(p for p in self.vocab if p.split(".")[0] == ns)
+            raise ApiError("invalid_argument", f"Unknown predicate '{predicate}' (field: predicate). "
+                           + (f"Valid {ns}.* predicates are listed in valid_predicates. " if same_ns else "")
+                           + "Otherwise use a free-form note.* or synthesis.* predicate.",
+                           {"field": "predicate", "valid_predicates": same_ns,
+                            "allowed_namespaces": sorted({p.split('.')[0] for p in self.vocab}) + ["note", "synthesis"]})
         if not graph.node_exists(self.db, subject_id):
-            raise ApiError("invalid_argument", f"subject_id {subject_id} is not a known node")
+            raise ApiError("invalid_argument", f"subject_id {subject_id} is not a known node (field: subject_id). Use a "
+                           "place, space, room or pano id exactly as a tool returned it.", {"field": "subject_id"})
         if not evidence_ids and not derived_from:
             raise ApiError("invalid_argument", "A claim needs at least one evidence_id you received from a tool, "
                            "or derived_from claim ids.")
@@ -103,18 +109,23 @@ class Claims:
                 evidence_ids)}
             unknown = [e for e in evidence_ids if e not in found]
             if unknown:
-                raise ApiError("invalid_argument", "Unknown evidence ids. Cite only ids returned by a tool.",
-                               {"unknown_evidence_ids": unknown})
+                raise ApiError("invalid_argument", "Unknown evidence ids (field: evidence_ids). An evidence id starts "
+                               "with ev: and must be copied exactly from a tool result; a claim id, row id or node id "
+                               "is not an evidence id.", {"field": "evidence_ids", "unknown_evidence_ids": unknown})
         else:
             found = {}
         if derived_from:
             have = {r[0] for r in self.db.q(
-                f"SELECT claim_id FROM claim WHERE claim_id IN ({','.join('?' * len(derived_from))})", derived_from)}
+                f"SELECT claim_id FROM claim WHERE scope=? AND claim_id IN ({','.join('?' * len(derived_from))})",
+                [CLAIM_SCOPE.get(), *derived_from])}
             unknown = [c for c in derived_from if c not in have]
             if unknown:
                 raise ApiError("invalid_argument", "Unknown derived_from claim ids.", {"unknown_claim_ids": unknown})
 
+        scope = CLAIM_SCOPE.get()
         cid = claim_id(subject_id, predicate, value)
+        if scope:                      # a private memory gets its own ids, so the same fact in two runs never merges
+            cid = "claim:" + sha256_hex(f"{cid}|{scope}")[:16]
         now = now_iso()
         place = graph.place_of(self.db, subject_id)
         rank = self._rank(evidence_ids, derived_from)
@@ -126,8 +137,8 @@ class Claims:
             outcome, status = "created", "active"
             if not self._is_multi(predicate):
                 others = [dict(r) for r in c.execute(
-                    "SELECT * FROM claim WHERE subject_id=? AND predicate=? AND status IN ('active','disputed')",
-                    (subject_id, predicate))]
+                    "SELECT * FROM claim WHERE subject_id=? AND predicate=? AND scope=? AND status IN ('active','disputed')",
+                    (subject_id, predicate, scope))]
                 exact = bool((self.vocab.get(predicate) or {}).get("exact"))
                 close = [o for o in others if not _differs(json.loads(o["value_json"]), value, exact)]
                 if close:
@@ -149,11 +160,11 @@ class Claims:
                         self._edge(c, cid, "contradicts", old["claim_id"], "rule", now)
             c.execute(
                 """INSERT INTO claim(claim_id,subject_id,place_id,predicate,value_json,unit,statement,evidence_ids,evidence_sha,
-                     derived_from,confidence,status,confirmations,rank,created_by,run_id,created_at,updated_at)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                     derived_from,confidence,status,confirmations,rank,created_by,run_id,created_at,updated_at,scope)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (cid, subject_id, place, predicate, json.dumps(value, ensure_ascii=False), unit, statement.strip(),
                  json.dumps(evidence_ids), json.dumps(found), json.dumps(derived_from), confidence, status, 1, rank,
-                 created_by, run_id, now, now))
+                 created_by, run_id, now, now, scope))
             self._edge(c, cid, "about", subject_id, "agent", now)
             for e in evidence_ids:
                 self._edge(c, cid, "supported_by", e, "agent", now)
@@ -192,7 +203,8 @@ class Claims:
 
     # ---- staleness ---------------------------------------------------------
     def refresh_stale(self, place_id: str | None = None) -> int:
-        where, params = ("WHERE status='active'", [])
+        # Only the caller's own scope: a run-scoped read must never change shared claims or another run's.
+        where, params = ("WHERE status='active' AND scope=?", [CLAIM_SCOPE.get()])
         if place_id:
             where += " AND place_id=?"
             params.append(place_id)
@@ -231,8 +243,8 @@ class Claims:
             raise ApiError("not_found", f"No node with id {subject_id}")
         is_place = node_kind(subject_id) == "place"
         self.refresh_stale(subject_id if is_place else graph.place_of(self.db, subject_id))
-        sql = f"SELECT * FROM claim WHERE {'place_id' if is_place else 'subject_id'}=?"
-        params: list[Any] = [subject_id]
+        sql = f"SELECT * FROM claim WHERE {'place_id' if is_place else 'subject_id'}=? AND scope=?"
+        params: list[Any] = [subject_id, CLAIM_SCOPE.get()]
         if status and status != "all":
             sql += " AND status=?"
             params.append(status)
@@ -266,7 +278,8 @@ class Claims:
     def places_with_claims(self) -> list[dict[str, Any]]:
         return [dict(r) for r in self.db.q(
             """SELECT c.place_id, p.name, count(*) AS claims, sum(c.status='active') AS active FROM claim c
-               JOIN place p ON p.place_id=c.place_id GROUP BY c.place_id ORDER BY claims DESC""")]
+               JOIN place p ON p.place_id=c.place_id WHERE c.scope=? GROUP BY c.place_id ORDER BY claims DESC""",
+            (CLAIM_SCOPE.get(),))]
 
     # ---- reset and snapshots -------------------------------------------------
     def _clear(self, c) -> None:
@@ -274,6 +287,17 @@ class Claims:
         c.execute("DELETE FROM edges WHERE source IN ('agent','rule')")
         c.execute("DELETE FROM doc_fts WHERE doc_type='claim'")
         c.execute("DELETE FROM embedding WHERE doc_type='claim'")
+
+    def purge_scoped(self) -> dict[str, Any]:
+        """Deletes every private (run-scoped) claim. The shared memory is not touched."""
+        with self.db.write() as c:
+            ids = [r[0] for r in c.execute("SELECT claim_id FROM claim WHERE scope!=''")]
+            for cid in ids:
+                c.execute("DELETE FROM edges WHERE src=? OR dst=?", (cid, cid))
+                c.execute("DELETE FROM doc_fts WHERE doc_id=?", (cid,))
+                c.execute("DELETE FROM embedding WHERE doc_id=?", (cid,))
+            c.execute("DELETE FROM claim WHERE scope!=''")
+        return {"purged": len(ids)}
 
     def snapshot(self, name: str) -> dict[str, Any]:
         now = now_iso()
@@ -330,11 +354,19 @@ class Claims:
 FACETS = ("market", "interior", "aerial", "surroundings")
 
 
+def _facet_of(c: dict[str, Any]) -> str:
+    """Facet a claim counts toward. A free-form note about a room, space or pano is interior knowledge: without this,
+    an agent that files what it saw under note.* leaves the interior facet looking empty and the work is redone."""
+    ns = c["predicate"].split(".")[0]
+    if ns == "pano" or (ns == "note" and str(c.get("subject_id") or "").startswith(("room:", "space:", "pano:"))):
+        return "interior"
+    return ns
+
+
 def coverage(claims: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     out = {f: {"fresh": 0, "stale": 0} for f in FACETS}
     for c in claims:
-        ns = c["predicate"].split(".")[0]
-        ns = "interior" if ns == "pano" else ns
+        ns = _facet_of(c)
         if ns in out:
             if c["status"] == "active":
                 out[ns]["fresh"] += 1
@@ -371,7 +403,7 @@ def render_card(db: Database, claims_svc: Claims, place_id: str) -> str:
              f"updated: {max((c['updated_at'] for c in allc), default=now_iso())} · claims: {len(active)} active, {len(disputed)} disputed", ""]
     ev_types = {r[0]: r[1] for r in db.q("SELECT evidence_id, type FROM evidence WHERE place_id=?", (place_id,))}
     for facet in (*FACETS, "synthesis", "note"):
-        rows = [c for c in active if (c["predicate"].split(".")[0] if c["predicate"].split(".")[0] != "pano" else "interior") == facet]
+        rows = [c for c in active if _facet_of(c) == facet]
         if not rows:
             continue
         lines.append(f"## {facet}")

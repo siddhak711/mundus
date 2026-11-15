@@ -114,7 +114,7 @@ class World:
                 "note": f"Each list shows at most {MARKET_ITEMS} items, newest first; count is the true total. "
                         "Use query_market for the rest.",
             }
-        out["aerial"] = self.aerial_facts(place_id, strict=False)
+        out["aerial_images"] = self.aerial_images(place_id)
         allc = self.claims.get(place_id, status="all")["claims"]
         out["claims"] = [c for c in allc if c["status"] in ("active", "disputed")]
         out["claim_coverage"] = coverage(allc)
@@ -128,7 +128,7 @@ class World:
                 out["nearby_places"].append({"place_id": other, "name": o["name"], "property_type": o["property_type"],
                                              "is_deep": bool(o["is_deep"]), "distance_m": e["weight"]})
         if not pl["is_deep"]:
-            out["hint"] = "This place is not in the deep set: it has market records only, no rooms, photos or aerial facts."
+            out["hint"] = "This place is not in the deep set: it has market records only, no rooms or photos."
         return out
 
     # ---- spaces, rooms, panos ---------------------------------------------
@@ -248,25 +248,12 @@ class World:
         return self.s.data_dir / sp["preview_path"]
 
     # ---- aerial ------------------------------------------------------------
-    def aerial_facts(self, place_id: str, strict: bool = True) -> dict[str, Any] | None:
-        pl = self._place(place_id)
-        a = self.db.one("SELECT * FROM aerial_facts WHERE place_id=?", (place_id,))
-        if not a:
-            if strict:
-                raise ApiError("not_ingested", f"No aerial facts for {place_id}", {"is_deep": bool(pl["is_deep"])})
-            return None
-        imgs = self.db.q("SELECT kind, size_m, width, height, evidence_id FROM aerial_image WHERE place_id=? ORDER BY kind, size_m", (place_id,))
-        return {"aerial_id": a["aerial_id"], "place_id": place_id, "evidence_id": a["evidence_id"],
-                "match_method": a["match_method"], "match_distance_m": a["match_distance_m"],
-                "structure_count": a["structure_count"], "parcel_count": a["parcel_count"],
-                "footprint_area_m2": a["footprint_area_m2"], "footprint_wkt": a["footprint_wkt"],
-                "parcel_wkt": a["parcel_wkt"], "attributes": json.loads(a["attributes_json"] or "{}"),
-                "fetched_at": a["fetched_at"],
-                "images": [{"kind": i["kind"], "size_m": i["size_m"], "width": i["width"], "height": i["height"],
-                            "url": f"/v1/places/{place_id}/aerial?kind={i['kind']}&size_m={i['size_m']}",
-                            "evidence_id": i["evidence_id"]} for i in imgs],
-                "note": "match_method parcel_only means Vexcel returned a parcel with no building footprint."
-                if a["match_method"] == "parcel_only" else None}
+    def aerial_images(self, place_id: str) -> list[dict[str, Any]]:
+        """Aerial photos held for a place. Photos only: no measured or detected attributes are stored."""
+        return [{"kind": i["kind"], "size_m": i["size_m"], "width": i["width"], "height": i["height"],
+                 "url": f"/v1/places/{place_id}/aerial?kind={i['kind']}&size_m={i['size_m']}", "evidence_id": i["evidence_id"]}
+                for i in self.db.q("SELECT kind, size_m, width, height, evidence_id FROM aerial_image WHERE place_id=? "
+                                   "ORDER BY kind, size_m", (place_id,))]
 
     def aerial_image(self, place_id: str, kind: str = "ortho", size_m: int | None = None) -> tuple[Path, str, str]:
         self._place(place_id)
@@ -298,7 +285,7 @@ class World:
                 item = {"score": props.get("score"), "product_type": props.get("source.product-type"),
                         "lat": cen[1] if cen else None, "lon": cen[0] if cen else None,
                         "distance_m": round(haversine_m(lat, lon, cen[1], cen[0]), 1) if cen else None}
-                item["evidence_id"] = ev.register(c, "aerial_facts", "vexcel", f"aerial_search:{key[:12]}:{len(feats)}",
+                item["evidence_id"] = ev.register(c, "aerial_search", "vexcel", f"aerial_search:{key[:12]}:{len(feats)}",
                                                   content={"q": text, **item},
                                                   excerpt=f"Aerial semantic search hit for '{text}', score {item['score']}")
                 feats.append(item)
@@ -358,10 +345,13 @@ class World:
 
     def stats(self, run_id: str | None = None) -> dict[str, Any]:
         counts = {t: self.db.scalar(f"SELECT count(*) FROM {t}") for t in
-                  ("place", "space", "room", "pano", "pano_caption", "pano_face", "aerial_facts", "evidence", "claim",
+                  ("place", "space", "room", "pano", "pano_caption", "pano_face", "aerial_image", "evidence", "claim",
                    "edges", "embedding")}
         counts["deep_places"] = self.db.scalar("SELECT count(*) FROM place WHERE is_deep=1")
         counts["selected_panos"] = self.db.scalar("SELECT count(*) FROM pano WHERE is_selected=1")
+        counts["panos_selected_with_faces"] = self.db.scalar("SELECT count(*) FROM pano WHERE is_selected=1 AND has_faces=1")
+        counts["docs"] = self.db.scalar("SELECT count(*) FROM embedding WHERE doc_type!='claim'")
+        counts["docs_embedded"] = self.db.scalar("SELECT count(*) FROM embedding WHERE doc_type!='claim' AND vector IS NOT NULL")
         where, params = ("WHERE run_id=?", (run_id,)) if run_id else ("", ())
         ops = [dict(r) for r in self.db.q(
             f"SELECT op, count(*) AS calls, round(avg(ms),1) AS avg_ms, round(max(ms),1) AS max_ms, sum(bytes_out) AS bytes_out "

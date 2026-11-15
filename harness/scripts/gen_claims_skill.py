@@ -13,7 +13,7 @@ lines = ["---", "name: claims", "description: The fixed predicate vocabulary for
          "- `value` is the machine-readable value (number, string, true/false). `statement` is one plain sentence.",
          "- Put the claim on the most specific node: a room fact on the room, a building fact on the place.",
          "- Predicates marked multi can hold many values. The others hold one: a different value is a conflict, settled by",
-         "  evidence strength (record > room or aerial facts > image > caption > summary).",
+         "  evidence strength (record > room > image > caption > summary).",
          "- Predicates marked exact must match exactly (years, counts). Other numbers within 5% count as the same fact.", "",
          "| Predicate | Type | Unit | Notes |", "|---|---|---|---|"]
 for p, d in vocab.items():

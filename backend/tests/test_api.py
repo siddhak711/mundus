@@ -31,8 +31,11 @@ def test_place_bundle_shape_and_evidence(client):
     d = client.get(f"/v1/places/{PLACE}").json()
     assert d["is_deep"] and d["spaces"][0]["space_id"] == SPACE
     assert d["market"]["tenancies"]["count"] == 3 and d["market"]["sales"]["count"] == 1
-    assert d["aerial"]["match_method"] == "contains" and d["nearby_places"][0]["place_id"] == "place:costar:1002"
-    ids = [d["evidence_id"], d["aerial"]["evidence_id"], *[i["evidence_id"] for i in d["market"]["tenancies"]["items"]]]
+    assert "aerial" not in d and d["aerial_images"][0]["kind"] == "ortho"
+    assert d["nearby_places"][0]["place_id"] == "place:costar:1002"
+    assert client.get(f"/v1/aerial/{PLACE}").status_code == 404        # aerial facts are gone; photos remain
+    assert client.get(f"/v1/places/{PLACE}/aerial").headers["content-type"] == "image/jpeg"
+    ids = [d["evidence_id"], d["aerial_images"][0]["evidence_id"], *[i["evidence_id"] for i in d["market"]["tenancies"]["items"]]]
     for e in ids:
         assert client.get(f"/v1/evidence/{e}").status_code == 200
 
@@ -104,7 +107,7 @@ def test_mcp_exposes_exactly_the_contract_tools(tmp_path):
     c = build_world(tmp_path)
     mcp = build_mcp(c, Ops(c), RUN_ID, CALLER)
     names = sorted(t.name for t in asyncio.run(mcp.list_tools()))
-    assert names == ["aerial_semantic_search", "describe_market", "get_aerial_facts", "get_claims", "get_evidence",
+    assert names == ["aerial_semantic_search", "describe_market", "get_claims", "get_evidence",
                      "get_neighbors", "get_place", "get_room", "get_space", "put_claim", "query_market",
                      "search_interiors", "search_places"]
     assert "claims_reset" not in names

@@ -36,13 +36,15 @@ class Config:
     router_use_model: bool
     data_dir: Path
     ui_events_in_state: bool
+    claim_scope_run: bool = False     # each run gets a private claim memory (parallel evaluation runs)
     max_pano_images: int = 12
     max_aerial_images: int = 4
     orch_model_calls: int = 25
     orch_tool_calls: int = 60
-    sub_model_calls: int = 12
-    sub_tool_calls: int = 30
+    sub_model_calls: int = 16
+    sub_tool_calls: int = 40
     coverage_min_claims: int = 3
+    sub_context_trigger_tokens: int = 50000   # older tool results are cleared from a subagent's history beyond this
 
 
 def use_mundus_anthropic_key() -> None:
@@ -80,6 +82,7 @@ def load_config() -> Config:
         router_use_model=_env("ROUTER_USE_MODEL", "0") == "1",
         data_dir=dd,
         ui_events_in_state=_env("UI_EVENTS_IN_STATE", "0") == "1",
+        claim_scope_run=_env("CLAIM_SCOPE", "") == "run",
     )
 
 

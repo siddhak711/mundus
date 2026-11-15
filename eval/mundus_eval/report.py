@@ -19,6 +19,10 @@ def _mean(xs: list[float]) -> float | None:
 
 
 def summarize(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    latest: dict[tuple, dict[str, Any]] = {}          # a resumed suite may record a run twice: the last one counts
+    for r in runs:
+        latest[(r["task_id"], r["combo"], r.get("repeat", len(latest)))] = r
+    runs = list(latest.values())
     by_combo: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in runs:
         by_combo[r["combo"]].append(r)
@@ -38,6 +42,8 @@ def summarize(runs: list[dict[str, Any]]) -> dict[str, Any]:
                "mean_tokens_total": _mean([x.get("tokens_total") for x in m]),
                "mean_model_calls": _mean([x.get("model_calls") for x in m]), "mean_tool_calls": _mean([x.get("tool_calls") for x in m]),
                "mean_images": _mean([x.get("images") for x in m]),
+               "mean_claims_written": _mean([x.get("claims_written") for x in m]),
+               "tool_error_rate": round(sum(x.get("tool_errors") or 0 for x in m) / max(1, sum(x.get("tool_calls") or 0 for x in m)), 3),
                "mean_cost_usd": _mean(costs) if all(c is not None for c in costs) else None,
                "by_group": {}}
         for g in sorted({r["group"] for r in rs}):
@@ -53,6 +59,7 @@ def summarize(runs: list[dict[str, Any]]) -> dict[str, Any]:
     for t in out["tasks"].values():
         for c in t.values():
             c["mean_tokens"] = _mean(c.pop("tokens"))
+            c["flaky"] = 0 < c["pass"] < c["runs"]
     return out
 
 
@@ -61,7 +68,8 @@ def write_report(out_dir: Path) -> str:
     s = summarize(runs)
     (out_dir / "summary.json").write_text(json.dumps(s, indent=1), encoding="utf-8")
     cols = ["runs", "pass_rate", "mean_score", "citation_valid_rate", "median_wall_clock_s", "median_time_to_first_action_s",
-            "mean_tokens_in", "mean_tokens_out", "mean_tokens_total", "mean_model_calls", "mean_tool_calls", "mean_cost_usd"]
+            "mean_tokens_in", "mean_tokens_out", "mean_tokens_total", "mean_model_calls", "mean_tool_calls",
+            "tool_error_rate", "mean_claims_written", "errors", "mean_cost_usd"]
     lines = ["# Mundus eval results", "", "| combination | " + " | ".join(cols) + " |", "|---|" + "---|" * len(cols)]
     for name, row in s["combos"].items():
         lines.append(f"| {name} | " + " | ".join("unknown" if row[c] is None else str(row[c]) for c in cols) + " |")
@@ -74,7 +82,7 @@ def write_report(out_dir: Path) -> str:
     lines += ["", "## Per task (passes / runs, mean tokens)", "", "| task | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
     for tid, t in sorted(s["tasks"].items()):
         lines.append(f"| {tid} | " + " | ".join(
-            f"{t[n]['pass']}/{t[n]['runs']}, {t[n]['mean_tokens']}" if n in t else "" for n in names) + " |")
+            f"{t[n]['pass']}/{t[n]['runs']}{' flaky' if t[n]['flaky'] else ''}, {t[n]['mean_tokens']}" if n in t else "" for n in names) + " |")
     text = "\n".join(lines) + "\n"
     (out_dir / "report.md").write_text(text, encoding="utf-8")
     return text

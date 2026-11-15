@@ -26,7 +26,7 @@ def _dump(obj: Any) -> str:
 def build_mcp(c: Container, ops: Ops, run_id: contextvars.ContextVar, caller: contextvars.ContextVar) -> MCPServer:
     mcp = MCPServer("mundus-world", instructions=(
         "World context for 15 places in Los Angeles: CoStar market records, Matterport interiors (rooms, photos, captions), "
-        "Vexcel aerial facts, and a shared memory of evidence-linked claims. Every item returned carries an evidence_id. "
+        "Vexcel aerial photos, and a shared memory of evidence-linked claims. Every item returned carries an evidence_id. "
         "Cite only evidence ids you received. If the data does not contain something, say so: do not invent it."))
 
     async def run(op: str, fn, *args, **kw) -> str:
@@ -42,7 +42,7 @@ def build_mcp(c: Container, ops: Ops, run_id: contextvars.ContextVar, caller: co
             c.world.log(op, (time.perf_counter() - t0) * 1000, who or "mcp", rid, status)
 
     @mcp.tool(description="Find places in Los Angeles by name, address or location. Returns place summaries with ids. "
-                          "Use when you need candidates. Only places with is_deep true have interiors, captions and aerial facts.")
+                          "Use when you need candidates. Only places with is_deep true have interiors, captions and aerial photos.")
     async def search_places(query: str | None = None, near: dict | None = None, filters: dict | None = None,
                             limit: int = 10) -> str:
         return await run("search_places", ops.search_places, query, near, filters, limit)
@@ -71,13 +71,6 @@ def build_mcp(c: Container, ops: Ops, run_id: contextvars.ContextVar, caller: co
     async def search_interiors(text: str, place_id: str | None = None, near: dict | None = None, limit: int = 10) -> str:
         return await run("search_interiors", ops.search_interiors, text, place_id, near, None, limit)
 
-    @mcp.tool(description="Vexcel structured facts for a place seen from above: building footprint, parcel, roof material "
-                          "and shape, rooftop solar and AC units, pool, vehicles, tree cover. Includes evidence_id and "
-                          "links to aerial images. No image is returned. match_method parcel_only means no building "
-                          "footprint was found.")
-    async def get_aerial_facts(place_id: str) -> str:
-        return await run("get_aerial_facts", ops.get_aerial_facts, place_id)
-
     @mcp.tool(description="Search aerial imagery around a point by description (for example 'surface parking lot'). "
                           "near is {lat, lon}. Returns features with similarity scores and locations. Calls a live "
                           "service and can take a few seconds.")
@@ -97,7 +90,7 @@ def build_mcp(c: Container, ops: Ops, run_id: contextvars.ContextVar, caller: co
 
     @mcp.tool(description="Walk the knowledge graph from any node (place, space, room, pano, listing, tenancy, sale, "
                           "company, claim). Returns edges and neighbour summaries. rel filters by edge type: part_of, "
-                          "has_listing, has_tenancy, has_sale, tenant_is, has_aerial, near, adjacent_to, about, "
+                          "has_listing, has_tenancy, has_sale, tenant_is, near, adjacent_to, about, "
                           "supported_by, derived_from, supersedes, contradicts. depth is 1 or 2.")
     async def get_neighbors(node_id: str, rel: str | None = None, depth: int = 1, limit: int = 50) -> str:
         return await run("get_neighbors", ops.get_neighbors, node_id, rel, depth, limit)

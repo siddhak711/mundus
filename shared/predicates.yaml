@@ -34,16 +34,11 @@ interior.furnished: {type: boolean}
 interior.amenity_present: {type: string, multi: true}
 interior.layout_note: {type: string, multi: true}
 interior.adjacent_room: {type: string, multi: true}
-aerial.footprint_area_m2: {type: number, unit: m2}
-aerial.parcel_area_m2: {type: number, unit: m2}
-aerial.roof_material: {type: string}
 aerial.roof_condition: {type: string}
 aerial.has_pool: {type: boolean}
 aerial.has_solar: {type: boolean}
-aerial.tree_cover_pct: {type: number, unit: pct}
 aerial.parking_visible: {type: string}
 aerial.loading_access: {type: string}
-aerial.vehicle_count: {type: number, exact: true}
 surroundings.nearby_feature: {type: string, multi: true}
 surroundings.street_frontage: {type: string}
 pano.caption: {type: string, multi: true}

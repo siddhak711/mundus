@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 
 from mundus_world.repo.db import Database
+from mundus_world.types.ctx import CLAIM_SCOPE
 from mundus_world.types.errors import ApiError
 from mundus_world.types.ids import node_kind, now_iso
 
@@ -46,8 +47,6 @@ def build_edges(db: Database) -> dict[str, int]:
             put(c, [(r["node_id"], f"company:{r['tenant_location_id']}", None) for r in c.execute(
                 "SELECT node_id, tenant_location_id FROM costar_occupancy WHERE place_id IS NOT NULL AND tenant_location_id IS NOT NULL")],
                 "tenant_is", "join")
-        put(c, [(r["place_id"], r["aerial_id"], None) for r in c.execute("SELECT place_id, aerial_id FROM aerial_facts")],
-            "has_aerial", "join")
         put(c, [(r["room_a"], r["room_b"], r["shared_length_m"]) for r in c.execute(
             "SELECT room_a, room_b, shared_length_m FROM room_adjacency")], "adjacent_to", "geometry")
         places = c.execute("SELECT place_id, lat, lon FROM place WHERE lat IS NOT NULL AND lon IS NOT NULL").fetchall()
@@ -81,8 +80,6 @@ def node_summary(db: Database, node_id: str, strict: bool = False) -> dict[str, 
         r = db.one("SELECT room_id AS id, label AS name, area_m2, space_id FROM room WHERE room_id=?", (node_id,))
     elif kind == "pano":
         r = db.one("SELECT pano_id AS id, label AS name, room_id, space_id, is_selected FROM pano WHERE pano_id=?", (node_id,))
-    elif kind == "aerial":
-        r = db.one("SELECT aerial_id AS id, place_id, match_method FROM aerial_facts WHERE aerial_id=?", (node_id,))
     elif kind == "claim":
         r = db.one("SELECT claim_id AS id, statement AS name, predicate, status FROM claim WHERE claim_id=?", (node_id,))
     elif kind == "ev":
@@ -110,8 +107,6 @@ def place_of(db: Database, node_id: str) -> str | None:
         return db.scalar("SELECT s.place_id FROM room r JOIN space s ON s.space_id=r.space_id WHERE r.room_id=?", (node_id,))
     if kind == "pano":
         return db.scalar("SELECT s.place_id FROM pano p JOIN space s ON s.space_id=p.space_id WHERE p.pano_id=?", (node_id,))
-    if kind == "aerial":
-        return db.scalar("SELECT place_id FROM aerial_facts WHERE aerial_id=?", (node_id,))
     if kind == "claim":
         return db.scalar("SELECT place_id FROM claim WHERE claim_id=?", (node_id,))
     if kind in RECORD_TABLE and RECORD_TABLE[kind] in db.tables():
@@ -146,8 +141,10 @@ def neighbors(db: Database, node_id: str, rel: str | None = None, depth: int = 1
                 key = (e["src"], e["rel"], e["dst"])
                 if any((x["src"], x["rel"], x["dst"]) == key for x in edges):
                     continue
-                edges.append({k: v for k, v in e.items() if v is not None})
                 other = e["dst"] if e["src"] == n else e["src"]
+                if node_kind(other) == "claim" and db.scalar("SELECT scope FROM claim WHERE claim_id=?", (other,)) != CLAIM_SCOPE.get():
+                    continue              # another run's private memory
+                edges.append({k: v for k, v in e.items() if v is not None})
                 if other not in seen:
                     seen.add(other)
                     nxt.append(other)

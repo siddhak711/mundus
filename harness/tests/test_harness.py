@@ -185,3 +185,40 @@ def test_pure_helpers(cfg):
     text, cites, dropped = resolve_markers(WorldClient(cfg), "A fact [claim:deadbeefdeadbeef].")
     assert text == "A fact." and not cites and dropped == ["claim:deadbeefdeadbeef"]
     assert summarize("never-ran")["model_calls"] == 0
+
+
+def test_budget_warns_on_last_call_and_attaches_claims():
+    from types import SimpleNamespace
+
+    from langchain_core.messages import SystemMessage
+
+    from mundus_harness.middleware.budget import LAST_CALL_NOTE, BudgetMiddleware, claims_block
+
+    class Req(SimpleNamespace):
+        def override(self, **kw):
+            return Req(**{**self.__dict__, **kw})
+
+    sub = BudgetMiddleware("market-analyst", 16, is_root=False)
+    early = Req(state={"run_model_call_count": 3}, system_message=SystemMessage(content="base"))
+    last = Req(state={"run_model_call_count": 15}, system_message=SystemMessage(content="base"))
+    assert sub._last_call(early).system_message.content == "base"
+    assert sub._last_call(last).system_message.content == "base" + LAST_CALL_NOTE
+    assert "wrote no claims" in claims_block("market-analyst", [])
+    assert "[claim:ab12]" in claims_block("market-analyst", [{"claim_id": "claim:ab12", "statement": "Three tenants."}])
+
+    rid = "budget-test"
+    rec = runctx.reset(rid)
+    rec["claims_by_agent"] = {"market-analyst": [{"claim_id": "claim:ab12", "statement": "Three tenants."}]}
+    root = BudgetMiddleware("orchestrator", 25, is_root=True)
+    req = Req(tool_call={"name": "task", "args": {"subagent_type": "market-analyst"}, "id": "t1"})
+    msg = ToolMessage(content="Model call limits exceeded", tool_call_id="t1", name="task")
+    import mundus_harness.middleware.budget as b
+    orig = b.runctx.run_id_from_config
+    b.runctx.run_id_from_config = lambda *a, **k: rid
+    try:
+        out = root._attach(req, msg)
+    finally:
+        b.runctx.run_id_from_config = orig
+    assert "Model call limits exceeded" in out.content and "[claim:ab12] Three tenants." in out.content
+    other = Req(tool_call={"name": "get_claims", "args": {}, "id": "t2"})
+    assert root._attach(other, msg) is msg
