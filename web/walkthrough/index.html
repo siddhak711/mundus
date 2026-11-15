@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10880 Wilshire, Suite 1600: floor walkthrough</title>
+<style>
+  html,body{margin:0;height:100%;background:#14171c;color:#e9edf2;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+  canvas#c{display:block;width:100vw;height:100vh;cursor:grab;touch-action:none} canvas#c.drag{cursor:grabbing} canvas#c.point{cursor:pointer}
+  .panel{background:rgba(20,23,28,.86);border:1px solid #2c333d;border-radius:10px;backdrop-filter:blur(8px)}
+  .card{position:fixed;top:16px;left:16px;max-width:300px;padding:14px 16px;transition:opacity .3s}
+  .card h1{font-size:16px;margin:0 0 2px;font-weight:650} .card .sub{color:#9aa6b4;margin:0 0 10px;font-size:13px}
+  .card dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:13px} .card dt{color:#9aa6b4} .card dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+  .card .src{color:#6f7b89;font-size:11.5px;margin:10px 0 0}
+  body.walk .card dl, body.walk .card .src{display:none} body.walk .card .sub{margin:0}
+  .bar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;border-radius:999px;padding:6px 8px}
+  .bar button{all:unset;cursor:pointer;padding:7px 14px;border-radius:999px;color:#c5ced8;font-size:13.5px} .bar button[aria-pressed=true]{background:#e9edf2;color:#14171c;font-weight:600}
+  .bar button:focus-visible{outline:2px solid #ffb02e}
+  .bar label{display:flex;gap:6px;align-items:center;padding:0 12px 0 8px;border-left:1px solid #2c333d;color:#c5ced8;font-size:13.5px;cursor:pointer}
+  body.walk .bar label{display:none}
+  .bar button.act{border:1px solid #3a4350;margin-left:2px} .bar button.act[aria-pressed=true]{background:#ffb02e;color:#14171c;border-color:#ffb02e}
+  .bar button[disabled]{opacity:.4;cursor:default}
+  #cmd{position:fixed;right:16px;bottom:18px;padding:6px 8px;border-radius:999px} #cmd input{all:unset;width:250px;padding:5px 10px;font-size:13px;color:#e9edf2} #cmd input::placeholder{color:#7d8996}
+  .hint{position:fixed;bottom:66px;left:50%;transform:translateX(-50%);margin:0;padding:4px 12px;border-radius:999px;background:rgba(20,23,28,.8);color:#c5ced8;font-size:12.5px;white-space:nowrap}
+  .legend{position:fixed;top:16px;right:16px;padding:10px 14px;font-size:12.5px;max-width:240px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+  #mini{position:fixed;left:16px;bottom:18px;padding:8px;display:none} body.walk #mini{display:block} #mini canvas{display:block;cursor:pointer}
+  #where{position:fixed;top:16px;right:16px;padding:6px 12px;font-size:12.5px;color:#c5ced8;display:none} body.walk #where{display:block}
+  #dip{position:fixed;inset:0;background:#14171c;opacity:0;pointer-events:none;transition:opacity .18s}
+  #loading{position:fixed;inset:0;display:grid;place-items:center;background:#14171c;font-size:15px;color:#9aa6b4;text-align:center}
+</style>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js", "three-mesh-bvh": "./vendor/three-mesh-bvh.module.js" } }</script>
+</head><body>
+<canvas id="c"></canvas>
+<div class="card panel">
+  <h1>Suite 1600, full floor</h1>
+  <p class="sub">The Oppenheimer Tower · 10880 Wilshire Blvd, Los Angeles · floor 16 of 24 · built 1969</p>
+  <dl>
+    <dt>Scanned floor area</dt><dd id="s-area"></dd>
+    <dt>Listed size</dt><dd>26,711 sq ft</dd>
+    <dt>Ceiling height</dt><dd>8 ft 9 in</dd>
+    <dt>Capture points</dt><dd id="s-panos"></dd>
+  </dl>
+  <p class="src">Matterport scan: 360° photos for the walkthrough, 3-D mesh for the dollhouse. Building facts from CoStar.</p>
+</div>
+<div class="legend panel" id="legend" hidden>
+  <div><i style="background:#ffb02e"></i>Within 30 ft of the outer wall: <b id="s-share"></b> of the scanned floor</div>
+  <div style="margin-top:4px"><i style="background:#2e568c"></i>Deeper than 30 ft</div>
+  <div style="color:#6f7b89;margin-top:6px">Rough guide to where apartments could get daylight. Measured from the scan's outline, not from window positions.</div>
+</div>
+<div id="where" class="panel"></div>
+<div id="mini" class="panel"><canvas width="520" height="300" style="width:260px;height:150px"></canvas></div>
+<p class="hint" id="hint"></p>
+<div class="bar panel">
+  <button type="button" data-mode="doll" aria-pressed="true">Dollhouse</button>
+  <button type="button" data-mode="plan" aria-pressed="false">Floor plan</button>
+  <button type="button" data-mode="walk" aria-pressed="false">Walk inside</button>
+  <label><input type="checkbox" id="band"> Daylight zone</label>
+  <button type="button" class="act" id="walls" aria-pressed="false">Remove walls</button>
+</div>
+<form id="cmd" class="panel"><input id="cmd-in" type="text" autocomplete="off" placeholder="Type a command: remove all the walls" aria-label="Command"></form>
+<div id="dip"></div>
+<div id="loading">Loading the scan…</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from './vendor/controls/OrbitControls.js';
+import { computeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
+const Q = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const loadingEl = $('loading');
+const fail = (msg) => { loadingEl.textContent = msg; throw new Error(msg); };
+if (location.protocol === 'file:') fail('Open this through the local server (run start.command, or "python3 -m http.server 8123" in this folder, then visit http://localhost:8123).');
+
+const bin = async (name, Type) => new Type(await (await fetch(`data/${name}`)).arrayBuffer());
+const [S, pos, uv, idx, dropFlags] = await Promise.all([fetch('data/scene.json').then((r) => r.json()), bin('pos.bin', Float32Array), bin('uv.bin', Float32Array), bin('idx.bin', Uint32Array), bin('drop.bin', Uint8Array)]);
+$('s-area').textContent = S.stats.areaSf.toLocaleString('en-US') + ' sq ft';
+$('s-panos').textContent = S.panos.length;
+$('s-share').textContent = Math.round(S.share * 100) + '%';
+
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x14171c);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 800);
+camera.rotation.order = 'YXZ';
+
+// ---------- panoramas ----------
+const YAW0 = THREE.MathUtils.degToRad(Number(Q.get('yaw') || 90));
+const T_M = new THREE.Matrix4().set(1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1);       // three (x,y,z) -> scan (x,-z,y)
+const SWAP = new THREE.Matrix4().set(1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1);       // scan-local (x,y,z) -> cube (x,z,y)
+const panos = S.panos.map((p, i) => {
+  const q = new THREE.Quaternion(p.q[0], p.q[1], p.q[2], p.q[3]);
+  if (!Q.get('qfwd')) q.invert();
+  const m = new THREE.Matrix4().multiplyMatrices(SWAP, new THREE.Matrix4().makeRotationZ(YAW0))
+    .multiply(new THREE.Matrix4().makeRotationFromQuaternion(q)).multiply(T_M);
+  return { i, id: p.id, label: p.label, pos: new THREE.Vector3(p.p[0], p.p[2], -p.p[1]), M: new THREE.Matrix3().setFromMatrix4(m), lo: null, loP: null, used: 0 };
+});
+const FACE_ORDER = [2, 4, 0, 5, 1, 3];   // cube +x,-x,+y,-y,+z,-z  <-  scan faces (0 up, 1-4 sides turning right, 5 down)
+const loadImg = (url) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('missing ' + url)); im.src = url; });
+async function loadCube(p, res) {
+  const imgs = await Promise.all(FACE_ORDER.map((f) => loadImg(`pano/${res}/${p.id}_${f}.jpg`)));
+  const t = new THREE.CubeTexture(imgs);
+  t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true;
+  return t;
+}
+let clock = 0;
+function lowRes(p) {
+  p.used = ++clock;
+  if (!p.loP) p.loP = loadCube(p, '2k').then((t) => { p.lo = t; trimCache(); return t; }, (e) => { p.loP = null; throw e; });
+  return p.loP;
+}
+function trimCache() {
+  const live = panos.filter((p) => p.lo && p !== cur && p !== next).sort((a, b) => a.used - b.used);
+  while (live.length > 6) { const p = live.shift(); p.lo.dispose(); p.lo = null; p.loP = null; }
+}
+let hi = null, hiFor = null, hiTimer = 0;
+function requestHi(p) {
+  clearTimeout(hiTimer);
+  if (Q.get('nohd')) return;
+  hiTimer = setTimeout(async () => {
+    try {
+      const t = await loadCube(p, '4k');
+      if (cur !== p || busy) { t.dispose(); return; }
+      if (hi) hi.dispose(); hi = t; hiFor = p; U.uA.value = t;
+    } catch (e) { /* keep the 2k version */ }
+  }, 220);
+}
+
+// ---------- materials ----------
+const blank = new THREE.CubeTexture();
+const U = {
+  uA: { value: blank }, uB: { value: blank }, uMA: { value: new THREE.Matrix3() }, uMB: { value: new THREE.Matrix3() },
+  uPA: { value: new THREE.Vector3() }, uPB: { value: new THREE.Vector3() }, uT: { value: 0 }, uPano: { value: 0 },
+  uDropT: { value: 0 }, uOrigin: { value: new THREE.Vector2() }, uMaxD: { value: 1 }, uSpread: { value: 1.7 }, uDur: { value: 1.1 }, uDepth: { value: 3.0 }, uFloor: { value: 0 },
+};
+const VERT = `varying vec3 vW; varying vec2 vUv; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+// interior walls and furniture carry aDrop = 1 and sink into the floor, rippling outward from uOrigin
+const VERT_MESH = `attribute float aDrop; uniform float uDropT, uMaxD, uSpread, uDur, uDepth; uniform vec2 uOrigin; varying vec3 vW; varying vec2 vUv; varying float vDrop, vK;
+  void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); vDrop = aDrop; vK = 0.0;
+    if (aDrop > 0.5 && uDropT > 0.0) { float delay = clamp(distance(w.xz, uOrigin) / uMaxD, 0.0, 1.0) * uSpread; float k = clamp((uDropT - delay) / uDur, 0.0, 1.0); k = k * k * (3.0 - 2.0 * k); vK = k; if (aDrop < 1.5) w.y -= k * k * uDepth; }
+    vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const PANO = `uniform samplerCube uA, uB; uniform mat3 uMA, uMB; uniform vec3 uPA, uPB; uniform float uT, uPano; varying vec3 vW; varying vec2 vUv;
+  vec3 pano(){ vec3 a = textureCube(uA, uMA * (vW - uPA)).rgb; if (uT <= 0.0) return a; vec3 b = textureCube(uB, uMB * (vW - uPB)).rgb; return mix(a, b, uT); }`;
+const meshMat = (map) => new THREE.ShaderMaterial({
+  uniforms: { ...U, map: { value: map } }, vertexShader: VERT_MESH,
+  fragmentShader: PANO + `uniform sampler2D map; uniform float uFloor; varying float vDrop, vK; void main(){ if (vDrop > 1.5) { if (vK > 0.0 && vK * 1.6 - 0.3 >= fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453)) discard; } else if (vDrop > 0.5 && (vW.y < uFloor + 0.004 || vK > 0.995)) discard; vec3 base = texture2D(map, vUv).rgb; gl_FragColor = vec4(uPano <= 0.0 ? base : mix(base, pano(), uPano), 1.0); }`,
+});
+const skyMat = new THREE.ShaderMaterial({
+  uniforms: U, vertexShader: VERT, side: THREE.BackSide, depthWrite: false, depthTest: false, transparent: true,
+  fragmentShader: PANO + `void main(){ gl_FragColor = vec4(pano(), uPano); }`,
+});
+
+// ---------- geometry ----------
+const texLoader = new THREE.TextureLoader();
+const atlases = await Promise.all(Array.from({ length: S.atlases }, (_, i) => texLoader.loadAsync(`data/atlas${i}.jpg`)));
+atlases.forEach((t) => { t.anisotropy = renderer.capabilities.getMaxAnisotropy(); });
+const posAttr = new THREE.BufferAttribute(pos, 3), uvAttr = new THREE.BufferAttribute(uv, 2), dropAttr = new THREE.BufferAttribute(Float32Array.from(dropFlags, (v) => (v === 1 ? 1 : 2)), 1);
+const meshes = S.groups.map(([start, count, ai]) => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', posAttr); g.setAttribute('uv', uvAttr); g.setAttribute('aDrop', dropAttr);
+  g.setIndex(new THREE.BufferAttribute(idx.slice(start, start + count), 1));
+  g.computeBoundsTree();
+  const m = new THREE.Mesh(g, meshMat(atlases[ai])); m.frustumCulled = false; scene.add(m); return m;
+});
+const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 48, 24), skyMat); sky.renderOrder = -1; sky.visible = false; sky.frustumCulled = false; scene.add(sky);
+if (Q.get('dbg')) meshes.forEach((m) => scene.add(new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({ wireframe: true, color: 0x33ff66, transparent: true, opacity: 0.18, depthTest: false }))));
+
+const pb = new THREE.Box3(); panos.forEach((p) => pb.expandByPoint(p.pos));
+const centre = pb.getCenter(new THREE.Vector3()); centre.y = S.floorY;
+const span = Math.max(pb.max.x - pb.min.x, pb.max.z - pb.min.z);
+
+// glass ribbon along the outer wall, so window gaps read as glass in the dollhouse
+{
+  const v = [];
+  for (const [x1, y1, x2, y2] of S.outline) {
+    const a = [x1, S.floorY, -y1], b = [x2, S.floorY, -y2], c = [x2, S.ceilY, -y2], d = [x1, S.ceilY, -y1];
+    v.push(...a, ...b, ...c, ...a, ...c, ...d);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  var glass = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x9cc3de, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
+  glass.renderOrder = 2; scene.add(glass);
+}
+// daylight band
+const [bx, by, bw, bh] = S.bandRect;
+const band = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), new THREE.MeshBasicMaterial({ map: await texLoader.loadAsync('data/band.png'), transparent: true, depthWrite: false }));
+band.rotation.x = -Math.PI / 2; band.position.set(bx + bw / 2, S.floorY + 0.08, -(by + bh / 2)); band.visible = false; band.renderOrder = 1; scene.add(band);
+
+// clean floor under everything, so nothing is missing where walls and furniture stood
+const fillTex = await texLoader.loadAsync('data/floorfill.png'); fillTex.colorSpace = THREE.SRGBColorSpace;
+fillTex.colorSpace = THREE.NoColorSpace; fillTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const fill = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), new THREE.ShaderMaterial({
+  uniforms: { map: { value: fillTex }, uRect: { value: new THREE.Vector4() } }, vertexShader: VERT,
+  // the clean floor, with a fine carpet grain that only shows up close
+  fragmentShader: `uniform sampler2D map; uniform vec4 uRect; varying vec3 vW; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    void main(){ vec4 t = texture2D(map, vUv); if (t.a < 0.5) discard; vec2 g = vW.xz * 140.0; vec2 i = floor(g), f = fract(g); f = f * f * (3.0 - 2.0 * f);
+      float n = mix(mix(h(i), h(i + vec2(1,0)), f.x), mix(h(i + vec2(0,1)), h(i + vec2(1,1)), f.x), f.y);
+      float near = clamp(1.0 - distance(vW, cameraPosition) / 7.0, 0.0, 1.0); float dw = min(min(vW.x - uRect.x, uRect.y - vW.x), min(vW.z - uRect.z, uRect.w - vW.z)); float day = uRect.y > uRect.x ? 0.9 + 0.2 * exp(-max(dw, 0.0) / 3.5) : 1.0;
+      gl_FragColor = vec4(t.rgb * day * (1.0 + (n - 0.5) * 0.06 * near), 1.0); }`,
+}));
+fill.rotation.x = -Math.PI / 2; fill.position.set(bx + bw / 2, S.floorY - 0.035, -(by + bh / 2)); scene.add(fill);
+U.uFloor.value = S.floorY; U.uMaxD.value = span * 0.8;
+
+// ---------- empty shell: photo-baked exterior walls, ceiling backing, walkable area ----------
+const SH = await fetch('data/shell.json').then((r) => r.json());
+const wallTex = await texLoader.loadAsync('data/walls.jpg'); wallTex.colorSpace = THREE.SRGBColorSpace; wallTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const shellWalls = (() => {
+  const p = [], t = [];
+  for (const w of SH.pieces) {
+    const A = [w.a[0], SH.z0, -w.a[1]], Bq = [w.b[0], SH.z0, -w.b[1]], C = [w.b[0], SH.z1, -w.b[1]], Dq = [w.a[0], SH.z1, -w.a[1]];
+    const inward = new THREE.Vector3(w.inward[0], 0, -w.inward[1]);
+    const nrm = new THREE.Vector3().subVectors(new THREE.Vector3(...Bq), new THREE.Vector3(...A)).cross(new THREE.Vector3().subVectors(new THREE.Vector3(...C), new THREE.Vector3(...A)));
+    const quad = [[A, [w.u0, w.v0]], [Bq, [w.u1, w.v0]], [C, [w.u1, w.v1]], [Dq, [w.u0, w.v1]]];
+    const order = nrm.dot(inward) > 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2];
+    for (const k of order) { p.push(...quad[k][0]); t.push(...quad[k][1]); }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(t, 2));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: wallTex, transparent: true, opacity: 0 })); m.visible = false; m.renderOrder = 1; scene.add(m); return m;
+})();
+const [rx0, rx1, ry0, ry1] = SH.rect;
+fill.material.uniforms.uRect.value.set(rx0, rx1, -ry1, -ry0);
+// drawn ceiling: 2 ft tiles on a grid with recessed light panels
+const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(rx1 - rx0, ry1 - ry0), new THREE.ShaderMaterial({
+  uniforms: { uRect: { value: new THREE.Vector4(rx0, rx1, -ry1, -ry0) } }, vertexShader: VERT,
+  fragmentShader: `uniform vec4 uRect; varying vec3 vW;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
+    void main(){ float T = 0.6096; vec2 g = (vW.xz - uRect.xz) / T; vec2 i = floor(g), f = fract(g);
+      float edge = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)) * T; float aa = max(fwidth(g.x), fwidth(g.y)) * T;
+      float line = 1.0 - smoothstep(0.007, 0.007 + aa, edge); line *= clamp(0.012 / max(aa, 1e-4), 0.0, 1.0);   // fade the grid far away instead of shimmering
+      vec3 tile = vec3(0.87, 0.86, 0.83) * (0.975 + 0.05 * h(i)); vec3 col = mix(tile, vec3(0.60, 0.59, 0.56), line * 0.85);
+      // light panels: 2 x 4 ft, every 4 tiles across and 6 along
+      vec2 c = mod(i, vec2(4.0, 6.0)); bool lit = c.x == 1.0 && (c.y == 2.0 || c.y == 3.0);
+      if (lit) { vec2 q = vec2(f.x, (c.y - 2.0 + f.y) * 0.5); float rim = min(min(q.x, 1.0 - q.x) * T, min(q.y, 1.0 - q.y) * 2.0 * T); col = mix(vec3(0.55, 0.55, 0.54), vec3(1.0, 0.99, 0.95), smoothstep(0.015, 0.04, rim)); }
+      float dw = min(min(vW.x - uRect.x, uRect.y - vW.x), min(vW.z - uRect.z, uRect.w - vW.z)); if (!lit) col *= 0.93 + 0.12 * exp(-max(dw, 0.0) / 3.0);
+      gl_FragColor = vec4(col, 1.0); }`,
+}));
+ceiling.rotation.x = Math.PI / 2; ceiling.position.set((rx0 + rx1) / 2, SH.z1 - 0.005, -(ry0 + ry1) / 2); scene.add(ceiling);   // faces down, so it never shows from above
+// building core: plain walls that follow the outline of the part of the floor the scan never entered
+const coreGroup = new THREE.Group(); coreGroup.visible = false; scene.add(coreGroup);
+const coreMat = new THREE.ShaderMaterial({
+  uniforms: { uOpacity: { value: 1 }, uZ0: { value: SH.z0 }, uH: { value: SH.z1 - SH.z0 } }, side: THREE.DoubleSide, transparent: true,
+  vertexShader: `varying vec3 vW; varying vec3 vN; void main(){ vN = normal; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform float uOpacity, uZ0, uH; varying vec3 vW; varying vec3 vN;
+    void main(){ float hh = vW.y - uZ0; vec3 col = vec3(0.93, 0.915, 0.875);
+      col *= 0.86 + 0.14 * abs(dot(normalize(vN), normalize(vec3(0.55, 0.0, 0.83))));                       // each wall direction catches the light differently
+      col *= 1.0 - 0.10 * exp(-hh * 5.0) - 0.12 * exp(-(uH - hh) * 4.0);                                     // soft shading at the floor and ceiling
+      if (hh < 0.10) col = vec3(0.40, 0.23, 0.10); else if (hh < 0.112) col = vec3(0.25, 0.14, 0.06);       // baseboard
+      gl_FragColor = vec4(col, uOpacity); }`,
+});
+const capMat = new THREE.MeshBasicMaterial({ color: 0x3a4049, transparent: true });
+for (const blk of SH.core) {
+  const p = [], nn = [];
+  for (const ring of [blk.outer, ...blk.holes]) for (let k = 0; k < ring.length; k++) {
+    const a = ring[k], b2 = ring[(k + 1) % ring.length], dx = b2[0] - a[0], dy = b2[1] - a[1], L = Math.hypot(dx, dy) || 1, n = [dy / L, 0, dx / L];
+    const A = [a[0], SH.z0, -a[1]], B2 = [b2[0], SH.z0, -b2[1]], C = [b2[0], SH.z1, -b2[1]], D2 = [a[0], SH.z1, -a[1]];
+    p.push(...A, ...B2, ...C, ...A, ...C, ...D2); for (let j = 0; j < 6; j++) nn.push(...n);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nn, 3));
+  coreGroup.add(new THREE.Mesh(g, coreMat));
+  const shape = new THREE.Shape(blk.outer.map(([x, y]) => new THREE.Vector2(x, y))); blk.holes.forEach((hh) => shape.holes.push(new THREE.Path(hh.map(([x, y]) => new THREE.Vector2(x, y)))));
+  const cap = new THREE.Mesh(new THREE.ShapeGeometry(shape), capMat); cap.rotation.x = -Math.PI / 2; cap.position.y = SH.z1 + 0.01; capMat.side = THREE.DoubleSide; coreGroup.add(cap);   // shape (x, y) lands on world (x, -y)
+}
+const walkMask = await (async () => {
+  const im = await loadImg('data/walk.png'); const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
+  const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0); return { w: im.width, h: im.height, d: cx.getImageData(0, 0, im.width, im.height).data };
+})();
+const walkable = (x, z) => { const px = Math.floor((x - bx) / bw * walkMask.w), py = Math.floor((by + bh + z) / bh * walkMask.h); return px >= 0 && py >= 0 && px < walkMask.w && py < walkMask.h && walkMask.d[(py * walkMask.w + px) * 4] > 127; };
+const EYE = S.floorY + SH.eye;
+
+// capture-point markers and the cursor ring (walk mode)
+const markerGeo = new THREE.RingGeometry(0.13, 0.2, 40).rotateX(-Math.PI / 2);
+const markers = panos.map((p) => {
+  const m = new THREE.Mesh(markerGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false }));
+  m.position.set(p.pos.x, S.floorY + 0.06, p.pos.z); m.visible = false; m.renderOrder = 3; scene.add(m); return m;
+});
+const reticle = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.26, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+reticle.visible = false; reticle.renderOrder = 4; scene.add(reticle);
+
+// ---------- state ----------
+const orbit = new OrbitControls(camera, canvas);
+orbit.enableDamping = true; orbit.dampingFactor = 0.08; orbit.maxPolarAngle = Math.PI * 0.49; orbit.minDistance = 3; orbit.maxDistance = span * 2.2;
+orbit.target.copy(centre);
+const dollPos = () => centre.clone().add(new THREE.Vector3(span * 0.15, span * 0.62, span * 0.62));
+const planPos = () => centre.clone().add(new THREE.Vector3(0, span * 0.95, 0.01));
+camera.position.copy(dollPos()); camera.lookAt(centre);
+
+let mode = 'doll', cur = null, next = null, busy = false, yaw = 0, pitch = 0, hover = -1, removed = false, dropping = false;
+const tweens = new Set();
+const ease = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+const tween = (ms, fn) => new Promise((done) => { const t0 = performance.now(); const step = (now) => { const k = Math.min(1, (now - t0) / ms); fn(ease(k), k); if (k === 1) { tweens.delete(step); done(); } }; tweens.add(step); });
+const hints = {
+  doll: 'Drag to rotate · scroll to zoom · right-drag to pan · double-click a spot to stand there',
+  plan: 'Drag to pan · scroll to zoom · double-click a spot to stand there',
+  walk: 'Drag to look around · click where you want to go · scroll to zoom · Esc for the dollhouse',
+  shell: 'Empty floor · drag to look · click the floor to move · W A S D to walk · Esc for the dollhouse',
+};
+function setUi(m) {
+  document.body.classList.toggle('walk', m === 'walk' || m === 'shell');
+  document.querySelectorAll('.bar button[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (m === 'shell' ? 'walk' : m))));
+  $('hint').textContent = removed && (m === 'doll' || m === 'plan') ? 'Interior walls and furniture are down · click Walk inside to stand on the empty floor' : hints[m];
+  if (m === 'shell') $('where').textContent = 'Empty floor · walk anywhere';
+  const flat = m !== 'walk' && m !== 'shell';
+  glass.visible = flat && !removed; band.visible = flat && $('band').checked; $('legend').hidden = !(flat && $('band').checked);
+}
+function setA(p) { cur = p; U.uA.value = (hiFor === p && hi) ? hi : p.lo; U.uMA.value = p.M; U.uPA.value = p.pos; U.uT.value = 0; $('where').textContent = `Capture point ${p.i + 1} of ${panos.length}`; }
+function applyLook() { camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
+const nearest = (v, skip) => { let best = null, bd = Infinity; for (const p of panos) { if (p === skip) continue; const d = (p.pos.x - v.x) ** 2 + (p.pos.z - v.z) ** 2; if (d < bd) { bd = d; best = p; } } return best; };
+function showMarkers() {
+  markers.forEach((m, i) => { const p = panos[i]; m.visible = mode === 'walk' && !busy && p !== cur && p.pos.distanceTo(cur.pos) < 13; m.material.opacity = i === hover ? 1 : 0.5; m.scale.setScalar(i === hover ? 1.35 : 1); });
+}
+
+async function enterWalk(p) {
+  if (busy) return; busy = true; orbit.enabled = false;
+  try { await lowRes(p); } catch (e) { busy = false; orbit.enabled = true; return; }
+  mode = 'walk'; setUi('walk'); setA(p); sky.visible = true;
+  const from = camera.position.clone(), dir = camera.getWorldDirection(new THREE.Vector3());
+  yaw = Math.atan2(-dir.x, -dir.z); const p0 = Math.asin(THREE.MathUtils.clamp(dir.y, -1, 1)); const f0 = camera.fov;
+  await tween(1500, (e) => { camera.position.lerpVectors(from, p.pos, e); pitch = p0 * (1 - e); applyLook(); U.uPano.value = Math.min(1, e * 1.6); camera.fov = f0 + (70 - f0) * e; camera.updateProjectionMatrix(); });
+  U.uPano.value = 1; busy = false; requestHi(p); showMarkers();
+}
+async function leaveWalk(to) {
+  if (busy) return; busy = true; clearTimeout(hiTimer); reticle.visible = false; hover = -1; markers.forEach((m) => { m.visible = false; });
+  const wasShell = mode === 'shell'; mode = to; setUi(to);
+  const from = camera.position.clone(), q0 = camera.quaternion.clone(), dest = to === 'doll' ? dollPos() : planPos();
+  const probe = new THREE.PerspectiveCamera(); probe.position.copy(dest); probe.lookAt(centre); const q1 = probe.quaternion.clone(), f0 = camera.fov;
+  await tween(1300, (e) => { camera.position.lerpVectors(from, dest, e); camera.quaternion.slerpQuaternions(q0, q1, e); if (!wasShell) U.uPano.value = 1 - e; camera.fov = f0 + (60 - f0) * e; camera.updateProjectionMatrix(); });
+  U.uPano.value = 0; sky.visible = false; camera.rotation.order = 'YXZ';
+  orbit.target.copy(centre); orbit.enableRotate = to === 'doll'; orbit.mouseButtons.LEFT = to === 'doll' ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN; orbit.update(); orbit.enabled = true; busy = false;
+}
+async function enterShell(at) {
+  if (busy || dropping || !removed) return; busy = true; orbit.enabled = false;
+  let spot = at && walkable(at.x, at.z) ? at : null;
+  if (!spot) {   // an open spot near where the camera is looking
+    const ref = at || orbit.target; let best = -1;
+    for (const p of panos) { if (!walkable(p.pos.x, p.pos.z)) continue; const sc = Math.min(openDist(p.pos.x, p.pos.z, 8).min, 4) - Math.hypot(p.pos.x - ref.x, p.pos.z - ref.z) * 0.12; if (sc > best) { best = sc; spot = p.pos; } }
+  }
+  const dest = new THREE.Vector3(spot.x, EYE, spot.z), faceYaw = openDist(spot.x, spot.z, 24).yaw;
+  mode = 'shell'; setUi('shell');
+  const from = camera.position.clone(), dir = camera.getWorldDirection(new THREE.Vector3());
+  const y0 = Math.atan2(-dir.x, -dir.z), dy = Math.atan2(Math.sin(faceYaw - y0), Math.cos(faceYaw - y0)); const p0 = Math.asin(THREE.MathUtils.clamp(dir.y, -1, 1)), f0 = camera.fov;
+  await tween(1700, (e) => { camera.position.lerpVectors(from, dest, e); yaw = y0 + dy * e; pitch = p0 * (1 - e); applyLook(); camera.fov = f0 + (70 - f0) * e; camera.updateProjectionMatrix(); });
+  busy = false; drawMini();
+}
+function openDist(x, z, n) {   // how far the floor stays open around a point: shortest reach, and the direction of the longest
+  let min = Infinity, far = 0, yawBest = 0;
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, dx = -Math.sin(a), dz = -Math.cos(a); let d = 0; while (d < 60 && walkable(x + dx * (d + 0.25), z + dz * (d + 0.25))) d += 0.25; if (d < min) min = d; if (d > far) { far = d; yawBest = a; } }
+  return { min, yaw: yawBest };
+}
+function shellMoveTo(x, z) {
+  // glide in a straight line, stopping at the last spot that is still open floor
+  const from = camera.position.clone(); let tx = from.x, tz = from.z; const n = Math.ceil(Math.hypot(x - from.x, z - from.z) / 0.1);
+  for (let i = 1; i <= n; i++) { const qx = from.x + (x - from.x) * i / n, qz = from.z + (z - from.z) * i / n; if (!walkable(qx, qz)) break; tx = qx; tz = qz; }
+  const to = new THREE.Vector3(tx, EYE, tz), dist = from.distanceTo(to); if (dist < 0.15) return;
+  busy = true; reticle.visible = false;
+  tween(Math.min(2600, 350 + dist * 170), (e) => { camera.position.lerpVectors(from, to, e); drawMini(); }).then(() => { busy = false; });
+}
+const floorPoint = (ev) => {
+  const r = canvas.getBoundingClientRect(); ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const d = ray.ray.direction, o = ray.ray.origin; if (d.y > -0.02) return null; const t = (S.floorY - o.y) / d.y; return t > 0 && t < 60 ? new THREE.Vector3(o.x + d.x * t, S.floorY, o.z + d.z * t) : null;
+};
+async function flat(to) {
+  if (busy) return; busy = true; orbit.enabled = false; mode = to; setUi(to);
+  const from = camera.position.clone(), t0 = orbit.target.clone(), dest = to === 'doll' ? dollPos() : planPos();
+  await tween(900, (e) => { camera.position.lerpVectors(from, dest, e); orbit.target.lerpVectors(t0, centre, e); camera.lookAt(orbit.target); });
+  orbit.enableRotate = to === 'doll'; orbit.mouseButtons.LEFT = to === 'doll' ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN; orbit.update(); orbit.enabled = true; busy = false;
+}
+async function goTo(p) {
+  if (busy || mode !== 'walk' || !p || p === cur) return; busy = true; reticle.visible = false; hover = -1; showMarkers(); clearTimeout(hiTimer);
+  try { await lowRes(p); } catch (e) { busy = false; showMarkers(); return; }
+  const from = cur.pos.clone(), dist = from.distanceTo(p.pos);
+  if (dist > 11) {   // too far to glide: dip to dark and jump
+    $('dip').style.opacity = 1; await new Promise((r) => setTimeout(r, 200));
+    setA(p); camera.position.copy(p.pos); $('dip').style.opacity = 0;
+  } else {
+    next = p; U.uB.value = p.lo; U.uMB.value = p.M; U.uPB.value = p.pos;
+    await tween(Math.min(1300, 520 + dist * 95), (e) => { camera.position.lerpVectors(from, p.pos, e); U.uT.value = e; });
+    setA(p); next = null;
+  }
+  busy = false; requestHi(p); showMarkers(); drawMini();
+  // warm the cache for the nearest neighbours
+  panos.filter((n) => n !== p).sort((a, b) => a.pos.distanceToSquared(p.pos) - b.pos.distanceToSquared(p.pos)).slice(0, 3).forEach((n) => lowRes(n).catch(() => {}));
+}
+function setMode(m) {
+  if (m === mode || busy) return;
+  if (m === 'walk' && mode === 'shell') return;
+  if (m === 'walk' && removed) enterShell();
+  else if (m === 'walk') enterWalk(nearest(centre));
+  else if (mode === 'walk' || mode === 'shell') leaveWalk(m);
+  else flat(m);
+}
+
+// ---------- walls ----------
+let sayTimer = 0;
+function say(text) { $('hint').textContent = text; clearTimeout(sayTimer); sayTimer = setTimeout(() => setUi(mode), 2600); }
+async function setWalls(down) {
+  if (dropping || busy || down === removed) return;
+  if (mode === 'walk' || mode === 'shell') { await leaveWalk('doll'); }
+  dropping = true; removed = down; setUi(mode);
+  $('walls').setAttribute('aria-pressed', String(down)); $('walls').textContent = down ? 'Bring walls back' : 'Remove walls';
+  const total = U.uSpread.value + U.uDur.value;
+  if (down) U.uOrigin.value.set(orbit.target.x, orbit.target.z);
+  shellWalls.visible = true; coreGroup.visible = true;
+  await tween((total * 1000) | 0, (e, k) => { const q = down ? k : 1 - k; U.uDropT.value = q * total; const o = THREE.MathUtils.smoothstep(q, 0.12, 0.6); shellWalls.material.opacity = o; coreMat.uniforms.uOpacity.value = o; capMat.opacity = o; });
+  shellWalls.visible = down; coreGroup.visible = down; shellWalls.material.opacity = down ? 1 : 0; setUi(mode);
+  dropping = false;
+}
+$('walls').addEventListener('click', () => setWalls(!removed));
+$('cmd').addEventListener('submit', (e) => {
+  e.preventDefault(); const t = $('cmd-in').value.toLowerCase().trim(); $('cmd-in').value = ''; if (!t) return;
+  const wall = /wall|partition|interior/.test(t);
+  if (wall && /(bring|put|restore|add|raise|show|back|undo)/.test(t)) { removed ? setWalls(false) : say('The walls are already up.'); }
+  else if (wall && /(remove|drop|clear|hide|delete|lower|take|get rid|strip|empty)/.test(t)) { removed ? say('The walls are already down.') : setWalls(true); }
+  else if (/empty|shell/.test(t)) setWalls(true);
+  else if (/doll/.test(t)) setMode('doll'); else if (/plan|top/.test(t)) setMode('plan'); else if (/walk|inside/.test(t)) setMode('walk');
+  else say('Try: "remove all the walls", "bring the walls back", "floor plan", "walk inside".');
+});
+
+// ---------- picking ----------
+const ray = new THREE.Raycaster(); ray.firstHitOnly = true; const ndc = new THREE.Vector2();
+function pick(ev) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  let best = null; for (const m of meshes) { const h = ray.intersectObject(m, false)[0]; if (h && (!best || h.distance < best.distance)) best = h; }
+  return best;
+}
+function markerAt(ev) {
+  // nearest visible marker to the pointer on screen
+  const r = canvas.getBoundingClientRect(); let best = -1, bd = 34 * 34; const v = new THREE.Vector3();
+  markers.forEach((m, i) => { if (!m.visible) return; v.copy(m.position).project(camera); if (v.z > 1) return; const dx = (v.x * 0.5 + 0.5) * r.width - (ev.clientX - r.left), dy = (-v.y * 0.5 + 0.5) * r.height - (ev.clientY - r.top); const d = dx * dx + dy * dy; if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+function along(dirYaw, minDot = 0.55) {
+  const d = new THREE.Vector3(-Math.sin(dirYaw), 0, -Math.cos(dirYaw)); let best = null, bs = Infinity; const v = new THREE.Vector3();
+  for (const p of panos) { if (p === cur) continue; v.subVectors(p.pos, cur.pos); v.y = 0; const dist = v.length(); if (dist > 9 || dist < 0.3) continue; const dot = v.dot(d) / dist; if (dot < minDot) continue; const s = dist / (dot * dot * dot); if (s < bs) { bs = s; best = p; } }
+  return best;
+}
+let down = null, moveEv = null; const keys = new Set(); addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase())); addEventListener('blur', () => keys.clear());
+canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, moved: false }; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => {
+  moveEv = e;
+  if (!down) return;
+  if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) > 5) { down.moved = true; canvas.classList.add('drag'); }
+  if ((mode === 'walk' || mode === 'shell') && down.moved && !busy) {
+    const k = 0.0026 * (camera.fov / 70);
+    yaw += e.movementX * k; pitch = THREE.MathUtils.clamp(pitch + e.movementY * k, -1.35, 1.35); applyLook(); drawMini();
+  }
+});
+canvas.addEventListener('pointerup', (e) => {
+  const click = down && !down.moved; down = null; canvas.classList.remove('drag');
+  if (click && mode === 'shell' && !busy) { const fp = floorPoint(e); if (fp) shellMoveTo(fp.x, fp.z); return; }
+  if (!click || mode !== 'walk' || busy) return;
+  const mk = markerAt(e); if (mk >= 0) return goTo(panos[mk]);
+  const h = pick(e);
+  if (h) { const p = nearest(h.point, null); if (p !== cur) return goTo(p); const q = nearest(h.point, cur); if (q && q.pos.distanceTo(h.point) < 4) return goTo(q); return; }
+  const d = ray.ray.direction; goTo(along(Math.atan2(-d.x, -d.z), 0.8));
+});
+canvas.addEventListener('dblclick', (e) => { if (mode === 'walk' || mode === 'shell' || busy || dropping) return; if (removed) { const fp = floorPoint(e); if (fp) enterShell(fp); return; } const h = pick(e); if (h) enterWalk(nearest(h.point)); });
+canvas.addEventListener('wheel', (e) => { if (mode !== 'walk' && mode !== 'shell') return; e.preventDefault(); camera.fov = THREE.MathUtils.clamp(camera.fov + e.deltaY * 0.03, 32, 85); camera.updateProjectionMatrix(); }, { passive: false });
+addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return; keys.add(e.key.toLowerCase());
+  if (mode === 'shell') { if (e.key === 'Escape') setMode('doll'); return; }
+  if (mode !== 'walk') return; const k = e.key.toLowerCase();
+  if (k === 'escape') setMode('doll');
+  else if (k === 'arrowup' || k === 'w') goTo(along(yaw));
+  else if (k === 'arrowdown' || k === 's') goTo(along(yaw + Math.PI));
+  else if (k === 'a') goTo(along(yaw + Math.PI / 2)); else if (k === 'd') goTo(along(yaw - Math.PI / 2));
+  else if (k === 'arrowleft') { yaw += 0.26; applyLook(); drawMini(); } else if (k === 'arrowright') { yaw -= 0.26; applyLook(); drawMini(); }
+});
+document.querySelectorAll('.bar button[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+$('band').addEventListener('change', () => setUi(mode));
+
+// ---------- mini map ----------
+const mini = document.querySelector('#mini canvas'), mctx = mini.getContext('2d');
+const mb = { x0: pb.min.x - 3, x1: pb.max.x + 3, z0: pb.min.z - 3, z1: pb.max.z + 3 };
+const msc = Math.min(mini.width / (mb.x1 - mb.x0), mini.height / (mb.z1 - mb.z0));
+const mx = (x) => (x - mb.x0) * msc + (mini.width - (mb.x1 - mb.x0) * msc) / 2, mz = (z) => (z - mb.z0) * msc + (mini.height - (mb.z1 - mb.z0) * msc) / 2;
+function drawMini() {
+  const inShell = mode === 'shell'; if (!(inShell || (mode === 'walk' && cur))) return; const here = inShell ? camera.position : cur.pos;
+  mctx.clearRect(0, 0, mini.width, mini.height);
+  mctx.strokeStyle = '#5b6878'; mctx.lineWidth = 2; mctx.beginPath();
+  for (const [x1, y1, x2, y2] of S.outline) { mctx.moveTo(mx(x1), mz(-y1)); mctx.lineTo(mx(x2), mz(-y2)); } mctx.stroke();
+  mctx.fillStyle = '#6f7b89'; if (!inShell) for (const p of panos) { mctx.beginPath(); mctx.arc(mx(p.pos.x), mz(p.pos.z), 3, 0, 7); mctx.fill(); }
+  const cx = mx(here.x), cz = mz(here.z), a = Math.atan2(-Math.cos(yaw), -Math.sin(yaw)), half = THREE.MathUtils.degToRad(camera.fov * camera.aspect) / 2 * 0.8;
+  mctx.fillStyle = 'rgba(255,176,46,.35)'; mctx.beginPath(); mctx.moveTo(cx, cz); mctx.arc(cx, cz, 46, a - half, a + half); mctx.closePath(); mctx.fill();
+  mctx.fillStyle = '#ffb02e'; mctx.beginPath(); mctx.arc(cx, cz, 7, 0, 7); mctx.fill();
+}
+mini.addEventListener('click', (e) => {
+  const r = mini.getBoundingClientRect(), px = (e.clientX - r.left) * mini.width / r.width, pz = (e.clientY - r.top) * mini.height / r.height;
+  if (mode === 'shell') { const wx = (px - (mini.width - (mb.x1 - mb.x0) * msc) / 2) / msc + mb.x0, wz = (pz - (mini.height - (mb.z1 - mb.z0) * msc) / 2) / msc + mb.z0; if (walkable(wx, wz) && !busy) { $('dip').style.opacity = 1; setTimeout(() => { camera.position.set(wx, EYE, wz); $('dip').style.opacity = 0; drawMini(); }, 200); } return; }
+  let best = null, bd = 30 * 30; for (const p of panos) { const d = (mx(p.pos.x) - px) ** 2 + (mz(p.pos.z) - pz) ** 2; if (d < bd) { bd = d; best = p; } }
+  goTo(best);
+});
+
+// ---------- loop ----------
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+let lastPick = 0, lastT = performance.now();
+renderer.setAnimationLoop((now) => {
+  tweens.forEach((t) => t(now));
+  if ((mode === 'doll' || mode === 'plan') && !busy) orbit.update();
+  if (mode === 'walk' && !busy && moveEv && !down && now - lastPick > 40) {
+    lastPick = now; const mk = markerAt(moveEv);
+    if (mk !== hover) { hover = mk; showMarkers(); }
+    canvas.classList.toggle('point', mk >= 0);
+    const h = mk < 0 ? pick(moveEv) : null;
+    if (h && h.face) { reticle.visible = true; const n = h.face.normal.clone().transformDirection(h.object.matrixWorld); reticle.position.copy(h.point).addScaledVector(n, 0.02); reticle.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n); const s = THREE.MathUtils.clamp(h.distance / 5, 0.5, 2.2); reticle.scale.setScalar(s); }
+    else reticle.visible = false;
+    moveEv = null;
+  }
+  if (mode === 'shell' && !busy) {
+    const dt = Math.min(0.05, (now - lastT) / 1000);
+    const f = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0), sd = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
+    if (keys.has('arrowleft')) { yaw += dt * 1.5; applyLook(); } if (keys.has('arrowright')) { yaw -= dt * 1.5; applyLook(); }
+    if (f || sd) {
+      const v = 3.4 * dt / Math.hypot(f, sd), dx = (-Math.sin(yaw) * f + Math.cos(yaw) * sd) * v, dz = (-Math.cos(yaw) * f - Math.sin(yaw) * sd) * v, p = camera.position;
+      if (walkable(p.x + dx, p.z + dz)) { p.x += dx; p.z += dz; } else if (walkable(p.x + dx, p.z)) p.x += dx; else if (walkable(p.x, p.z + dz)) p.z += dz;   // slide along walls
+      drawMini();
+    }
+    if (moveEv && !down) { const fp = floorPoint(moveEv); if (fp && walkable(fp.x, fp.z)) { reticle.visible = true; reticle.position.set(fp.x, S.floorY + 0.02, fp.z); reticle.rotation.set(-Math.PI / 2, 0, 0); reticle.scale.setScalar(THREE.MathUtils.clamp(fp.distanceTo(camera.position) / 5, 0.5, 2.2)); } else reticle.visible = false; moveEv = null; }
+  }
+  lastT = now;
+  sky.position.copy(camera.position);
+  renderer.render(scene, camera);
+});
+setUi('doll'); orbit.enabled = true; loadingEl.remove();
+window.__app = { panos, setMode, goTo, enterWalk, enterShell, setWalls, camera, look: (y, p) => { yaw = y; pitch = p; applyLook(); drawMini(); }, state: () => ({ mode, busy, removed, dropping, cur: cur && cur.i, hd: hiFor === cur && !!hi, yaw, pitch }) };
+window.__U = U; window.__ready = true;
+</script>
+</body></html>
