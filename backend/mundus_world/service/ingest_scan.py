@@ -338,7 +338,18 @@ class ScanIngest:
                     c.execute("UPDATE room SET pano_selected=(SELECT count(*) FROM pano p WHERE p.room_id=room.room_id "
                               "AND p.is_selected=1) WHERE space_id=?", (sp["space_id"],))
 
-        return self._each(step, spaces, lambda s: s["sid"], one, force)
+        stats = self._each(step, spaces, lambda s: s["sid"], one, force)
+        if not defurnished:
+            # A rerun of `resolve` selects image-less panos again while their space is skipped here as done: sweep them.
+            with self.db.write() as c:
+                gone = c.execute(
+                    "UPDATE pano SET is_selected=0 WHERE is_selected=1 AND has_faces=0 AND space_id IN ("
+                    "SELECT 'space:' || key FROM ingest_log WHERE step='panos' AND status='done')").rowcount
+                if gone:
+                    c.execute("UPDATE room SET pano_selected=(SELECT count(*) FROM pano p WHERE p.room_id=room.room_id "
+                              "AND p.is_selected=1)")
+            stats["deselected_without_images"] = gone
+        return stats
 
     # ---- step 8: aerial ----------------------------------------------------
     def aerial(self, force: bool = False) -> dict[str, int]:
