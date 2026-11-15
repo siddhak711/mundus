@@ -159,32 +159,22 @@ need the API. Floor walkthroughs need baked Matterport data that is not publishe
 
 ### Atlas on Vercel
 
-The Atlas site (`web/`, `server.py`) also runs on Vercel: the CDN serves `web/` and the CoStar index, `api/index.py`
-runs `server.py`'s handler for `/api/*`, and built site models go to Vercel Blob (`pipeline/storage.py`), because
-function instances share no disk and a response is capped at 4.5 MB (a tall building's aerial photo is about 8 MB).
-The World API and the agent stay on the VM.
+Vercel serves the site's own files (`web/`, about 50 files). Everything else is proxied by the rewrites in
+`vercel.json` to `server.py` on the VM (`https://<vm-host>/atlas`): the CoStar index under `/data/`, site models
+(`/api/twin`, `/cache/`), scans, angled photos, the agent (`/api/agent`) and the baked walkthrough floors. The VM is
+the right home for those: the apartment agent reads the floor files that `server.py` prepares, and a walkthrough
+floor is about 500 MB. Nothing licensed is uploaded to Vercel.
+
+```bash
+bash scripts/deploy/vm_atlas.sh
+```
 
 ```bash
 bash scripts/deploy/vercel_deploy.sh
 ```
 
-Project environment variables: `VEXCEL_API_KEY`, `MATTERPORT_API_KEY`, `MATTERPORT_API_TOKEN` (site models),
-`BLOB_READ_WRITE_TOKEN` (set by connecting a public Blob store), and for Ask Atlas `HARNESS_URL`
-(`https://<vm-host>/agent`), `AGENT_TOKEN`, `WORLD_REST_URL` (`https://<vm-host>`) and `WORLD_API_TOKEN`.
-
----
-
-# Atlas
-
-A site-model viewer for every property in the HackPrinceton CoStar kit: 3,346 in Houston and
-1,857 in Los Angeles. Pick a city, pick a property, and Atlas builds a 3-D model of it from three
-sources that describe the same address.
-
-| Source | What it contributes |
-|---|---|
-| CoStar | The property record, tenants by floor since the building opened, space for lease with asking rents, sales, apartment floor plans, home listings |
-| Vexcel | Aerial photo, measured building heights, building footprints, roof facts, angled views, object detection |
-| Matterport | Interior scans shown as cut-open models, with measured area and room types |
+The first runs on the VM (index, conversion screen, walkthrough bakes, `mundus-atlas` service, Caddy route); the
+second from any machine logged in to Vercel.
 
 ## Run it
 

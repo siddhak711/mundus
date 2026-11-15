@@ -2,21 +2,32 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "",
-  "buildCommand": "bash scripts/deploy/vercel_build.sh",
+  "buildCommand": "rm -rf public && cp -r web public",
   "outputDirectory": "public",
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 300,
-      "memory": 2048,
-      "includeFiles": "{server.py,pipeline/**,data/property/**,data/home/**}",
-      "excludeFiles": "{public/**,web/**,raw/**,cache/**}"
-    }
-  },
   "rewrites": [
-    { "source": "/api/:route*", "destination": "/api/index?__route=:route*" }
-  ],
-  "headers": [
-    { "source": "/data/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400" }] },
-    { "source": "/(index.html|js/.*|styles.css)?", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
+    {
+      "source": "/api/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/api/:path*"
+    },
+    {
+      "source": "/cache/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/cache/:path*"
+    },
+    {
+      "source": "/data/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/data/:path*"
+    },
+    {
+      "source": "/walkthrough/floors/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/floors/:path*"
+    },
+    {
+      "source": "/walkthrough/data/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/data/:path*"
+    },
+    {
+      "source": "/walkthrough/pano/:path*",
+      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/pano/:path*"
+    }
   ]
 }
