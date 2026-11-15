@@ -20,3 +20,6 @@ node_modules/
 raw/
 cache/
 web/walkthrough/pano/
+# local symlinks to the licensed scan (no trailing slash: "data/" does not match a symlink)
+web/walkthrough/data
+web/walkthrough/pano
