@@ -13,6 +13,23 @@ from pipeline import ask, config, matterport, twin, vexcel
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5190
 STATIC_ROOTS = {"/data/": config.DATA, "/cache/": config.CACHE}
+WALKTHROUGHS = config.ROOT / "pipeline" / "walkthroughs.json"
+
+
+def walkthrough_layout():
+    """The apartment layout the conversion agent saved for the walkthrough's floor (data/conversion/<scan>/layout.json).
+    The walkthrough reads data/layout.json next to itself; this hands it the agent's newest layout instead, so a layout
+    made from Ask Atlas shows up under the walkthrough's Apartment layout button. None when there is none yet."""
+    try:
+        floors = json.loads(WALKTHROUGHS.read_text(encoding="utf-8"))["floors"]
+    except (OSError, ValueError, KeyError):
+        return None
+    for entry in floors:
+        if entry.get("url", "/walkthrough/").rstrip("/") == "/walkthrough" and entry.get("scanId"):
+            path = config.DATA / "conversion" / entry["scanId"] / "layout.json"
+            if path.exists():
+                return path
+    return None
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -20,6 +37,10 @@ class Handler(SimpleHTTPRequestHandler):
         # normpath, not resolve: blocks "../" escapes but follows symlinks the owner placed, such as the
         # walkthrough's data/ and pano/ links to the baked scan kept outside the repository
         clean = urlparse(path).path
+        if clean == "/walkthrough/data/layout.json":
+            agent_layout = walkthrough_layout()
+            if agent_layout:
+                return str(agent_layout)
         for prefix, root in STATIC_ROOTS.items():
             if clean.startswith(prefix):
                 base = Path(os.path.abspath(root))
