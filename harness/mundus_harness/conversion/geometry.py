@@ -126,42 +126,46 @@ class Floor:
             self._win_dist = ndimage.distance_transform_edt(~self.window) / self.res
         return self._win_dist
 
-    def walk_distance_m(self) -> np.ndarray:
-        """Shortest walking distance (metres) to the nearest exit across the plate, around the core. Computed on a
-        25 cm grid; walls inside the plate are ignored (they come down in a conversion)."""
-        if self._walk is None:
-            step = max(1, int(round(self.res / 4)))
-            walk = (self.plate & ~self.core)[::step, ::step]
-            h, w = walk.shape
-            dist = np.full((h, w), np.inf)
-            heap = []
-            cell = step / self.res
-            for e in self.struct.get("exits") or []:
-                c, r = self.to_px(e["x"], e["y"])
-                c, r = int(c / step), int(r / step)
-                rad = int(1.5 / cell)
-                for rr in range(max(0, r - rad), min(h, r + rad + 1)):
-                    for cc in range(max(0, c - rad), min(w, c + rad + 1)):
-                        if walk[rr, cc]:
-                            d0 = math.hypot(rr - r, cc - c) * cell
-                            if d0 < dist[rr, cc]:
-                                dist[rr, cc] = d0
-                                heapq.heappush(heap, (d0, rr, cc))
-            nb = [(-1, 0, 1), (1, 0, 1), (0, -1, 1), (0, 1, 1), (-1, -1, 1.4142), (-1, 1, 1.4142), (1, -1, 1.4142), (1, 1, 1.4142)]
-            while heap:
-                d, r, c = heapq.heappop(heap)
-                if d > dist[r, c]:
-                    continue
-                for dr, dc, k in nb:
-                    rr, cc = r + dr, c + dc
-                    if 0 <= rr < h and 0 <= cc < w and walk[rr, cc]:
-                        nd = d + k * cell
-                        if nd < dist[rr, cc]:
-                            dist[rr, cc] = nd
-                            heapq.heappush(heap, (nd, rr, cc))
-            full = np.repeat(np.repeat(dist, step, 0), step, 1)[: self.h, : self.w]
+    def walk_distance_m(self, walk_mask: np.ndarray | None = None) -> np.ndarray:
+        """Shortest walking distance (metres) to the nearest exit, on a 25 cm grid. With no mask, across the whole
+        plate around the core (cached). With a mask, only across the cells it allows: check_layout passes the open
+        floor plus one unit, so a route may not cut through another apartment."""
+        if walk_mask is None and self._walk is not None:
+            return self._walk
+        step = max(1, int(round(self.res / 4)))
+        base = (self.plate & ~self.core) if walk_mask is None else (walk_mask & self.plate & ~self.core)
+        walk = base[::step, ::step]
+        h, w = walk.shape
+        dist = np.full((h, w), np.inf)
+        heap = []
+        cell = step / self.res
+        for e in self.struct.get("exits") or []:
+            c, r = self.to_px(e["x"], e["y"])
+            c, r = int(c / step), int(r / step)
+            rad = int(1.5 / cell)
+            for rr in range(max(0, r - rad), min(h, r + rad + 1)):
+                for cc in range(max(0, c - rad), min(w, c + rad + 1)):
+                    if walk[rr, cc]:
+                        d0 = math.hypot(rr - r, cc - c) * cell
+                        if d0 < dist[rr, cc]:
+                            dist[rr, cc] = d0
+                            heapq.heappush(heap, (d0, rr, cc))
+        nb = [(-1, 0, 1), (1, 0, 1), (0, -1, 1), (0, 1, 1), (-1, -1, 1.4142), (-1, 1, 1.4142), (1, -1, 1.4142), (1, 1, 1.4142)]
+        while heap:
+            d, r, c = heapq.heappop(heap)
+            if d > dist[r, c]:
+                continue
+            for dr, dc, k in nb:
+                rr, cc = r + dr, c + dc
+                if 0 <= rr < h and 0 <= cc < w and walk[rr, cc]:
+                    nd = d + k * cell
+                    if nd < dist[rr, cc]:
+                        dist[rr, cc] = nd
+                        heapq.heappush(heap, (nd, rr, cc))
+        full = np.repeat(np.repeat(dist, step, 0), step, 1)[: self.h, : self.w]
+        if walk_mask is None:
             self._walk = full
-        return self._walk
+        return full
 
     # ---------- facade sides ----------
     def sides(self) -> list[dict[str, Any]]:
@@ -416,7 +420,13 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
     open_d = f.open_facade_distance_m()
     uns = f.unscanned_facade()
     uns_zone = ndimage.binary_dilation(uns, structure=f.disk(0.5))
-    walk = f.walk_distance_m()
+    unit_masks = [f.raster(u["polygon"]) for u in layout.get("units") or []]
+    all_units = np.zeros_like(f.plate)
+    for um in unit_masks:
+        all_units |= um
+    # open floor a person can walk: gaps narrower than 0.8 m between units, core and facade are not a route
+    open_floor = ndimage.binary_opening(f.plate & ~f.core & ~all_units, structure=f.disk(0.4))
+    walk_open = f.walk_distance_m(open_floor)
     ceiling = f.geo.get("ceiling_height_ft")
     exits_assumed = all((e.get("confidence") == "assumed") for e in f.struct.get("exits") or [])
     wall_results = []
@@ -462,7 +472,7 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
         put("daylight_depth", tri(deepest is not None and deepest <= DAYLIGHT_FT, deepest_open is not None and deepest_open <= DAYLIGHT_FT),
             f"deepest point {deepest:.0f} ft from a seen window" + (f", {deepest_open:.0f} ft counting unscanned facade" if deepest_open is not None and deepest_open < deepest else "") if deepest is not None else None,
             f"Rule of thumb, not code: within {DAYLIGHT_FT} ft of a window")
-        bed_status, bed_notes = "pass", []
+        bed_status, bed_notes, col_notes = "pass", [], []
         beds = u.get("bedroom_polygons") or []
         if u.get("bedrooms") and not beds:
             bed_status, bed_notes = "unknown", ["bedrooms not drawn; unit window frontage checked instead"]
@@ -482,16 +492,28 @@ def check_layout(scan: str, layout: dict[str, Any], root: Path | None = None) ->
                 bed_status = "unknown"
             seen = "touches a window" if touches else ("faces unscanned facade" if maybe else "NO window")
             bed_notes.append(f"bedroom {i}: {bsf:.0f} sf, {seen}, narrowest {dims[0] * FT_PER_M:.1f} ft")
+            col_m2 = float((bm & f.columns).sum() / f.res ** 2)
+            if col_m2 > 0.02:
+                col_notes.append(f"bedroom {i} overlaps a column candidate by {col_m2:.2f} m2")
         put("bedroom_windows", bed_status, "; ".join(bed_notes) or "no bedrooms",
             "Every bedroom has an exterior window (CBC 1204/1205, unconfirmed); bedroom at least 70 sf and 7 ft wide (CBC 1208)")
-        travel = walk[m & np.isfinite(walk)]
-        if travel.size:
-            ft = float(travel.max() * FT_PER_M)
+        put("bedrooms_clear_of_columns", "fail" if col_notes else "pass", "; ".join(col_notes) or "no column in any bedroom",
+            "A column inside a bedroom breaks its minimum size and furnishing; move the demising wall or the bedroom")
+        # exit route over walkable open floor only, never through another apartment: the unit needs >= 1 m of
+        # outline on open floor that reaches an exit (its door goes there), then the walk inside the unit
+        door = ndimage.binary_dilation(m, structure=f.disk(0.5)) & ~m & open_floor & np.isfinite(walk_open)
+        if door.sum() / f.res ** 2 >= 0.5:      # a 0.5 m band along at least 1 m of the unit's outline
+            rr, cc = np.nonzero(door)
+            k = int(np.argmin(walk_open[rr, cc]))
+            ur, uc = np.nonzero(m)
+            inside = float(np.max(np.hypot(ur - rr[k], uc - cc[k])) / f.res)
+            ft = float((walk_open[rr[k], cc[k]] + inside) * FT_PER_M)
             put("exit_travel", "pass" if ft <= MAX_TRAVEL_FT else "fail",
                 f"{ft:.0f} ft from the unit's farthest point to the nearest exit" + (" (exits assumed at the core)" if exits_assumed else ""),
                 f"Exit access travel at most {MAX_TRAVEL_FT} ft, sprinklered R-2 (CBC Table 1017.2, unconfirmed)")
         else:
-            put("exit_travel", "unknown", "no walking route found to an exit")
+            put("exit_travel", "fail", "no route to an exit except through other apartments or gaps under 0.8 m: "
+                "open the unit onto the corridor", f"Exit access travel at most {MAX_TRAVEL_FT} ft, sprinklered R-2 (CBC Table 1017.2, unconfirmed)")
         if ceiling:
             put("ceiling_height", "pass" if ceiling >= MIN_CEILING_FT else "fail", f"{ceiling} ft as scanned, before new ceilings",
                 f"At least {MIN_CEILING_FT} ft (CBC 1208.2, unconfirmed)")

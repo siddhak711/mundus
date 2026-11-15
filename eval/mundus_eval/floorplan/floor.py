@@ -28,11 +28,13 @@ class Column:
     y: float
     size: float
     kind: str  # probable | possible | hidden
+    w: float | None = None     # footprint along x when not square (floorprep gives w_m x d_m)
+    d: float | None = None     # footprint along y
 
     @property
     def square(self) -> Polygon:
-        h = self.size / 2
-        return box(self.x - h, self.y - h, self.x + h, self.y + h)
+        hw, hd = (self.w or self.size) / 2, (self.d or self.size) / 2
+        return box(self.x - hw, self.y - hd, self.x + hw, self.y + hd)
 
 
 @dataclass

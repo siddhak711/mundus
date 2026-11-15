@@ -168,3 +168,6 @@ def add_parser(sub) -> None:
     r.add_argument("--seed", type=int, default=0)
     r.add_argument("--workers", type=int, default=6)
     r.set_defaults(fn=cmd_rulecheck)
+    from mundus_eval.floorplan.runs import add_parsers
+
+    add_parsers(s)

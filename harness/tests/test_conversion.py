@@ -144,3 +144,30 @@ def test_memory_writes_only_in_own_folder(tmp_path, monkeypatch):
     assert (mem / "INDEX.md").exists()
     from mundus_harness.conversion.graph import SKILLS_DIR
     assert (SKILLS_DIR / "layout" / "SKILL.md").read_text().startswith("---")   # orchestrator's write was denied
+
+
+def test_bedroom_over_a_column_fails(tmp_path):
+    # the grader found bedrooms over columns that this checker passed (it tested walls only)
+    root = make_floor(tmp_path)
+    unit = {"id": "U1", "type": "1BR", "bedrooms": 1, "polygon": [[2, 14], [9, 14], [9, 20], [2, 20]],
+            "bedroom_polygons": [[[3.5, 16.4], [6.7, 16.4], [6.7, 20], [3.5, 20]]]}           # column at (5, 18) inside
+    rep = geo.check_layout(SCAN, {"units": [unit], "walls": []}, root)
+    assert rep["units"][0]["checks"]["bedrooms_clear_of_columns"]["status"] == "fail"
+    unit["bedroom_polygons"] = [[[6.0, 16.4], [9.0, 16.4], [9.0, 20], [6.0, 20]]]              # moved off it
+    rep = geo.check_layout(SCAN, {"units": [unit], "walls": []}, root)
+    assert rep["units"][0]["checks"]["bedrooms_clear_of_columns"]["status"] == "pass"
+
+
+def test_exit_route_may_not_pass_through_another_unit(tmp_path):
+    # a unit boxed in by its neighbours and the core has no route out; the old check walked through apartments
+    root = make_floor(tmp_path)
+    box_ = lambda x0, y0, x1, y1: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]            # noqa: E731
+    units = [{"id": "U1", "type": "studio", "bedrooms": 0, "polygon": box_(20, 8, 26, 12)},     # against the core's east face
+             {"id": "U2", "type": "studio", "bedrooms": 0, "polygon": box_(20, 0, 30, 8)},      # below it
+             {"id": "U3", "type": "studio", "bedrooms": 0, "polygon": box_(20, 12, 30, 20)},    # above it
+             {"id": "U4", "type": "studio", "bedrooms": 0, "polygon": box_(26, 8, 30, 12)}]     # beyond it, to the facade
+    rep = geo.check_layout(SCAN, {"units": units, "walls": []}, root)
+    by = {u["id"]: u["checks"]["exit_travel"]["status"] for u in rep["units"]}
+    assert by["U2"] == "pass" and by["U3"] == "pass"     # open onto the floor west of them, round to the west exit
+    assert by["U4"] == "fail"            # sealed: only reachable through U1, U2 or U3
+    assert by["U1"] == "fail"            # built over the assumed east stair, and boxed in: it blocks the exit too
