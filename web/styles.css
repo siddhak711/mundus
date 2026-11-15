@@ -31,6 +31,7 @@ a { color: var(--link); }
 .cities { display: flex; gap: 4px; }
 .cities a { padding: 6px 12px; border-radius: 6px; color: var(--muted); text-decoration: none; font-weight: 500; }
 .cities a[aria-current="page"] { background: var(--ink); color: #fff; }
+.topbar-link { font-weight: 600; text-decoration: none; }
 .topbar-note { color: var(--muted); margin-left: auto; }
 .ask-toggle { border: 1px solid var(--ink); background: var(--surface); border-radius: 6px; padding: 6px 14px; font-weight: 600; cursor: pointer; }
 .ask-toggle[aria-expanded="true"] { background: var(--ink); color: #fff; }

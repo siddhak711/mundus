@@ -1,0 +1,6 @@
+{
+  "note": "Floors that have a baked walkthrough in web/walkthrough/. A building is matched by street address, because the walkthrough was made before its CoStar id was recorded. Add one entry per baked floor.",
+  "floors": [
+    {"address": "10880 Wilshire Blvd", "floor": 16, "suite": "1600", "url": "/walkthrough/"}
+  ]
+}

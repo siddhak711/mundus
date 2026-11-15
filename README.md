@@ -165,6 +165,44 @@ server the rest of the site still works and the drawer says the agent is off.
 - `server.py` serves the site and those APIs. `web/` is the front end: plain ES modules, three.js
   for the model, Leaflet for the map, no build step.
 
+## Office to housing (`/city/`)
+
+A map of every Los Angeles office building in the kit, coloured by whether it could become housing, and a floor-by-floor
+view of one building that opens the floor walkthrough. It runs on the same index as the rest of Atlas:
+
+```bash
+python pipeline/build_index.py raw/costar
+```
+
+```bash
+python pipeline/conversion.py
+```
+
+Then open http://localhost:5190/city/, or follow "LA office to housing" in the top bar. `conversion.py` writes
+`data/conversion/los-angeles.json` and one floor file per office building in the City of LA.
+
+| Dot | Meaning |
+|---|---|
+| Green | Strong candidate: eligible by right and a fit score of 60 or more |
+| Amber | Eligible by right, weaker fit |
+| Purple | Eligible with review: 5 to 15 years old, or in a manufacturing zone |
+| Grey | Not a candidate: not an office, too new, in a zone the ordinance does not cover, or outside the City of LA |
+
+- Eligibility follows the Citywide Adaptive Reuse Ordinance (Ordinance 188,793, in effect Feb 1, 2026): an office
+  building inside the City of LA, at least 15 years old, in a multifamily, commercial, parking or public facilities
+  zone. The zone is read from the CoStar record's zoning code; codes the screen cannot read, such as downtown's new
+  zoning code, are flagged for a check on ZIMAS.
+- Fit (0 to 100) is vacancy (50 points at 30% of the building available), floor plate size (30 points under 20,000 sq
+  ft, where most of a floor is near a window) and building class (C 20, B 15, A 5). These are rules of thumb from
+  conversion studies, not code.
+- A floor is convertible now when half or more of it is listed. Vacancy counts every active lease listing for the
+  building (`allSpaces` in the index), each space once, leaving out spaces already pending a lease.
+- "Inside the City of LA" is judged from the postal place name. CoStar writes "Los Angeles" for some addresses on the
+  city line (8228 Sunset Blvd borders West Hollywood), so check those by hand.
+- The kit holds 98 Los Angeles office buildings, not every office in the city.
+- Floors with a baked walkthrough are listed in `pipeline/walkthroughs.json`. Opened from the city view, the
+  walkthrough links back to its building's floors.
+
 ## What the model does and does not show
 
 - Roofs and ground are the aerial photo. Building sides have no imagery, so they are plain massing.

@@ -11,4 +11,5 @@ for comp in backend harness eval; do
   if [ ! -x "$py" ]; then (cd "$dir" && uv venv -q .venv && uv pip install -q -e ".[dev]"); fi
   (cd "$dir" && run "$comp lint" "$py" -m ruff check . && run "$comp tests" "$py" -m pytest -q)
 done
+(cd "$ROOT" && run "pipeline tests" python3 -m unittest -q pipeline.test_conversion)   # Atlas scripts: standard library only
 echo "verify: ok"
