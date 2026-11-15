@@ -22,7 +22,7 @@ from mundus_harness.conversion.tools import build_tools
 SKILLS_DIR = HARNESS_DIR / "skills_conversion"
 AGENTS = ("layout", "compliance", "cost")
 SUB_TOOLS = {"layout": ["read_floor", "draft_layout", "check_layout"],
-             "compliance": ["read_floor", "check_layout"],
+             "compliance": ["read_floor", "check_layout", "web_search"],
              "cost": ["read_market", "estimate_returns"]}
 ORCH_TOOLS = ["read_floor", "check_layout", "write_layout"]
 

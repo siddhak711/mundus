@@ -57,6 +57,9 @@ COMPLIANCE = """You check one draft apartment layout against Los Angeles rules f
 
 How to work:
 1. Read /skills/compliance-la/SKILL.md (the rules, each with its source and status) and /memories/compliance/la.md.
+   For each rule still unconfirmed in memory, check it with web_search against an official source (California
+   Building Code, LA City Planning, LADBS). At most 6 searches per run. Confirm, correct or leave it unconfirmed,
+   and record the result with the source URL. Rules already confirmed in memory need no search.
 2. Call check_layout with the scan id and draft id. It measures every rule it can per unit.
 3. For each unit decide pass, fail or unknown. Use the measured values; do not judge distances yourself. A rule whose
    threshold is unconfirmed still counts, but list it as unconfirmed. Rules nothing measures (fire ratings between
@@ -71,8 +74,10 @@ COST = """You estimate the money side of one draft apartment layout.
 
 How to work:
 1. Read /skills/cost/SKILL.md and /memories/cost/assumptions.md, then call read_market for the scan.
-2. Choose a monthly rent per unit type from the market summary's nearby rents (match unit sizes; say which buildings
-   or figures you used). If the market summary is missing, say rents are unknown and stop.
+2. Choose a monthly rent per square foot for each unit type from the market summary's nearby rents (the median
+   rent per sf by type). Price by area, never by whole-unit median rent: our units are usually smaller than the local
+   median unit, so a whole-unit rent overstates. Say which figures you used. If the market summary is missing, say
+   rents are unknown and stop.
 3. Choose a conversion cost per square foot from the skill's range, and say which end and why.
 4. Call estimate_returns with the scan id, draft id, rents and cost.
 5. Return five lines: monthly rent, annual rent, conversion cost, simple yield, and the inputs with their sources.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -128,26 +129,31 @@ def build_tools(root: Path | None = None) -> dict[str, Any]:
                                "Say that rents are unknown; do not invent them."})
 
     @tool
-    def estimate_returns(scan: str, draft_id: str, monthly_rent_by_type: dict[str, float],
+    def estimate_returns(scan: str, draft_id: str, monthly_rent_per_sf_by_type: dict[str, float],
                          conversion_cost_per_sf: float, operating_cost_share: float = 0.35) -> str:
-        """Arithmetic for a draft: units by type x monthly rent per unit (from the market summary), gross annual
-        rent, net operating income after operating_cost_share, conversion cost = rentable sf x cost per sf, and the
-        simple yield (NOI / cost). Every input is an assumption you must state."""
+        """Arithmetic for a draft: each unit's monthly rent = its area_sf x the monthly rent per square foot for its
+        type (use the market summary's median rent per sf; our units are often smaller than the local median unit,
+        so a whole-unit median rent would overstate). Then gross annual rent, net operating income after
+        operating_cost_share, conversion cost = rentable sf x cost per sf, and the simple yield (NOI / cost).
+        Every input is an assumption you must state."""
         try:
             layout = _load_draft(scan, draft_id, root)
         except ValueError as e:
             return _dump({"error": str(e)})
-        missing = sorted({u["type"] for u in layout["units"]} - set(monthly_rent_by_type))
+        rates = monthly_rent_per_sf_by_type
+        missing = sorted({u["type"] for u in layout["units"]} - set(rates))
         if missing:
-            return _dump({"error": f"no monthly rent given for unit types {missing}"})
-        monthly = sum(float(monthly_rent_by_type[u["type"]]) for u in layout["units"])
+            return _dump({"error": f"no monthly rent per sf given for unit types {missing}"})
+        by_unit = {u["id"]: round(float(rates[u["type"]]) * u["area_sf"]) for u in layout["units"]}
+        monthly = sum(by_unit.values())
         sf = sum(u["area_sf"] for u in layout["units"])
         cost = sf * float(conversion_cost_per_sf)
         noi = monthly * 12 * (1 - float(operating_cost_share))
         out = {"draft_id": draft_id, "units": len(layout["units"]), "rentable_sf": sf,
                "monthly_rent_usd": round(monthly), "annual_rent_usd": round(monthly * 12), "noi_usd": round(noi),
                "conversion_cost_usd": round(cost), "simple_yield": round(noi / cost, 4) if cost else None,
-               "inputs": {"monthly_rent_by_type": monthly_rent_by_type, "conversion_cost_per_sf": conversion_cost_per_sf,
+               "rent_by_unit": by_unit,
+               "inputs": {"monthly_rent_per_sf_by_type": rates, "conversion_cost_per_sf": conversion_cost_per_sf,
                           "operating_cost_share": operating_cost_share}}
         (_drafts(scan, root) / f"{draft_id}.returns.json").write_text(json.dumps(out), encoding="utf-8")
         return _dump(out)
@@ -180,4 +186,19 @@ def build_tools(root: Path | None = None) -> dict[str, Any]:
         return _dump({"written": str(root / scan / "layout.json"), "units": out["summary"]["units"],
                       "rentable_sf": out["summary"]["rentable_sf"], "check_counts": rep["counts"]})
 
-    return {t.name: t for t in (read_floor, draft_layout, check_layout, read_market, estimate_returns, write_layout)}
+    @tool
+    def web_search(query: str, max_results: int = 5) -> str:
+        """Search the web (Tavily). Use for code and ordinance research: prefer official sources (California
+        Building Code on codes.iccsafe.org, LA City Planning, LADBS). Returns titles, URLs and short extracts."""
+        import requests
+        try:
+            r = requests.post("https://api.tavily.com/search", timeout=30,
+                              headers={"Authorization": f"Bearer {os.environ.get('TAVILY_API_KEY') or 'proxy-injected'}"},
+                              json={"query": query, "max_results": max(1, min(int(max_results), 8)), "search_depth": "advanced"})
+            r.raise_for_status()
+            res = r.json().get("results") or []
+        except Exception as e:  # network or key problems: the agent marks the rule unconfirmed instead
+            return _dump({"error": f"search failed: {str(e)[:200]}"})
+        return _dump([{"title": x.get("title"), "url": x.get("url"), "extract": (x.get("content") or "")[:700]} for x in res])
+
+    return {t.name: t for t in (read_floor, draft_layout, check_layout, read_market, estimate_returns, write_layout, web_search)}
