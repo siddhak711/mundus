@@ -1,7 +1,7 @@
 [project]
 name = "mundus-eval"
 version = "0.1.0"
-description = "Evaluation runner and graders for the Mundus agent harness"
+description = "Evaluation runner and graders for the Census agent harness"
 requires-python = ">=3.11"
 dependencies = [
   "mundus-harness",

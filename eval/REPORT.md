@@ -1,4 +1,4 @@
-# Mundus harness eval: results
+# Census harness eval: results
 
 Run on Nov 15, 2026, 02:27 to 02:40 UTC. Aggregates only: answers, truth values and photos stay in the git-ignored
 `eval/data/results/20261115-022709/`.

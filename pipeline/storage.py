@@ -16,7 +16,7 @@ from . import config
 
 BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN", "")
 BLOB_API = os.environ.get("VERCEL_BLOB_API_URL", "https://vercel.com/api/blob")
-PREFIX = "atlas"
+PREFIX = "atlas"   # the site's former name; the models already in the Blob store live under it
 ONE_YEAR = 31_536_000
 
 

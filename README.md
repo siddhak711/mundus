@@ -1,4 +1,4 @@
-# Mundus
+# Census
 
 A world context layer for physical places, and an agent harness that answers questions through it.
 Built at HackPrinceton Fall 2026 on CoStar market records, Matterport interior scans and Vexcel aerial data
@@ -32,7 +32,7 @@ frontend (separate)  ──REST──►  backend/   World API: ingestion, SQLit
 | Compliance | LA Ordinance 188,793 and the 2025 California Building Code, measured on the layout (`docs/floor16-research.md`) | public code |
 | Cost-benefit | Rents fitted to CoStar apartment listings within 2 km; costs from AECOM 2024 and LA Planning | CoStar data, public reports |
 | Structure | Columns detected in the Matterport mesh, hidden ones inferred from the grid | Matterport |
-| Agents and Ask Atlas | Orchestrator plus layout, compliance and cost subagents (`harness/`), on Claude Sonnet 5.5 and Haiku 5.5; the World API serves CoStar records and Matterport photos captioned by Claude; traces in LangSmith | deepagents, LangGraph, Claude, LangSmith |
+| Agents and Ask Census | Orchestrator plus layout, compliance and cost subagents (`harness/`), on Claude Sonnet 5.5 and Haiku 5.5; the World API serves CoStar records and Matterport photos captioned by Claude; traces in LangSmith | deepagents, LangGraph, Claude, LangSmith |
 
 The walkthrough's review page (`web/walkthrough/review.html`, after Submit) ends with the same table.
 
@@ -122,44 +122,44 @@ On a fresh Ubuntu 24.04 VM with ports 80 and 443 open:
 git clone https://github.com/siddhak711/mundus && cd mundus && bash scripts/deploy/vm_setup.sh
 ```
 
-The script asks for the keys once, ingests the 15 places, builds the Atlas site's index from the same CoStar kit,
+The script asks for the keys once, ingests the 15 places, builds the Census site's index from the same CoStar kit,
 and starts three services behind HTTPS on one hostname:
 
 | Path | Service | Access |
 |---|---|---|
 | `/v1/*`, `/mcp/`, `/healthz`, `/docs` | World API (`mundus-world`, port 8000) | Bearer `WORLD_API_TOKEN` |
 | `/agent/*` | Agent server (`mundus-harness`, port 2024) | Header `X-Agent-Token: <AGENT_TOKEN>` |
-| everything else | Atlas site (`mundus-site`, `server.py`, port 5190) | Public. Ask Atlas calls the agent server inside the VM, so anyone with the URL can spend model credits |
+| everything else | Census site (`mundus-site`, `server.py`, port 5190) | Public. Ask Census calls the agent server inside the VM, so anyone with the URL can spend model credits |
 
 On a VM set up before the site was added, pull and rerun the same script: every step skips work already done.
 
 Without SSH (Google Compute Engine): pass `scripts/deploy/vm_boot.sh` as the instance's `startup-script` metadata
 and the keys as `mundus-<KEY>` metadata attributes. It runs the same setup at boot and logs to the serial console.
 
-### Atlas on GitHub Pages
+### Census on GitHub Pages
 
 Pages serves this repository's `main` branch; the root `index.html` opens `web/`. Pages is static, so on github.io
-`web/js/config.js` points the site at `server.py` on the VM (`https://<vm-host>/atlas`) for the CoStar index, site
+`web/js/config.js` points the site at `server.py` on the VM (`https://<vm-host>/census`) for the CoStar index, site
 models, walkthrough floors and the agent. Nothing licensed is in the repository. Set the VM up with
-`scripts/deploy/vm_atlas.sh` (below).
+`scripts/deploy/vm_census.sh` (below).
 
-### Atlas on Vercel
+### Census on Vercel
 
 Vercel serves the site's own files (`web/`, about 50 files). Everything else is proxied by the rewrites in
-`vercel.json` to `server.py` on the VM (`https://<vm-host>/atlas`): the CoStar index under `/data/`, site models
+`vercel.json` to `server.py` on the VM (`https://<vm-host>/census`): the CoStar index under `/data/`, site models
 (`/api/twin`, `/cache/`), scans, angled photos, the agent (`/api/agent`) and the baked walkthrough floors. The VM is
 the right home for those: the apartment agent reads the floor files that `server.py` prepares, and a walkthrough
 floor is about 500 MB. Nothing licensed is uploaded to Vercel.
 
 ```bash
-bash scripts/deploy/vm_atlas.sh
+bash scripts/deploy/vm_census.sh
 ```
 
 ```bash
 bash scripts/deploy/vercel_deploy.sh
 ```
 
-The first runs on the VM (index, conversion screen, walkthrough bakes, `mundus-atlas` service, Caddy route); the
+The first runs on the VM (index, conversion screen, walkthrough bakes, `mundus-census` service, Caddy route); the
 second from any machine logged in to Vercel.
 
 ## Run it
@@ -176,7 +176,7 @@ python server.py
 
 Open http://localhost:5190.
 
-Ask Atlas needs the World API (port 8000) and the harness's agent server (port 2024) running, as in
+Ask Census needs the World API (port 8000) and the harness's agent server (port 2024) running, as in
 "Run it locally" above. `server.py` finds them through `WORLD_REST_URL` and `HARNESS_URL` in `.env`, which default
 to those two ports. Set `AGENT_TOKEN` only when the agent server sits behind the VM's Caddy. Without the agent
 server the rest of the site still works and the drawer says the agent is off.
@@ -188,7 +188,7 @@ server the rest of the site still works and the drawer says the agent is off.
 - `pipeline/twin.py` builds a property's site model the first time it is opened (about three
   seconds) and caches it under `cache/`. `pipeline/vexcel.py` and `pipeline/matterport.py` are the
   API clients.
-- `pipeline/ask.py` is Ask Atlas: a bridge to the Mundus deep agent in `harness/`. Each question is one run on a
+- `pipeline/ask.py` is Ask Census: a bridge to the Census deep agent in `harness/`. Each question is one run on a
   LangGraph thread, so the agent server keeps the conversation. The bridge turns the harness's stream events into
   the drawer's activity trail, opens the property the agent focuses on, and numbers the answer's claim citations.
   The agent knows only the Los Angeles places ingested into the World API, not the whole kit.
@@ -198,9 +198,9 @@ server the rest of the site still works and the drawer says the agent is off.
 ## Office to housing (`/city/`)
 
 A map of every Los Angeles office building in the kit, coloured by whether it could become housing. Picking a building
-opens its 3-D model in Atlas: each floor is coloured by tenants and available space, the Conversion tab holds the
+opens its 3-D model in Census: each floor is coloured by tenants and available space, the Conversion tab holds the
 screen, and a floor with a walkthrough is painted blue with a "Walk floor N" pin, so clicking it goes inside. It runs
-on the same index as the rest of Atlas:
+on the same index as the rest of Census:
 
 ```bash
 python pipeline/build_index.py raw/costar
@@ -219,7 +219,7 @@ python -m pipeline.prewarm
 ```
 
 Then open http://localhost:5190/#/los-angeles/office-to-housing (the old /city/ address redirects there), or follow
-"LA office to housing" in the top bar. The map is a view inside Atlas's page, so opening a building never loads a new
+"LA office to housing" in the top bar. The map is a view inside Census's page, so opening a building never loads a new
 page: the map stays up while the 3-D model is drawn behind it, then zooms away as the model fades in. `conversion.py` writes
 `data/conversion/los-angeles.json` and one floor file per office building in the City of LA. The page also starts
 loading a building's model in the background when the pointer rests on it, when it is focused, or when a search

@@ -1,5 +1,5 @@
 [Unit]
-Description=Atlas site (server.py: pages, site-model API, Ask Atlas bridge to the agent server)
+Description=Census site (server.py: pages, site-model API, Ask Census bridge to the agent server)
 After=network-online.target mundus-world.service mundus-harness.service
 
 [Service]

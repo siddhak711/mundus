@@ -251,7 +251,7 @@ async def test_memory_file_is_read_only_with_private_claims(cfg):
         agent = build_agent(c, wt, orch_model=orch, worker_model=ScriptedModel(script=[], calls=[]))
         await _run(agent, "Note something", f"run-mem-{private}")
         assert ("Leaked" in mem.read_text()) is (not private)
-        mem.write_text("# Lessons learned by Mundus agents\n", encoding="utf-8")
+        mem.write_text("# Lessons learned by Census agents\n", encoding="utf-8")
 
 
 

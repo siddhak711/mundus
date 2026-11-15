@@ -1,4 +1,4 @@
-# Atlas site (server.py and the Vercel function in api/). The backend, harness and eval have their own pyproject.toml.
+# Census site (server.py and the Vercel function in api/). The backend, harness and eval have their own pyproject.toml.
 requests>=2.32
 numpy>=2.0
 pillow>=11.0

@@ -1,7 +1,7 @@
 [project]
 name = "mundus-world"
 version = "0.1.0"
-description = "Mundus world context layer: ingestion, storage, World API (REST + MCP)"
+description = "Census world context layer: ingestion, storage, World API (REST + MCP)"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115",

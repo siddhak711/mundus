@@ -1,4 +1,4 @@
-// The "Ask Atlas" drawer: sends each question to the Mundus deep agent and plays back its steps, actions and cited answer.
+// The "Ask Census" drawer: sends each question to the Census deep agent and plays back its steps, actions and cited answer.
 // Layout requests for a scanned space go to the apartment (conversion) agent instead; its layout comes back as a card.
 import { api, fetchStatus } from './api.js';
 import { escapeHtml, number } from './format.js';
@@ -33,7 +33,7 @@ function showStarters(agentReady) {
   hint.className = 'hint';
   hint.innerHTML = agentReady
     ? `Ask about the Los Angeles places in world memory. A deep agent sends market, interior and aerial specialists, saves what they find, and cites every fact. Open a scanned space and ask to lay out apartments on it, and an apartment agent drafts, checks and prices a layout.${STARTERS.map((s) => `<button type="button">${escapeHtml(s)}</button>`).join('')}`
-    : 'Ask Atlas is switched off: the agent server is not running. Start the World API and the harness (see README), then reload.';
+    : 'Ask Census is switched off: the agent server is not running. Start the World API and the harness (see README), then reload.';
   hint.addEventListener('click', (event) => {
     if (event.target.tagName === 'BUTTON') send(event.target.textContent);
   });

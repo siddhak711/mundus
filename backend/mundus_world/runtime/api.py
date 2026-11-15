@@ -74,7 +74,7 @@ def create_app(container: Container | None = None) -> FastAPI:
         async with mcp.session_manager.run():
             yield
 
-    app = FastAPI(title="Mundus World API", version="1.0", lifespan=lifespan)
+    app = FastAPI(title="Census World API", version="1.0", lifespan=lifespan)
     app.state.container = c
 
     @app.exception_handler(ApiError)

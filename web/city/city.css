@@ -1,4 +1,4 @@
-/* LA office-to-housing view, inside Atlas's page. Every rule is scoped to .city so nothing leaks into Atlas's views. */
+/* LA office-to-housing view, inside Census's page. Every rule is scoped to .city so nothing leaks into Census's views. */
 :root { --strong: #0e8a5f; --possible: #d99a00; --review: #7a4fd0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .city { display: grid; grid-template-columns: 420px 1fr; height: calc(100vh - var(--bar)); }

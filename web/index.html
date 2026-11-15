@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Atlas</title>
+  <title>Census</title>
   <!-- first in the head, ahead of every stylesheet, so both run before the page is revealed -->
   <script>/* back from a floor walkthrough: start dark, as the walkthrough was, and let app.js fade to the scene */
-    try { if (sessionStorage.getItem('atlas:fromWalk')) { sessionStorage.removeItem('atlas:fromWalk'); document.documentElement.classList.add('from-walk'); } } catch (e) {}
+    try { if (sessionStorage.getItem('census:fromWalk')) { sessionStorage.removeItem('census:fromWalk'); document.documentElement.classList.add('from-walk'); } } catch (e) {}
     /* a page transition the browser skips (an unsupported case, a fast click) must not surface as an error */
     for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v = e.viewTransition; if (v) for (const p of [v.ready, v.finished, v.updateCallbackDone]) p?.catch(() => {}); });
     addEventListener('unhandledrejection', (e) => { if (e.reason?.name === 'InvalidStateError' && /Transition was aborted/.test(e.reason.message)) e.preventDefault(); });</script>
@@ -26,14 +26,14 @@
 <body>
   <div class="page-cover" id="page-cover" aria-hidden="true"></div>
   <header class="topbar">
-    <a class="wordmark" href="#/">Atlas</a>
+    <a class="wordmark" href="#/">Census</a>
     <nav class="cities" aria-label="City">
       <a data-city="houston" href="#/houston">Houston</a>
       <a data-city="los-angeles" href="#/los-angeles">Los Angeles</a>
     </nav>
     <a class="topbar-link" href="#/los-angeles/office-to-housing">LA office to housing</a>
     <span class="topbar-note" id="topbar-note"></span>
-    <button class="ask-toggle" id="ask-toggle" type="button" aria-expanded="false">Ask Atlas</button>
+    <button class="ask-toggle" id="ask-toggle" type="button" aria-expanded="false">Ask Census</button>
   </header>
 
   <main id="browse" class="browse" hidden>

@@ -1,13 +1,13 @@
 [Unit]
-Description=Atlas site API (server.py): site models, scans, angled photos, Ask Atlas
+Description=Census site API (server.py): site models, scans, angled photos, Ask Census
 After=network-online.target mundus-world.service mundus-harness.service
 
 [Service]
 User=@USER@
 WorkingDirectory=@ROOT@
 EnvironmentFile=@ROOT@/.env
-Environment=ATLAS_CORS_ORIGIN=@CORS_ORIGIN@
-ExecStart=@ROOT@/.venv-atlas/bin/python server.py 5190
+Environment=CENSUS_CORS_ORIGIN=@CORS_ORIGIN@
+ExecStart=@ROOT@/.venv-census/bin/python server.py 5190
 Restart=on-failure
 RestartSec=2
 

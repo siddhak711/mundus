@@ -1,5 +1,5 @@
 [Unit]
-Description=Mundus agent server (LangGraph)
+Description=Census agent server (LangGraph)
 After=network-online.target mundus-world.service
 
 [Service]

@@ -264,7 +264,7 @@ async function openProperty(city, kind, id) {
     clearTimeout(slowNotice);
     showStatus('');
     el('topbar-note').textContent = `${CITY_NAMES[city]}, ${detail.type}`;
-    document.title = `${detail.name} | Atlas`;
+    document.title = `${detail.name} | Census`;
     session.ready = true;
     liftPageCover();
     if (fromMap) {
@@ -296,7 +296,7 @@ function route() {
     twinView.classList.remove('is-entering', 'is-in');
     cityView.hidden = false;
     el('topbar-note').textContent = '';
-    document.title = 'LA office to housing | Atlas';
+    document.title = 'LA office to housing | Census';
     return showConversionMap();
   }
   if (kind && id) return openProperty(knownCity, kind, id);
@@ -306,7 +306,7 @@ function route() {
   cityView.hidden = true;
   browseView.hidden = false;
   el('topbar-note').textContent = '';
-  document.title = `${CITY_NAMES[knownCity]} | Atlas`;
+  document.title = `${CITY_NAMES[knownCity]} | Census`;
   showCity(knownCity);
 }
 

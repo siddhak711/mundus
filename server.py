@@ -20,7 +20,7 @@ WALKTHROUGHS = config.ROOT / "pipeline" / "walkthroughs.json"
 def walkthrough_layout():
     """The apartment layout the conversion agent saved for the walkthrough's floor (data/conversion/<scan>/layout.json).
     The walkthrough reads data/layout.json next to itself; this hands it the agent's newest layout instead, so a layout
-    made from Ask Atlas shows up under the walkthrough's Apartment layout button. None when there is none yet."""
+    made from Ask Census shows up under the walkthrough's Apartment layout button. None when there is none yet."""
     try:
         floors = json.loads(WALKTHROUGHS.read_text(encoding="utf-8"))["floors"]
     except (OSError, ValueError, KeyError):

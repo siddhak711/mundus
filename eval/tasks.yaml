@@ -1,4 +1,4 @@
-# Mundus harness evaluation: 15 tasks over the 15-place evaluation set.
+# Census harness evaluation: 15 tasks over the 15-place evaluation set.
 # status: final. Frozen before the first full run; changes after that are listed in the report.
 # Three groups of five: retrieval, cross-building analysis, physical reasoning.
 # grader: code  -> every check is computed; truth comes from the World API at build time (mundus-eval truth).

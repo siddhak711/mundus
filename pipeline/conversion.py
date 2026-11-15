@@ -1,4 +1,4 @@
-"""Office-to-residential conversion screen for Los Angeles, built on the Atlas index of the CoStar kit.
+"""Office-to-residential conversion screen for Los Angeles, built on the Census index of the CoStar kit.
 
     python pipeline/build_index.py <kit folder>     # first: writes data/index and data/property
     python pipeline/conversion.py                   # then: writes data/conversion/
@@ -273,8 +273,8 @@ def assess(b, walk_entries=(), year=CURRENT_YEAR):
     return out
 
 
-def from_atlas(item, detail):
-    """One Atlas index row and its detail file, as the record the screen works on."""
+def from_census(item, detail):
+    """One Census index row and its detail file, as the record the screen works on."""
     avail = detail.get("availability") or {}
     spaces = avail["allSpaces"] if avail.get("allSpaces") is not None else (avail.get("spaces") or [])
     total = avail["allTotalSf"] if avail.get("allSpaces") is not None else (avail.get("totalSf") or 0)
@@ -288,7 +288,7 @@ def from_atlas(item, detail):
     }
 
 
-def load_atlas(data=DATA):
+def load_census(data=DATA):
     index_path = data / "index" / f"{CITY}.json"
     if not index_path.exists():
         sys.exit(f"{index_path} is missing: run  python pipeline/build_index.py <kit folder>  first")
@@ -296,7 +296,7 @@ def load_atlas(data=DATA):
     for item in json.loads(index_path.read_text(encoding="utf-8")):
         detail_path = data / "property" / f"{item['id']}.json"
         if item.get("kind") == "commercial" and detail_path.exists():
-            record = from_atlas(item, json.loads(detail_path.read_text(encoding="utf-8")))
+            record = from_census(item, json.loads(detail_path.read_text(encoding="utf-8")))
             daylight_path = data / "daylight" / f"{item['id']}.json"       # pipeline/daylight.py, where it was run
             if daylight_path.exists():
                 record["daylight"] = json.loads(daylight_path.read_text(encoding="utf-8"))
@@ -305,7 +305,7 @@ def load_atlas(data=DATA):
 
 
 def write(buildings, out=DATA / "conversion", year=CURRENT_YEAR):
-    """buildings: records from from_atlas()."""
+    """buildings: records from from_census()."""
     walk_entries = json.loads((Path(__file__).with_name("walkthroughs.json")).read_text(encoding="utf-8"))["floors"]
     (out / "property").mkdir(parents=True, exist_ok=True)
     rows, counts = [], {}
@@ -339,7 +339,7 @@ def write(buildings, out=DATA / "conversion", year=CURRENT_YEAR):
 
 def main():
     data = Path(sys.argv[1]) if len(sys.argv) > 1 else DATA
-    buildings = load_atlas(data)
+    buildings = load_census(data)
     counts = write(buildings, data / "conversion")
     print(f"{len(buildings)} LA commercial properties screened:", dict(sorted(counts.items(), key=lambda kv: -kv[1])))
 

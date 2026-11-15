@@ -8,7 +8,7 @@
       "port": 8124
     },
     {
-      "name": "atlas",
+      "name": "census",
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": ["server.py", "5190"],
       "port": 5190

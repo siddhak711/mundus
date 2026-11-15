@@ -10,7 +10,7 @@ Written 15 Nov 2026 at the end of a Cowork session with Pranava. This is the com
 
 Team "mundus" (repo: github.com/siddhak711/mundus, members siddhak711 / Siddha Kanthi, mad10116, Pranava as PranavaM39). The product idea, decided after a mentor check-in with CoStar: **a developer picks an eligible LA office building, flies into a vacant floor, sees it as it is today (real Matterport photos), strips it to an empty shell, and watches agents fill it with affordable one-bed apartments; then edits the layout, reviews cost/compliance on a 2-D plan, and sends it to an architect in one step.** The CoStar track scores 30% data use, 30% agentic depth, 25% usefulness, 15% demo polish. Submission deadline: Sunday 15 Nov, 8:00 am (Devpost). Judging 9:30 am to 2:30 pm.
 
-The repo is now a Mundus "world API + deepagents harness" (backend/, harness/, eval/). The walkthrough is a **standalone front-end prototype** in `web/walkthrough/` (PR #6). It does not yet talk to the backend or the agent.
+The repo is now a Census "world API + deepagents harness" (backend/, harness/, eval/). The walkthrough is a **standalone front-end prototype** in `web/walkthrough/` (PR #6). It does not yet talk to the backend or the agent.
 
 ---
 
@@ -107,7 +107,7 @@ Order to regenerate: `rzip.py` + `gettex.py` (MatterPak OBJ + textures into `pak
 ## 6. Agreed product flow (the spec to build toward)
 
 1. **Find buildings**: filter by LA ARO eligibility (year built ≤ 2011, zone, not downtown) and vacancy (CoStar available SF). Show as a map.
-2. **Pick a building, see the outside**: 3-D massing textured with Vexcel obliques, floors coloured leased/vacant (Atlas already has floor colouring + timeline; obliques are downloaded but not yet mapped onto walls).
+2. **Pick a building, see the outside**: 3-D massing textured with Vexcel obliques, floors coloured leased/vacant (Census already has floor colouring + timeline; obliques are downloaded but not yet mapped onto walls).
 3. **Click a floor → fly inside**: the walkthrough above (only floors with a full-floor scan; Suite 1600 is the one). Chat assistant stays open on the side.
 4. **Three toggles**: Initial view (built), Empty view (built: walls down + columns), **Apartment view (next)**.
 5. **Apartment view**: agents (layout / compliance / cost) design the floor; walls rise in 3-D along the window band; bedroom at the window, kitchen/bath at the corridor; one-bed one-bath default.
@@ -120,7 +120,7 @@ Open decisions not yet answered: affordable share (100% vs mixed), what "send to
 - Port the build scripts into `pipeline/` with CLI args.
 - **Apartment view**: generate units inside the daylight band using `shell.json` rect/core/columns; raise drawn walls with the same ripple shader (reverse of the drop); keep columns fixed; count units, SF, rent.
 - Cross-check columns against a Douglas Emmett floor plan if obtainable; fill the missing west-half grid.
-- Wire the walkthrough into the Mundus frontend/agent (custom stream events; see `NEXT_SESSION.md`, `specs/backend-spec.md`).
+- Wire the walkthrough into the Census frontend/agent (custom stream events; see `NEXT_SESSION.md`, `specs/backend-spec.md`).
 - Demo mode: keyboard-driven steps, pre-cached everything, backup screen recording.
 
 ---
@@ -129,7 +129,7 @@ Open decisions not yet answered: affordable share (100% vs mixed), what "send to
 
 - PR #6 `walkthrough` → `main` (merged): adds `web/walkthrough/{index.html,start.command,vendor/}` + `.gitignore` line (`web/walkthrough/pano/`). Code only; data/ and pano/ must be linked in locally to run.
 - `CLAUDE.md`: **humans only in git history**: no `Co-Authored-By: Claude`, no `Claude-Session`, no "Generated with Claude Code" in commits/PRs; a PreToolUse hook blocks them. Commit as the human owner.
-- Through Atlas's `server.py` the viewer is also at `http://localhost:5190/walkthrough/` once data is in place.
+- Through Census's `server.py` the viewer is also at `http://localhost:5190/walkthrough/` once data is in place.
 
 ## 8. Known limitations of the current viewer
 - Walls-up walk: stops only at the 200 capture points (by design after the rejected experiments); tripod blur patch below/above each photo (Matterport's data); mid-move frame is a two-photo fade.

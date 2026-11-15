@@ -199,7 +199,7 @@ def cmd_qa(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="mundus", description="Mundus world context layer")
+    p = argparse.ArgumentParser(prog="mundus", description="Census world context layer")
     p.add_argument("--data-dir", default=None, help="data folder (default: WORLD_DATA_DIR or backend/data)")
     sub = p.add_subparsers(dest="cmd", required=True)
     i = sub.add_parser("ingest", help="run ingestion steps")

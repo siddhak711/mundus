@@ -70,7 +70,7 @@ def write_report(out_dir: Path) -> str:
     cols = ["runs", "pass_rate", "mean_score", "citation_valid_rate", "median_wall_clock_s", "median_time_to_first_action_s",
             "mean_tokens_in", "mean_tokens_out", "mean_tokens_total", "mean_model_calls", "mean_tool_calls",
             "tool_error_rate", "mean_claims_written", "errors", "mean_cost_usd"]
-    lines = ["# Mundus eval results", "", "| combination | " + " | ".join(cols) + " |", "|---|" + "---|" * len(cols)]
+    lines = ["# Census eval results", "", "| combination | " + " | ".join(cols) + " |", "|---|" + "---|" * len(cols)]
     for name, row in s["combos"].items():
         lines.append(f"| {name} | " + " | ".join("unknown" if row[c] is None else str(row[c]) for c in cols) + " |")
     lines += ["", "## Pass rate by group", "", "| combination | " + " | ".join(sorted({g for r in s['combos'].values() for g in r['by_group']})) + " |"]

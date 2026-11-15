@@ -2,7 +2,7 @@
 @HOST@ {
 	encode gzip
 
-	# Agent server: shared-secret header, so strangers cannot call it directly. The site's Ask Atlas drawer reaches
+	# Agent server: shared-secret header, so strangers cannot call it directly. The site's Ask Census drawer reaches
 	# it from inside the VM instead, so the public site can use the agent without the token.
 	handle_path /agent/* {
 		@noauth not header X-Agent-Token @AGENT_TOKEN@
@@ -10,7 +10,12 @@
 		reverse_proxy 127.0.0.1:2024
 	}
 
-	# Atlas site API (server.py), for the site on GitHub Pages: /atlas/api/*, /atlas/cache/*
+	# Census site API (server.py), for the site on GitHub Pages: /census/api/*, /census/cache/*
+	handle_path /census/* {
+		reverse_proxy 127.0.0.1:5190
+	}
+
+	# Former path of the same API. Keep until every deployed copy of the site calls /census.
 	handle_path /atlas/* {
 		reverse_proxy 127.0.0.1:5190
 	}
@@ -22,8 +27,8 @@
 		reverse_proxy 127.0.0.1:8000
 	}
 
-	# Everything else is the Atlas site (server.py): pages, /api/*, /data/*, /cache/*. Public, no login.
-	# Ask Atlas answers stream as server-sent events, which Caddy passes through without buffering.
+	# Everything else is the Census site (server.py): pages, /api/*, /data/*, /cache/*. Public, no login.
+	# Ask Census answers stream as server-sent events, which Caddy passes through without buffering.
 	handle {
 		reverse_proxy 127.0.0.1:5190
 	}

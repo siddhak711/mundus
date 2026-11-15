@@ -5,7 +5,7 @@ const API = API_BASE.replace(/\/$/, '');
 // files they produce, Submit for review, and the chat at the bottom.
 //
 // The agent cards replay the saved study (layouts/<scan>.json) step by step, so the demo never waits on a model. The chat is
-// live: commands run on the page, and questions go to the Mundus agent through Atlas's server (POST /api/agent) when it is
+// live: commands run on the page, and questions go to the Census agent through the site's server (POST /api/agent) when it is
 // running, or are answered from the same saved study when it is not.
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -146,7 +146,7 @@ export function setUpSidebar({ LAY, S, SH, SCAN, FLOOR, building, setApts, runCo
     const pick = /cost|yield|rent|noi|money|price|budget|profit|worth|return|benefit|fee/.test(t) ? 3 : /code|complian|egress|exit|stair|fire|access|ada|zoning|legal|permit|ordinance/.test(t) ? 1
       : /column|beam|struct|load|earthquake|seismic|slab|drain|plumb|riser/.test(t) ? 2 : 0;
     const a = AG[pick];
-    return `The live agent is not running on this server (open the floor through Atlas, server.py, with the harness up). From the saved study, the ${a.name.toLowerCase()} says:\n`
+    return `The live agent is not running on this server (open the floor through Census, server.py, with the harness up). From the saved study, the ${a.name.toLowerCase()} says:\n`
       + a.rows.map(([k, v]) => `• ${k}: ${v}`).join('\n');
   }
   async function* events(response) {

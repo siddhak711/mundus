@@ -13,7 +13,7 @@ YEAR = 2026
 
 
 def detail(**kw):
-    """An Atlas detail file (data/property/<id>.json)."""
+    """An Census detail file (data/property/<id>.json)."""
     d = {
         "id": 1, "kind": "commercial", "name": "Test Tower", "address": "100 Test St, Los Angeles, CA 90024",
         "type": "Office", "buildingClass": "B", "stories": 4, "yearBuilt": 1980, "sizeSf": 80000,
@@ -46,7 +46,7 @@ def item(d=None, **kw):
 
 def office(**kw):
     d = detail(**kw)
-    return cv.from_atlas(item(d), d)
+    return cv.from_census(item(d), d)
 
 
 class Zoning(unittest.TestCase):
@@ -121,7 +121,7 @@ class Floors(unittest.TestCase):
         self.assertEqual(cv.floors(office(floorSf={}), (), YEAR)[0]["sizeSource"], "typical")
 
 
-class FromAtlas(unittest.TestCase):
+class FromCensus(unittest.TestCase):
     def test_every_listing_is_used(self):
         b = office()
         self.assertEqual(b["availableSf"], 32000)
@@ -130,7 +130,7 @@ class FromAtlas(unittest.TestCase):
     def test_older_index_without_merged_listings(self):
         d = detail()
         d["availability"] = {"totalSf": 26000, "spaces": d["availability"]["spaces"]}
-        self.assertEqual(cv.from_atlas(item(d), d)["availableSf"], 26000)
+        self.assertEqual(cv.from_census(item(d), d)["availableSf"], 26000)
 
 
 class Score(unittest.TestCase):
@@ -188,7 +188,7 @@ class Main(unittest.TestCase):
             (root / "index" / "los-angeles.json").write_text(json.dumps([item(tower), item(shed), home]))
             (root / "property" / "1.json").write_text(json.dumps(tower))
             (root / "property" / "2.json").write_text(json.dumps(shed))
-            cv.write(cv.load_atlas(root), root / "conversion", YEAR)
+            cv.write(cv.load_census(root), root / "conversion", YEAR)
             summary = json.loads((root / "conversion" / "los-angeles.json").read_text())
             self.assertEqual([b["id"] for b in summary["buildings"]], [1, 2])
             self.assertTrue(summary["buildings"][0]["walkthrough"])

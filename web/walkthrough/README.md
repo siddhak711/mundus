@@ -19,7 +19,7 @@ The scan data is licensed and never committed. Bake a floor from the Matterport 
 python -m pipeline.bake WhqAmKQ3YYP
 ```
 
-This writes `floors/<scan>/` (raw download, `data/`, `pano/`); add `--4k` for the 4K photos too, which roughly triples the download. A stopped bake resumes. Then open `http://localhost:5190/walkthrough/?scan=WhqAmKQ3YYP` through Atlas's server, or from a building's 3-D model, where the floor shows blue with a "Walk floor N" pin.
+This writes `floors/<scan>/` (raw download, `data/`, `pano/`); add `--4k` for the 4K photos too, which roughly triples the download. A stopped bake resumes. Then open `http://localhost:5190/walkthrough/?scan=WhqAmKQ3YYP` through Census's server, or from a building's 3-D model, where the floor shows blue with a "Walk floor N" pin.
 
 To add another floor: bake it, then add an entry to `floors.json` (facts from CoStar and Matterport only) and to `pipeline/walkthroughs.json` (the building's street address as CoStar writes it, the floor and the scan id), and rerun `python pipeline/conversion.py`.
 
@@ -36,7 +36,7 @@ A floor whose files are missing shows a message with the bake command and a link
 
 - **Layout**: `layouts/<scan>.json` (committed). Made from a layout study by `python3 scripts/layout_v4_to_viewer.py` (default: `studies/floor16/v4/layout-v4.json` → `layouts/cEvQ8q5GKZd.json`). It finds the walls and door gaps from the study's rooms. Without it, the page falls back to the conversion agent's `data/layout.json` and draws plain white walls.
 - **Finishes**: `js/apartments.js` draws oak floors, tiled baths, painted walls with baseboards, kitchens, baths, beds and sofas, using CC0 textures in `vendor/materials/` (sources in `vendor/materials/LICENSE.md`). Walk inside with the apartments up: walls and furniture block you.
-- **Sidebar**: `js/sidebar.js`. The layout, compliance, structure and cost-benefit agents replay the saved study step by step. Click a finished agent to read its file. Chat commands (“remove the walls”, “design apartments”, “floor plan”) run on the page. Other questions go to `/api/agent` when the page is served by Atlas's `server.py` with the agent up; otherwise the answer comes from the saved study, and the chat says so.
+- **Sidebar**: `js/sidebar.js`. The layout, compliance, structure and cost-benefit agents replay the saved study step by step. Click a finished agent to read its file. Chat commands (“remove the walls”, “design apartments”, “floor plan”) run on the page. Other questions go to `/api/agent` when the page is served by Census's `server.py` with the agent up; otherwise the answer comes from the saved study, and the chat says so.
 - **Review**: `review.html?scan=<id>` (Submit): summary, plan, compliance, cost-benefit, structure, open questions. "Send to architect" prints it to PDF, and "Download layout" saves the JSON.
 
 ## Files

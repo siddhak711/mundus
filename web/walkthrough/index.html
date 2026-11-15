@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..110,400..700&display=swap" rel="stylesheet">
 <style>
-  /* Light chrome to match Atlas (web/styles.css): white sidebar on the left, a soft grey stage for the model */
+  /* Light chrome to match Census (web/styles.css): white sidebar on the left, a soft grey stage for the model */
   :root{--surface:#fff;--wash:#f1f3f5;--stage:#eceef1;--ink:#17212b;--muted:#5d6975;--faint:#8a95a1;--rule:#d8dde2;--link:#1d4fd7;--ok:#1c8a68;--warn:#b26b00;--bad:#c2410c;--side:384px;
     font-family:"Archivo",system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.45;color:var(--ink);font-variant-numeric:tabular-nums}
   *{box-sizing:border-box} html,body{margin:0;height:100%;overflow:hidden;background:var(--stage)}
@@ -97,9 +97,9 @@ for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v
 <aside id="side" aria-label="Floor and agents">
   <header class="s-head">
     <nav class="crumbs" id="crumbs" aria-label="Where you are">
-      <a href="../#/los-angeles">Atlas</a><span aria-hidden="true">›</span><a href="../#/los-angeles/office-to-housing">LA office to housing</a><span aria-hidden="true">›</span><a class="back" id="back" href="../#/los-angeles">Building</a>
+      <a href="../#/los-angeles">Census</a><span aria-hidden="true">›</span><a href="../#/los-angeles/office-to-housing">LA office to housing</a><span aria-hidden="true">›</span><a class="back" id="back" href="../#/los-angeles">Building</a>
     </nav>
-    <p class="crumbs-off" id="crumbs-off" hidden>Atlas isn't running on this server, so the map and buildings aren't reachable from here. Open the floor through Atlas (<code>python server.py</code>, port 5190).</p>
+    <p class="crumbs-off" id="crumbs-off" hidden>Census isn't running on this server, so the map and buildings aren't reachable from here. Open the floor through Census (<code>python server.py</code>, port 5190).</p>
     <label class="floor-pick">Floor <select id="floor-pick" aria-label="Switch floor"></select></label>
     <p class="eyebrow">Office to housing</p>
     <h1 id="card-title">Floor walkthrough</h1>
@@ -172,14 +172,14 @@ const SCAN = /^[A-Za-z0-9]{11}$/.test(Q.get('scan') || '') ? Q.get('scan') : 'cE
 // The card: real facts only, from floors.json (CoStar for the building and listed size, Matterport for the ceiling)
 const FLOORS = await fetch('floors.json').then((r) => (r.ok ? r.json() : null)).then((j) => j?.floors || {}).catch(() => ({}));
 const FLOOR = FLOORS[SCAN] || null;
-// The way out, always in the sidebar: Atlas › office to housing › this building, and a switch to the other baked floors.
-// Atlas is the site served by server.py; the walkthrough sits at /walkthrough/ under it. Served on its own (python -m
-// http.server in this folder), there is no Atlas to go back to, so the links give way to a note saying so.
+// The way out, always in the sidebar: Census › office to housing › this building, and a switch to the other baked floors.
+// Census is the site served by server.py; the walkthrough sits at /walkthrough/ under it. Served on its own (python -m
+// http.server in this folder), there is no Census to go back to, so the links give way to a note saying so.
 const BUILDING = /^\d+$/.test(Q.get('building') || '') ? Q.get('building') : FLOOR?.propertyId ? String(FLOOR.propertyId) : null;
 $('back').href = BUILDING ? `../#/los-angeles/commercial/${BUILDING}` : '../#/los-angeles/office-to-housing';
 $('back').textContent = FLOOR?.building || (BUILDING ? 'This building' : 'Buildings');
 fetch(`${API}/api/status`).then((r) => r.ok && /json/.test(r.headers.get('content-type') || '')).catch(() => false)
-  .then((atlas) => { if (!atlas) { $('crumbs').hidden = true; $('crumbs-off').hidden = false; } });
+  .then((census) => { if (!census) { $('crumbs').hidden = true; $('crumbs-off').hidden = false; } });
 {
   const pick = $('floor-pick'), ids = Object.keys(FLOORS);
   if (!ids.includes(SCAN)) ids.unshift(SCAN);

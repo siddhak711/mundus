@@ -72,9 +72,9 @@ that gap.
 ## Branches
 
 - `claude/new-session-e32bmm`: the backend, harness and eval. All work happens here.
-- `main`: holds one unrelated commit (`66dca39`, the Atlas viewer). The two diverged at the initial commit, and
-  both changed `README.md`, so the merge in `NEXT_SESSION.md` step 6 will conflict there. Whether Atlas and
-  Mundus stay in one repository is undecided.
+- `main`: holds one unrelated commit (`66dca39`, the Census viewer). The two diverged at the initial commit, and
+  both changed `README.md`, so the merge in `NEXT_SESSION.md` step 6 will conflict there. Whether the site and
+  the backend stay in one repository is undecided.
 
 ## Order of work for the next session
 

@@ -69,7 +69,7 @@ def build_backend(cfg: Config, client: WorldClient) -> CompositeBackend:
     (cfg.data_dir / "memory").mkdir(parents=True, exist_ok=True)
     mem = cfg.data_dir / "memory" / "AGENTS.md"
     if not mem.exists():
-        mem.write_text("# Lessons learned by Mundus agents\n", encoding="utf-8")
+        mem.write_text("# Lessons learned by Census agents\n", encoding="utf-8")
     return CompositeBackend(default=StateBackend(), routes={
         "/world/": WorldBackend(client),
         "/skills/": FilesystemBackend(root_dir=HARNESS_DIR / "skills", virtual_mode=True),

@@ -7,27 +7,27 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/api/:path*"
+      "destination": "https://34-132-39-199.sslip.io/census/api/:path*"
     },
     {
       "source": "/cache/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/cache/:path*"
+      "destination": "https://34-132-39-199.sslip.io/census/cache/:path*"
     },
     {
       "source": "/data/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/data/:path*"
+      "destination": "https://34-132-39-199.sslip.io/census/data/:path*"
     },
     {
       "source": "/walkthrough/floors/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/floors/:path*"
+      "destination": "https://34-132-39-199.sslip.io/census/walkthrough/floors/:path*"
     },
     {
       "source": "/walkthrough/data/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/data/:path*"
+      "destination": "https://34-132-39-199.sslip.io/census/walkthrough/data/:path*"
     },
     {
       "source": "/walkthrough/pano/:path*",
-      "destination": "https://34-132-39-199.sslip.io/atlas/walkthrough/pano/:path*"
+      "destination": "https://34-132-39-199.sslip.io/census/walkthrough/pano/:path*"
     }
   ]
 }

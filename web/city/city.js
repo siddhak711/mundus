@@ -1,5 +1,5 @@
-// LA office-to-housing map, a view inside Atlas's page (#/los-angeles/office-to-housing): every commercial building in
-// the kit, coloured by its conversion screen. A building opens in Atlas's 3-D model on the same page, so the map stays
+// LA office-to-housing map, a view inside Census's page (#/los-angeles/office-to-housing): every commercial building in
+// the kit, coloured by its conversion screen. A building opens in Census's 3-D model on the same page, so the map stays
 // up until the model is drawn and the two cross-fade, with no blank page between them.
 import * as L from 'leaflet';
 import { data as dataUrl } from '../js/api.js';
@@ -7,7 +7,7 @@ import { escapeHtml, number } from '../js/format.js';
 import { handoff } from '../js/handoff.js';
 import { onHoverIntent, prefetchProperty } from '../js/prefetch.js';
 
-const $ = (id) => document.getElementById(`c-${id}`);      // ids are prefixed: this view shares a page with Atlas's
+const $ = (id) => document.getElementById(`c-${id}`);      // ids are prefixed: this view shares a page with Census's
 const LA = [[34.05, -118.33], 11];
 const PAGE = 80;
 
@@ -27,7 +27,7 @@ let map, layer;
 const markers = new Map();
 const shownGroups = new Set(GROUPS.filter((g) => g.on).map((g) => g.key));
 let listLimit = PAGE;
-const modelUrl = (id) => `#/los-angeles/commercial/${id}`;   // Atlas's 3-D model of the building, same page
+const modelUrl = (id) => `#/los-angeles/commercial/${id}`;   // Census's 3-D model of the building, same page
 
 // ---- data ---------------------------------------------------------------------
 async function getJson(url) {
@@ -64,7 +64,7 @@ function drawMarkers() {
     });
     m.bindTooltip(`<span class="map-tip">${escapeHtml(b.name)}</span><br>${escapeHtml(data.statusLabels[b.status] || b.status)}`
       + (b.score != null ? ` · fit ${b.score}` : ''), { direction: 'top' });
-    m.on('click', () => openBuilding(b));                            // every building opens in Atlas's 3-D model
+    m.on('click', () => openBuilding(b));                            // every building opens in Census's 3-D model
     m.on('mouseover', () => prefetchProperty('commercial', b.id));
     layer.addLayer(m);
     markers.set(String(b.id), m);

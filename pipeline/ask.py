@@ -1,4 +1,4 @@
-"""Ask Atlas: a bridge from the browser to the Mundus deep agent (harness/, served by LangGraph Server).
+"""Ask Census: a bridge from the browser to the Census deep agent (harness/, served by LangGraph Server).
 
 The site does not run a model itself. Each question becomes one run on a LangGraph thread, so the agent server keeps
 the conversation. The harness reports its work as custom stream events (route, tool, claim, focus, answer, metrics),
@@ -80,7 +80,7 @@ def agent_ready():
 
 
 def _new_thread():
-    with _request(config.HARNESS_URL + "/threads", {"metadata": {"source": "atlas-web"}}, _agent_headers()) as r:
+    with _request(config.HARNESS_URL + "/threads", {"metadata": {"source": "census-web"}}, _agent_headers()) as r:
         return json.load(r)["thread_id"]
 
 
@@ -140,7 +140,7 @@ class Translator:
                 yield {"type": "step", "text": text}
         elif kind == "claim":
             self.statements[ev["claim_id"]] = ev.get("statement", "")
-            who = AGENT_NAMES.get(ev.get("agent"), "Atlas")
+            who = AGENT_NAMES.get(ev.get("agent"), "Census")
             yield {"type": "step", "text": f"{who} saved: {ev.get('statement', '')}"}
         elif kind == "conflict":
             yield {"type": "step", "text": f"Found a conflicting earlier fact on {ev.get('predicate')}; memory kept one of them."}

@@ -1,7 +1,7 @@
 [project]
 name = "mundus-harness"
 version = "0.1.0"
-description = "Mundus agent layer: a deepagents harness over the World API"
+description = "Census agent layer: a deepagents harness over the World API"
 requires-python = ">=3.11"
 dependencies = [
   "deepagents==0.7.38",

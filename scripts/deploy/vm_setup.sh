@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# One-time setup of the Mundus VM (Ubuntu 24.04). Run from the repository root:  bash scripts/deploy/vm_setup.sh
+# One-time setup of the Census VM (Ubuntu 24.04). Run from the repository root:  bash scripts/deploy/vm_setup.sh
 # It asks for the keys once, writes .env (never committed), installs everything, ingests the 15 places,
-# and starts the World API, the agent server and the Atlas site behind HTTPS.
+# and starts the World API, the agent server and the Census site behind HTTPS.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
@@ -53,14 +53,14 @@ export UV_VENV_CLEAR=1   # a rerun replaces the environments instead of stopping
 (cd backend && uv venv -q --python 3.12 .venv && uv pip install -q -e ".[embed]")
 (cd harness && uv venv -q --python 3.12 .venv && uv pip install -q -e ".[serve]")
 (cd eval    && uv venv -q --python 3.12 .venv && uv pip install -q -e .)
-# the Atlas site (server.py, pipeline/) has no pyproject: its packages are listed in the README
+# the Census site (server.py, pipeline/) has no pyproject: its packages are listed in the README
 uv venv -q --python 3.12 .venv && uv pip install -q -p .venv requests shapely pillow numpy scipy opencv-python-headless tifffile imagecodecs
 
 echo "== ingestion (15 places; resumable: rerun this script if it stops)"
 set -a; . ./.env; set +a
 backend/.venv/bin/mundus ingest all --workers 16
 
-echo "== site index (every property in the kit, for the Atlas site)"
+echo "== site index (every property in the kit, for the Census site)"
 # ingestion has already downloaded and unzipped the CoStar kit; the site reads the same files
 KIT="$WORLD_DATA_DIR/kit"
 if [ -f "$KIT/schemas/enums.json" ] && .venv/bin/python pipeline/build_index.py "$KIT"; then
@@ -91,8 +91,8 @@ curl -fsS "http://127.0.0.1:5190/api/status" && echo
 
 cat <<MSG
 
-Mundus is up.
-  Atlas site:        https://$HOST/           public, no login (Ask Atlas uses the agent server from inside the VM)
+Census is up.
+  Census site:       https://$HOST/           public, no login (Ask Census uses the agent server from inside the VM)
   World API (REST):  https://$HOST/v1        header  Authorization: Bearer <WORLD_API_TOKEN>
   World API (MCP):   https://$HOST/mcp/
   Agent server:      https://$HOST/agent     header  X-Agent-Token: <AGENT_TOKEN>
