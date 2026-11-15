@@ -97,7 +97,7 @@ for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v
 <aside id="side" aria-label="Floor and agents">
   <header class="s-head">
     <nav class="crumbs" id="crumbs" aria-label="Where you are">
-      <a href="/#/los-angeles">Atlas</a><span aria-hidden="true">›</span><a href="/#/los-angeles/office-to-housing">LA office to housing</a><span aria-hidden="true">›</span><a class="back" id="back" href="/#/los-angeles">Building</a>
+      <a href="../#/los-angeles">Atlas</a><span aria-hidden="true">›</span><a href="../#/los-angeles/office-to-housing">LA office to housing</a><span aria-hidden="true">›</span><a class="back" id="back" href="../#/los-angeles">Building</a>
     </nav>
     <p class="crumbs-off" id="crumbs-off" hidden>Atlas isn't running on this server, so the map and buildings aren't reachable from here. Open the floor through Atlas (<code>python server.py</code>, port 5190).</p>
     <label class="floor-pick">Floor <select id="floor-pick" aria-label="Switch floor"></select></label>
@@ -174,7 +174,7 @@ const FLOOR = FLOORS[SCAN] || null;
 // Atlas is the site served by server.py; the walkthrough sits at /walkthrough/ under it. Served on its own (python -m
 // http.server in this folder), there is no Atlas to go back to, so the links give way to a note saying so.
 const BUILDING = /^\d+$/.test(Q.get('building') || '') ? Q.get('building') : FLOOR?.propertyId ? String(FLOOR.propertyId) : null;
-$('back').href = BUILDING ? `/#/los-angeles/commercial/${BUILDING}` : '/#/los-angeles/office-to-housing';
+$('back').href = BUILDING ? `../#/los-angeles/commercial/${BUILDING}` : '../#/los-angeles/office-to-housing';
 $('back').textContent = FLOOR?.building || (BUILDING ? 'This building' : 'Buildings');
 fetch('/api/status').then((r) => r.ok && /json/.test(r.headers.get('content-type') || '')).catch(() => false)
   .then((atlas) => { if (!atlas) { $('crumbs').hidden = true; $('crumbs-off').hidden = false; } });

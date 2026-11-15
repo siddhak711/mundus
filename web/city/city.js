@@ -2,9 +2,10 @@
 // the kit, coloured by its conversion screen. A building opens in Atlas's 3-D model on the same page, so the map stays
 // up until the model is drawn and the two cross-fade, with no blank page between them.
 import * as L from 'leaflet';
-import { escapeHtml, number } from '/js/format.js';
-import { handoff } from '/js/handoff.js';
-import { onHoverIntent, prefetchProperty } from '/js/prefetch.js';
+import { site } from '../js/api.js';
+import { escapeHtml, number } from '../js/format.js';
+import { handoff } from '../js/handoff.js';
+import { onHoverIntent, prefetchProperty } from '../js/prefetch.js';
 
 const $ = (id) => document.getElementById(`c-${id}`);      // ids are prefixed: this view shares a page with Atlas's
 const LA = [[34.05, -118.33], 11];
@@ -171,7 +172,7 @@ function renderMethod() {
 async function start() {
   setUpMap();
   try {
-    data = await getJson('/data/conversion/los-angeles.json');
+    data = await getJson(site('data/conversion/los-angeles.json'));
   } catch (e) {
     missingData();
     return;

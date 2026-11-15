@@ -66,7 +66,18 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Cache-Control", "max-age=3600")
         else:
             self.send_header("Cache-Control", "no-store")
+        # The site can be served from elsewhere (GitHub Pages) with this server as its API; three.js loads the
+        # /cache/ textures with crossOrigin, so they need the header too.
+        self.send_header("Access-Control-Allow-Origin", config.CORS_ORIGIN)
         super().end_headers()
+
+    def do_OPTIONS(self):  # preflight for the JSON POST to /api/agent
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def log_message(self, fmt, *args):
         # args[0] is the request line, except in send_error, where it is an HTTPStatus
@@ -136,4 +147,4 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     print(f"Serving on http://localhost:{PORT}")
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    ThreadingHTTPServer((config.HOST, PORT), Handler).serve_forever()

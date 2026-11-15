@@ -10,7 +10,7 @@ import { renderRecord } from './record.js';
 import { designSpace, offerSpace, setUpAsk } from './ask.js';
 import { Viewer } from './twin/viewer.js';
 import { handoff } from './handoff.js';
-import { showConversionMap } from '/city/city.js';
+import { showConversionMap } from '../city/city.js';
 
 const DEFAULT_CITY = 'houston';
 const el = (id) => document.getElementById(id);

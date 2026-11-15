@@ -1,0 +1,81 @@
+# Publishes the Atlas site to GitHub Pages.
+#
+# The CoStar index is licensed and never committed: this job builds it from the kit (repository secrets
+# COSTAR_KIT_URL and COSTAR_ZIP_PASSWORD) and caches the result, so a later run still publishes when the signed kit
+# link has expired. Pages serves static files only: the 3-D site models, scans, angled photos and Ask Atlas come from
+# server.py running elsewhere, named by the repository variable ATLAS_API (for example https://<vm-host>/atlas).
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore the built index
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: atlas-data-${{ hashFiles('pipeline/build_index.py', 'pipeline/conversion.py', 'pipeline/walkthroughs.json') }}
+          restore-keys: atlas-data-
+
+      - name: Build the index from the CoStar kit
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          COSTAR_KIT_URL: ${{ secrets.COSTAR_KIT_URL }}
+          COSTAR_ZIP_PASSWORD: ${{ secrets.COSTAR_ZIP_PASSWORD }}
+        run: |
+          if [ -z "$COSTAR_KIT_URL" ]; then echo "::error::Add the COSTAR_KIT_URL and COSTAR_ZIP_PASSWORD secrets"; exit 1; fi
+          if curl -fsSL -o "$RUNNER_TEMP/kit.zip" "$COSTAR_KIT_URL"; then
+            python -c "import os, sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2], pwd=os.environ['COSTAR_ZIP_PASSWORD'].encode())" "$RUNNER_TEMP/kit.zip" "$RUNNER_TEMP/costar"
+            rm -rf data && python pipeline/build_index.py "$RUNNER_TEMP/costar" && python pipeline/conversion.py
+          elif [ -f data/index/los-angeles.json ]; then
+            echo "::warning::The kit link failed (expired?); publishing the index from an earlier run"
+          else
+            echo "::error::The kit link failed and no earlier index is cached"; exit 1
+          fi
+
+      - name: Assemble the site
+        env:
+          ATLAS_API: ${{ vars.ATLAS_API }}
+        run: |
+          mkdir -p _site/data
+          cp -r web/. _site/
+          cp -r data/index data/property data/home data/conversion _site/data/
+          printf "export const API_BASE = '%s';\n" "${ATLAS_API%/}" > _site/js/config.js
+          touch _site/.nojekyll
+          [ -n "$ATLAS_API" ] || echo "::warning::ATLAS_API is not set: browsing works, 3-D models and Ask Atlas do not"
+          du -sh _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

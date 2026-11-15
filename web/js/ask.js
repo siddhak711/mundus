@@ -1,6 +1,6 @@
 // The "Ask Atlas" drawer: sends each question to the Mundus deep agent and plays back its steps, actions and cited answer.
 // Layout requests for a scanned space go to the apartment (conversion) agent instead; its layout comes back as a card.
-import { fetchStatus } from './api.js';
+import { api, fetchStatus } from './api.js';
 import { escapeHtml, number } from './format.js';
 
 const drawer = document.getElementById('ask');
@@ -90,7 +90,7 @@ async function send(question, { agent = null, scan = null } = {}) {
   add('q', question);
 
   try {
-    const response = await fetch('/api/agent', {
+    const response = await fetch(api('/api/agent'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, threads, agent, context: { ...handlers.context(), ...(scan ? { scan } : {}) } }),
