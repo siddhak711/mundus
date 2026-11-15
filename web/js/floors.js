@@ -11,7 +11,7 @@ export function createFloorModel(detail, twin, conversion = null) {
   const screened = new Map((conversion?.floors || []).map((f) => [f.floor, f]));
   const walkthrough = (floor) => {
     const w = screened.get(floor)?.walkthrough;
-    return w ? { ...w, href: `${w.url}?building=${detail.id}&floor=${floor}` } : null;
+    return w ? { ...w, href: `${w.url}?building=${detail.id}&floor=${floor}${w.scanId ? `&scan=${w.scanId}` : ''}` } : null;
   };
   const scans = twin.scans.filter((s) => s.floor);
   const years = tenancies.map((t) => t.from).filter(Boolean);

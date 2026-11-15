@@ -182,7 +182,7 @@ def floors(b, walkthroughs=(), year=CURRENT_YEAR):
             row["scans"] = [{k: s.get(k) for k in ("name", "scannedSf", "fullFloor", "within30ft", "deepestFt", "beyond30ftSf")}
                             for s in scans[n]]
         if n in walk:
-            row["walkthrough"] = {"url": walk[n]["url"], "suite": walk[n].get("suite")}
+            row["walkthrough"] = {"url": walk[n]["url"], "suite": walk[n].get("suite"), "scanId": walk[n].get("scanId")}
         out.append(row)
     return out
 

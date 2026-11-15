@@ -26,6 +26,10 @@
   #dip{position:fixed;inset:0;background:#14171c;opacity:0;pointer-events:none;transition:opacity .18s}
   .card .back{display:inline-block;margin:0 0 8px;color:#ffb02e;text-decoration:none;font-size:13px} .card .back:hover{text-decoration:underline}
   .card{z-index:2} /* above the loading cover, so the way back works while the scan loads or if it fails */
+  .fallback{max-width:520px;padding:24px;text-align:left;color:#c5ced8} .fallback h2{font-size:18px;color:#e9edf2;margin:0 0 10px}
+  .fallback code{color:#e9edf2} .fallback p{margin:0 0 14px}
+  .fallback a{display:inline-block;margin:4px 10px 0 0;padding:9px 14px;border-radius:999px;text-decoration:none;font-weight:600}
+  .fb-tour{background:#ffb02e;color:#14171c} .fb-back{border:1px solid #3a4350;color:#e9edf2}
   #loading{position:fixed;inset:0;display:grid;place-items:center;background:#14171c;font-size:15px;color:#9aa6b4;text-align:center}
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js", "three-mesh-bvh": "./vendor/three-mesh-bvh.module.js" } }</script>
@@ -76,6 +80,20 @@ if (/^\d+$/.test(Q.get('building') || '')) { $('back').href = `/#/los-angeles/co
 const fail = (msg) => { loadingEl.textContent = msg; throw new Error(msg); };
 if (location.protocol === 'file:') fail('Open this through the local server (run start.command, or "python3 -m http.server 8123" in this folder, then visit http://localhost:8123).');
 
+// The baked scan (data/ and pano/) is git-ignored and made on the author's machine. Without it, say so and offer
+// Matterport's own hosted tour of the same scan, so the floor can still be walked.
+const SCAN = /^[A-Za-z0-9]{11}$/.test(Q.get('scan') || '') ? Q.get('scan') : 'cEvQ8q5GKZd';   // Suite 1600
+{
+  const probe = await fetch('data/scene.json').catch(() => null);
+  if (!probe || !probe.ok || !/json/.test(probe.headers.get('content-type') || '')) {
+    const back = $('back').hidden ? '' : `<a class="fb-back" href="${$('back').href}">Back to the building</a>`;
+    loadingEl.innerHTML = `<div class="fallback"><h2>This floor's walkthrough files are not on this computer</h2>
+      <p>The walkthrough is drawn from a baked copy of the scan (the <code>data</code> and <code>pano</code> folders next
+        to this page), which is not in git. Until they are copied here, walk the same floor in Matterport's tour.</p>
+      <p><a class="fb-tour" href="https://my.matterport.com/show/?m=${SCAN}&play=1&qs=1">Open the Matterport tour of this floor</a>${back}</p></div>`;
+    throw new Error('walkthrough data missing');
+  }
+}
 const bin = async (name, Type) => new Type(await (await fetch(`data/${name}`)).arrayBuffer());
 const [S, pos, uv, idx, dropFlags] = await Promise.all([fetch('data/scene.json').then((r) => r.json()), bin('pos.bin', Float32Array), bin('uv.bin', Float32Array), bin('idx.bin', Uint32Array), bin('drop.bin', Uint8Array)]);
 $('s-area').textContent = S.stats.areaSf.toLocaleString('en-US') + ' sq ft';
