@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "bash scripts/deploy/vercel_build.sh",
+  "outputDirectory": "public",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 300,
+      "memory": 2048,
+      "includeFiles": "{server.py,pipeline/**,data/property/**,data/home/**}",
+      "excludeFiles": "{public/**,web/**,raw/**,cache/**}"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:route*", "destination": "/api/index?__route=:route*" }
+  ],
+  "headers": [
+    { "source": "/data/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400" }] },
+    { "source": "/(index.html|js/.*|styles.css)?", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
+  ]
+}

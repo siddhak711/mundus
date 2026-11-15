@@ -1,6 +1,7 @@
 """Build the 3-D site model for one property: terrain heights, aerial texture, footprints, scans.
 
-Everything is cached under cache/twin/<kind>-<id>/ so a property is only fetched once.
+Everything is cached under twin/<kind>-<id>/ (pipeline/storage.py: cache/ locally, Vercel Blob when deployed),
+so a property is only fetched once.
 """
 import json
 import math
@@ -13,7 +14,7 @@ from PIL import Image, ImageDraw
 from shapely import transform
 from shapely.geometry import Point, box
 
-from . import config, matterport, vexcel
+from . import config, matterport, storage, vexcel
 
 GRID = 450                 # terrain vertices per side sent to the browser
 RASTER = GRID * 2          # working resolution for height sampling
@@ -234,13 +235,17 @@ def _build(detail, folder):
     pooled = terrain.reshape(GRID, 2, GRID, 2).max(axis=(1, 3)).clip(min=0).astype(np.float32)
     pooled.tofile(folder / "heights.bin")
 
-    base = f"/cache/twin/{folder.name}"
+    rel = f"twin/{folder.name}"
+    storage.put(f"{rel}/heights.bin", folder / "heights.bin", "application/octet-stream")
+    storage.put(f"{rel}/trees.bin", folder / "trees.bin", "application/octet-stream")
+    storage.put(f"{rel}/ortho.jpg", folder / "ortho.jpg", "image/jpeg")
     stamp = int(time.time())  # the files are served with a long cache lifetime; this busts it on rebuild
     twin = {
         "version": VERSION,
         "extent": 2 * half, "grid": GRID, "groundElevation": round(ground, 1),
-        "trees": f"{base}/trees.bin?v={stamp}", "treeCount": int(len(trees)),
-        "heights": f"{base}/heights.bin?v={stamp}", "ortho": f"{base}/ortho.jpg?v={stamp}",
+        "trees": f"{storage.url(rel + '/trees.bin')}?v={stamp}", "treeCount": int(len(trees)),
+        "heights": f"{storage.url(rel + '/heights.bin')}?v={stamp}",
+        "ortho": f"{storage.url(rel + '/ortho.jpg')}?v={stamp}",
         "building": {"ring": _ring(building), "top": round(top, 1), "roof": round(roof, 1), "stories": stories,
                      "storiesEstimated": not detail.get("stories")},
         "neighbours": neighbours,
@@ -248,7 +253,7 @@ def _build(detail, folder):
         "scans": sorted(scans, key=lambda s: (s["floor"] is None, s["floor"] or 0, s["name"])),
         "scansOmitted": max(0, len(detail.get("scanIds", [])) - MAX_SCANS),
     }
-    (folder / "twin.json").write_text(json.dumps(twin), encoding="utf-8")
+    storage.put_json(f"{rel}/twin.json", twin)  # written last: its presence means the model is complete
     return twin
 
 
@@ -258,12 +263,10 @@ def get(kind, item_id):
     with _locks_guard:
         lock = _locks.setdefault(key, threading.Lock())
     with lock:
+        twin = storage.get_json(f"twin/{key}/twin.json")
+        if twin and twin.get("version", 1) >= VERSION:
+            return twin
+        # missing, or an older model (no trees): build it
         folder = config.CACHE / "twin" / key
-        cached = folder / "twin.json"
-        if cached.exists():
-            twin = json.loads(cached.read_text(encoding="utf-8"))
-            if twin.get("version", 1) >= VERSION:
-                return twin
-            # an older model (no trees): rebuild it
         folder.mkdir(parents=True, exist_ok=True)
         return _build(load_detail(kind, item_id), folder)

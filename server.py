@@ -5,6 +5,7 @@
 import json
 import os
 import sys
+from typing import ClassVar
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -50,8 +51,18 @@ class Handler(SimpleHTTPRequestHandler):
         target = Path(os.path.normpath(base / clean.lstrip("/")))
         return str(target if target == base or base in target.parents else base)
 
+    # Cache-Control for successful responses by path; api/index.py adds CDN rules when deployed on Vercel
+    cache_rules: ClassVar[dict] = {}
+
+    def send_response(self, code, message=None):
+        self._status = code
+        super().send_response(code, message)
+
     def end_headers(self):
-        if self.path.startswith(("/cache/", "/data/")):
+        path = urlparse(self.path).path
+        if getattr(self, "_status", 200) == 200 and path in self.cache_rules:
+            self.send_header("Cache-Control", self.cache_rules[path])
+        elif path.startswith(("/cache/", "/data/")):
             self.send_header("Cache-Control", "max-age=3600")
         else:
             self.send_header("Cache-Control", "no-store")
@@ -114,7 +125,6 @@ class Handler(SimpleHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
-        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         try:
             for event in ask.run(body.get("question", ""), body.get("threads") or body.get("thread_id"), body.get("context", {}), body.get("agent")):

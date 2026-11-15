@@ -4,7 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
-CACHE = ROOT / "cache"
+# Vercel functions can write only to /tmp
+CACHE = Path(os.environ.get("ATLAS_CACHE_DIR") or ("/tmp/atlas-cache" if os.environ.get("VERCEL") else ROOT / "cache"))
 WEB = ROOT / "web"
 
 
