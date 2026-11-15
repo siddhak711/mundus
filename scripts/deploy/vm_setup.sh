@@ -54,7 +54,7 @@ export UV_VENV_CLEAR=1   # a rerun replaces the environments instead of stopping
 (cd harness && uv venv -q --python 3.12 .venv && uv pip install -q -e ".[serve]")
 (cd eval    && uv venv -q --python 3.12 .venv && uv pip install -q -e .)
 # the Atlas site (server.py, pipeline/) has no pyproject: its packages are listed in the README
-uv venv -q --python 3.12 .venv && uv pip install -q -p .venv requests shapely pillow numpy scipy tifffile imagecodecs
+uv venv -q --python 3.12 .venv && uv pip install -q -p .venv requests shapely pillow numpy scipy opencv-python-headless tifffile imagecodecs
 
 echo "== ingestion (15 places; resumable: rerun this script if it stops)"
 set -a; . ./.env; set +a

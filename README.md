@@ -139,7 +139,7 @@ sources that describe the same address.
 3. Install and build the index, then start the server:
 
 ```bash
-pip install requests shapely pillow numpy scipy tifffile imagecodecs
+pip install requests shapely pillow numpy scipy opencv-python-headless tifffile imagecodecs
 python pipeline/build_index.py
 python server.py
 ```
