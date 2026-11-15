@@ -16,6 +16,7 @@ from deepagents.backends.protocol import (
     WriteResult,
 )
 
+from mundus_harness.runctx import run_id_from_config
 from mundus_harness.world_client import WorldClient, WorldError
 
 READ_ONLY = "read-only: /world is generated from shared memory. Use put_claim to add a fact."
@@ -27,7 +28,7 @@ class WorldBackend(BackendProtocol):
 
     def __init__(self, client: WorldClient, ttl_s: float = 5.0):
         self.client, self.ttl = client, ttl_s
-        self._cache: dict[str, tuple[float, str]] = {}
+        self._cache: dict[tuple[str, str], tuple[float, str]] = {}
 
     # ---- rendering -------------------------------------------------------
     def _places(self) -> list[dict]:
@@ -35,7 +36,9 @@ class WorldBackend(BackendProtocol):
 
     def _render(self, path: str) -> str:
         path = "/" + path.strip("/")
-        hit = self._cache.get(path)
+        # With private claim memories, two runs see different cards for the same path: cache per run.
+        key = (run_id_from_config() if self.client.cfg.claim_scope_run else "", path)
+        hit = self._cache.get(key)
         if hit and time.monotonic() - hit[0] < self.ttl:
             return hit[1]
         if path == "/index.md":
@@ -61,7 +64,7 @@ class WorldBackend(BackendProtocol):
                     w = f" ({e['weight']} m)" if e.get("weight") is not None and e["rel"] == "near" else ""
                     lines.append(f"- {e['rel']}: {other}{w} {str(s.get('name') or '')[:90]}")
                 text = "\n".join(lines) + "\n"
-        self._cache[path] = (time.monotonic(), text)
+        self._cache[key] = (time.monotonic(), text)
         return text
 
     # ---- protocol ----------------------------------------------------------
