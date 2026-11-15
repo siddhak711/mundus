@@ -5,8 +5,8 @@
 // floor with a walkthrough carries a soft blue; vacancy colours appear only when switched on.
 import * as THREE from 'three';
 
-const LEASED = new THREE.Color('#c2761b');
-const AVAILABLE = new THREE.Color('#1c8a68');
+// vacancy colours: the empty floors stand out on the real building; leased floors keep the building's own colour
+const VACANCY = { convertible: [new THREE.Color('#16a06e'), 0.78], partial: [new THREE.Color('#f2a900'), 0.7] };
 const NEUTRAL = new THREE.Color('#e9ecef');
 
 const VERTEX = /* glsl */ `
@@ -44,9 +44,9 @@ const FRAGMENT = /* glsl */ `
     } else {
       float facing = 0.80 + 0.14 * dot(normalize(n.xz + 1e-4), normalize(vec2(0.45, 0.6)));
       color = vec3(0.90, 0.91, 0.92) * facing;
-      color = mix(color, uTint * facing, uTintAmount * 0.55);
+      color = mix(color, uTint * facing, uTintAmount);
       color = mix(color, vec3(0.42, 0.62, 1.0) * facing, uWalk * 0.32);
-      color = mix(color, vec3(1.0, 0.83, 0.52) * facing, uHover * 0.55);
+      color = mix(color, min(color * 1.25 + 0.06, vec3(1.0)), uHover);       // the hovered floor brightens (and slides out)
     }
     color = mix(color, vec3(0.86, 0.88, 0.90), uDim * 0.72);
     gl_FragColor = vec4(color, 1.0);
@@ -83,8 +83,7 @@ export function createBuilding({ ring, roof, stories }, plate) {
   }
 
   // spread: how far apart the floors sit (1 = touching); fill: how much of each storey the slab fills (1 = solid)
-  const state = { spread: 1, spreadTarget: 1, fill: 1, fillTarget: 1, built: 0, vacancy: false };
-  const scratch = new THREE.Color();
+  const state = { spread: 1, spreadTarget: 1, fill: 1, fillTarget: 1, built: 0, vacancy: true };
   const floorBase = (floor) => (floor - 1) * storeyHeight * state.spread;
 
   return {
@@ -98,16 +97,15 @@ export function createBuilding({ ring, roof, stories }, plate) {
     floorMid: (floor) => floorBase(floor) + (storeyHeight * state.fill) / 2,
     height: () => floorBase(stories) + storeyHeight * state.fill,
 
-    /** paint(floor) -> { leasedShare, available, emphasised, walk } */
+    /** paint(floor) -> { vacancy: 'convertible' | 'partial' | 'leased' | 'no_data', emphasised, walk } */
     paint(describe) {
       for (const slab of slabs) {
-        const { leasedShare = 0, available = false, emphasised = false, walk = false } = describe(slab.userData.floor);
+        const { vacancy = null, emphasised = false, walk = false } = describe(slab.userData.floor);
         const u = slab.material.uniforms;
-        scratch.copy(NEUTRAL);
-        if (leasedShare > 0) scratch.lerp(LEASED, 0.35 + 0.65 * leasedShare);
-        if (available) scratch.lerp(AVAILABLE, leasedShare > 0 ? 0.55 : 0.9);
-        u.uTint.value.copy(scratch);
-        u.uTintAmount.value = state.vacancy ? 1 : 0;
+        const [color, amount] = VACANCY[vacancy] || [NEUTRAL, 0];
+        u.uTint.value.copy(color);
+        slab.userData.tint = amount;
+        u.uTintAmount.value = state.vacancy ? amount : 0;
         u.uWalk.value = walk ? 1 : 0;
         slab.userData.hoverTarget = emphasised ? 1 : 0;
       }
@@ -115,7 +113,7 @@ export function createBuilding({ ring, roof, stories }, plate) {
 
     setVacancy(on) {
       state.vacancy = on;
-      slabs.forEach((slab) => { slab.material.uniforms.uTintAmount.value = on ? 1 : 0; });
+      slabs.forEach((slab) => { slab.material.uniforms.uTintAmount.value = on ? slab.userData.tint || 0 : 0; });
     },
     /** view: 'model' closes the floors into one tower; 'floors' opens them; 'stacked' pulls them well apart */
     setLayout(view) {

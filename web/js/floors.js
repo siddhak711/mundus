@@ -26,6 +26,17 @@ export function createFloorModel(detail, twin, conversion = null) {
     return detail.floorSf?.[floor] || detail.typicalFloorSf || (detail.sizeSf ? detail.sizeSf / stories : 0);
   }
 
+  // how empty a floor is today: the conversion screen's verdict where the building was screened, otherwise listed space
+  // against the floor's size (half or more listed is 'convertible', any is 'partial')
+  function vacancyOf(floor) {
+    const s = screened.get(floor)?.status;
+    if (s) return s;
+    const listed = (availableOn.get(floor) || []).reduce((n, sp) => n + (sp.fullFloor ? capacity(floor) : sp.sf || 0), 0);
+    const cap = capacity(floor);
+    if (listed && cap && listed / cap >= 0.5) return 'convertible';
+    return listed ? 'partial' : 'leased';
+  }
+
   function at(floor, year = CURRENT_YEAR) {
     const tenants = (tenanciesOn.get(floor) || []).filter((t) => (t.from ?? 0) <= year && (t.to == null || t.to >= year));
     const leasedSf = tenants.reduce((sum, t) => sum + (t.sf || 0), 0);
@@ -40,6 +51,7 @@ export function createFloorModel(detail, twin, conversion = null) {
       scans: isNow ? scansOn.get(floor) || [] : [],
       walkthrough: isNow ? walkthrough(floor) : null,
       conversion: isNow ? screened.get(floor) || null : null,
+      vacancy: isNow ? vacancyOf(floor) : null,
     };
   }
 

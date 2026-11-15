@@ -49,8 +49,7 @@ function repaint() {
   viewer.paint((floor) => {
     const info = floors.at(floor, year);
     return {
-      leasedShare: info.leasedShare,
-      available: info.available.length > 0,
+      vacancy: year >= CURRENT_YEAR ? info.vacancy : (info.leasedShare > 0 ? 'leased' : 'no_data'),
       emphasised: floor === hovered || marked.has(floor),
       walk: Boolean(info.walkthrough),
     };
