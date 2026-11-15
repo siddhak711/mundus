@@ -10,6 +10,7 @@ import anthropic
 
 from mundus_world.config.settings import Settings
 from mundus_world.providers.http import UpstreamAuthError, UpstreamError
+from mundus_world.providers.tracing import wrap_anthropic
 
 CAPTION_PROMPT_VERSION = "cap-v3"
 # Word targets for the free-text description. "deep" is the default; the others exist for length experiments.
@@ -95,8 +96,8 @@ class Claude:
             if not self.s.anthropic_key:
                 raise UpstreamAuthError("no Anthropic key: set ANTHROPIC_API_KEY (or MUNDUS_ANTHROPIC_KEY)")
             # base_url is explicit so an ANTHROPIC_BASE_URL meant for another tool is never picked up
-            self._client = anthropic.Anthropic(api_key=self.s.anthropic_key, base_url=self.s.anthropic_base_url,
-                                               max_retries=4, timeout=180.0)
+            self._client = wrap_anthropic(anthropic.Anthropic(api_key=self.s.anthropic_key, base_url=self.s.anthropic_base_url,
+                                                              max_retries=4, timeout=180.0), name="caption")
         return self._client
 
     def _generate(self, model: str, content: list[dict]) -> anthropic.types.Message:

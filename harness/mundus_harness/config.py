@@ -7,6 +7,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from mundus_harness.tracing import enable_tracing
+
 HARNESS_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = HARNESS_DIR.parent
 
@@ -61,6 +63,7 @@ def load_config() -> Config:
     load_dotenv(REPO_ROOT / ".env", override=False)
     load_dotenv(HARNESS_DIR / ".env", override=False)
     use_mundus_anthropic_key()
+    enable_tracing()
     rest = _env("WORLD_REST_URL", "http://127.0.0.1:8000").rstrip("/")
     worker = _env("WORKER_MODEL", "anthropic:claude-haiku-5-5")
     dd = Path(_env("HARNESS_DATA_DIR") or (HARNESS_DIR / "data")).resolve()

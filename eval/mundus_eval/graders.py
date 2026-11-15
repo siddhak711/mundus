@@ -144,8 +144,9 @@ def grade_model(task: dict[str, Any], truth: dict[str, Any], reference: str | No
                 client: Any = None) -> dict[str, Any]:
     """Scores a wording task with Claude Fable 5.2. Thinking is always on for this model, so no thinking parameter is sent."""
     import anthropic
+    from mundus_harness.tracing import wrap_anthropic
 
-    client = client or anthropic.Anthropic()
+    client = client or wrap_anthropic(anthropic.Anthropic(), name="grader")
     facts = {k: v for k, v in truth.items() if not k.startswith("_")}
     prompt = (f"QUESTION:\n{task['question']}\n\nRUBRIC:\n{task['rubric']}\n\nREFERENCE FACTS (from the data):\n"
               f"{json.dumps(facts, indent=1, ensure_ascii=False)}\n\nVISUAL REFERENCE (from the photographs):\n"

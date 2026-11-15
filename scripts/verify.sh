@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The single gate: lint and tests for every component. Must stay under 60 seconds.
 set -euo pipefail
+export LANGSMITH_TRACING=false   # tests use fake models: keep them out of LangSmith
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 run() { echo "== $1"; shift; "$@"; }
 for comp in backend harness eval; do
