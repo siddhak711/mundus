@@ -50,7 +50,8 @@ def reset_memory(mode: str) -> dict[str, Any]:
         return r.json()
 
 
-async def run_once(agent: Any, question: str, run_id: str, timeout_s: float = 600) -> dict[str, Any]:
+async def run_once(agent: Any, question: str, run_id: str, timeout_s: float = 600,
+                   meta: dict[str, Any] | None = None) -> dict[str, Any]:
     """Runs one question and returns the answer, citations, claims, metrics and wall-clock timings."""
     t0 = time.perf_counter()
     first_action: float | None = None
@@ -61,7 +62,9 @@ async def run_once(agent: Any, question: str, run_id: str, timeout_s: float = 60
         nonlocal first_action
         async for _ns, mode, chunk in agent.astream({"messages": [{"role": "user", "content": question}]},
                                                     config={"configurable": {"thread_id": run_id, "run_id": run_id},
-                                                            "recursion_limit": 200},
+                                                            "recursion_limit": 200, "run_name": run_id,
+                                                            "tags": ["eval", *[str(v) for v in (meta or {}).values()]],
+                                                            "metadata": {"eval_run_id": run_id, **(meta or {})}},
                                                     stream_mode=["custom", "updates"], subgraphs=True):
             if mode == "custom":
                 events.append(chunk)
@@ -202,7 +205,8 @@ async def cmd_run(args) -> int:
             task = by_id[tid]
             async with sem:
                 run_id = f"eval-{cname}-{tid}-r{rep}-{int(time.time())}"
-                run = await run_once(agents[cname], task["question"], run_id, args.timeout)
+                run = await run_once(agents[cname], task["question"], run_id, args.timeout,
+                                     meta={"task_id": tid, "combo": cname, "repeat": rep})
                 run = await asyncio.to_thread(enrich, run, world)
                 if task["grader"] == "code":
                     grade = graders.grade_code(task, truth.get(tid, {}), run)
@@ -239,7 +243,8 @@ async def cmd_seed(args) -> int:
     reset_memory("cold")
     agent = await build_agent_for(combo)
     for t in tasks:
-        r = await run_once(agent, t["question"], f"seed-{t['id']}-{int(time.time())}", args.timeout)
+        r = await run_once(agent, t["question"], f"seed-{t['id']}-{int(time.time())}", args.timeout,
+                           meta={"task_id": t["id"], "combo": combo["name"], "phase": "seed"})
         print(f"seed {t['id']}: {len(r['claims'])} claims, {r['wall_clock_s']}s" + (f" ERROR {r['error']}" if r["error"] else ""))
     with world_client(admin=True) as a:
         s = a.post("/v1/admin/claims/snapshot", json={"name": WARM_SNAPSHOT})
@@ -297,6 +302,9 @@ def use_mundus_anthropic_key() -> None:
 
 def main(argv: list[str] | None = None) -> int:
     use_mundus_anthropic_key()
+    from mundus_harness.tracing import enable_tracing
+
+    enable_tracing()
     p = argparse.ArgumentParser(prog="mundus-eval")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("truth", help="compute ground truth from the World API").set_defaults(fn=cmd_truth)

@@ -63,7 +63,7 @@ that gap.
 
 - The LangSmith key is stored as `LANGCHAIN_API_KEY`, not `LANGSMITH_API_KEY`. The LangSmith SDK reads either
   name. On the VM, enter it at the LangSmith prompt.
-- From a cloud session, `api.smith.langchain.com` is blocked by the `mundus` environment's allowed hosts.
+- `api.smith.langchain.com` is now in the `mundus` environment's allowed hosts (added 2026-11-15). Tracing is on by default whenever a LangSmith key is set: agent runs, captions, eval grader and reference calls all go to project `mundus`.
   `api.anthropic.com` is reachable.
 - SSH from a cloud session to the VM was not tested and is expected to be blocked. Plan on the owner pasting
   the deploy command into the VM's SSH window.
