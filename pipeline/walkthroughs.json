@@ -1,6 +1,9 @@
 {
-  "note": "Floors that have a baked walkthrough in web/walkthrough/. A building is matched by street address, because the walkthrough was made before its CoStar id was recorded. Add one entry per baked floor.",
+  "note": "Floors that have a baked walkthrough in web/walkthrough/ (python -m pipeline.bake <scanId>; the card facts are in web/walkthrough/floors.json). A building is matched by its CoStar street address. Add one entry per baked floor.",
   "floors": [
-    {"address": "10880 Wilshire Blvd", "floor": 16, "suite": "1600", "scanId": "cEvQ8q5GKZd", "url": "/walkthrough/"}
+    {"address": "10880 Wilshire Blvd", "floor": 16, "suite": "1600", "scanId": "cEvQ8q5GKZd", "url": "/walkthrough/"},
+    {"address": "3415 Sepulveda Blvd", "floor": 10, "suite": "1000", "scanId": "aYTUWzQVbUs", "url": "/walkthrough/"},
+    {"address": "10940 Wilshire Blvd", "floor": 17, "suite": "1700", "scanId": "6Z3p5m9AcFQ", "url": "/walkthrough/"},
+    {"address": "5901 Century Blvd", "floor": 3, "suite": "300", "scanId": "WhqAmKQ3YYP", "url": "/walkthrough/"}
   ]
 }

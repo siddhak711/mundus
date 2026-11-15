@@ -224,8 +224,11 @@ narrows to three buildings or fewer, so the click only has to draw it.
   and 35 ft of its edge, and how deep the deepest point is. The 30 ft share then replaces the floor-size guess in the fit
   score. Suite scans are recorded but not measured: their edges are mostly corridor walls. Needs the Matterport keys in
   `.env`. The Oppenheimer Tower's floor 16 measures 67% within 30 ft, deepest point 59 ft.
-- Floors with a baked walkthrough are listed in `pipeline/walkthroughs.json`. The walkthrough links back to the
-  building's 3-D model. The 3-D model needs `VEXCEL_API_KEY` in `.env`.
+- Floors with a baked walkthrough are listed in `pipeline/walkthroughs.json` (and their card facts in
+  `web/walkthrough/floors.json`): Suite 1600 of the Oppenheimer Tower, and the whole-floor scans of the top candidates,
+  3415 Sepulveda Blvd floor 10, The Tower (10940 Wilshire) floor 17 and The Launch at Airport Center floor 3. Bake one
+  with `python -m pipeline.bake <scanId>` (licensed, git-ignored, into `web/walkthrough/floors/<scanId>/`; see
+  `web/walkthrough/README.md`). The walkthrough links back to the building's 3-D model. The 3-D model needs `VEXCEL_API_KEY` in `.env`.
 
 ## What the model does and does not show
 

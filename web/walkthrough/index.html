@@ -45,12 +45,12 @@ for (const t of ['pageswap', 'pagereveal']) addEventListener(t, (e) => { const v
 <canvas id="c"></canvas>
 <div class="card panel">
   <a class="back" id="back" hidden>&larr; Back to the building</a>
-  <h1>Suite 1600, full floor</h1>
-  <p class="sub">The Oppenheimer Tower · 10880 Wilshire Blvd, Los Angeles · floor 16 of 24 · built 1969</p>
+  <h1 id="card-title">Floor walkthrough</h1>
+  <p class="sub" id="card-sub"></p>
   <dl>
     <dt>Scanned floor area</dt><dd id="s-area"></dd>
-    <dt>Listed size</dt><dd>26,711 sq ft</dd>
-    <dt>Ceiling height</dt><dd>8 ft 9 in</dd>
+    <dt>Listed size</dt><dd id="s-listed"></dd>
+    <dt>Ceiling height</dt><dd id="s-ceiling"></dd>
     <dt>Capture points</dt><dd id="s-panos"></dd>
   </dl>
   <p class="src">Matterport scan: 360° photos for the walkthrough, 3-D mesh for the dollhouse. Building facts from CoStar.</p>
@@ -92,22 +92,44 @@ document.addEventListener('click', (e) => { if (e.target.closest('#back, .fb-bac
 const fail = (msg) => { loadingEl.textContent = msg; throw new Error(msg); };
 if (location.protocol === 'file:') fail('Open this through the local server (run start.command, or "python3 -m http.server 8123" in this folder, then visit http://localhost:8123).');
 
-// The baked scan (data/ and pano/) is git-ignored and made on the author's machine. Without it, say so and offer
-// Matterport's own hosted tour of the same scan, so the floor can still be walked.
-const SCAN = /^[A-Za-z0-9]{11}$/.test(Q.get('scan') || '') ? Q.get('scan') : 'cEvQ8q5GKZd';   // Suite 1600
+// Which floor: ?scan=<Matterport model id> (floors.json lists the baked ones); Suite 1600 of 10880 Wilshire by default.
+const SCAN = /^[A-Za-z0-9]{11}$/.test(Q.get('scan') || '') ? Q.get('scan') : 'cEvQ8q5GKZd';
+// The card: real facts only, from floors.json (CoStar for the building and listed size, Matterport for the ceiling)
+const FLOOR = await fetch('floors.json').then((r) => (r.ok ? r.json() : null)).then((j) => j?.floors?.[SCAN] || null).catch(() => null);
+if (FLOOR) {
+  const ftIn = (m) => { const inches = Math.round(m * 39.3701); return `${Math.floor(inches / 12)} ft ${inches % 12} in`; };
+  $('card-title').textContent = FLOOR.title;
+  $('card-sub').textContent = `${FLOOR.building} · ${FLOOR.address} · floor ${FLOOR.floor} of ${FLOOR.stories} · built ${FLOOR.built}`;
+  $('s-listed').textContent = FLOOR.listedSf ? `${FLOOR.listedSf.toLocaleString('en-US')} sq ft` : '';
+  $('s-listed').title = FLOOR.listedSource || '';
+  $('s-ceiling').textContent = FLOOR.ceilingM ? ftIn(FLOOR.ceilingM) : '';
+  document.title = `${FLOOR.address.split(',')[0]}, Suite ${FLOOR.suite}: floor walkthrough`;
+}
+// Every baked file comes from one base path: floors/<scan>/ (python -m pipeline.bake <scan>), or, for Suite 1600, the
+// original data/ and pano/ folders next to this page (Pranava's local copy) when it has not been re-baked there.
+const isJson = (r) => r && r.ok && /json/.test(r.headers.get('content-type') || '');
+let BASE = `floors/${SCAN}/`;
+let probe = await fetch(`${BASE}data/scene.json`).catch(() => null);
+if (!isJson(probe) && (FLOOR?.legacyData || SCAN === 'cEvQ8q5GKZd')) {
+  BASE = '';
+  probe = await fetch('data/scene.json').catch(() => null);
+}
+const dataFile = (name) => `${BASE}data/${name}`;
+const panoFile = (name) => `${BASE}pano/${name}`;
+// The baked scan is git-ignored and made on the author's machine. Without it, say so and offer Matterport's own hosted
+// tour of the same scan, so the floor can still be walked.
 {
-  const probe = await fetch('data/scene.json').catch(() => null);
-  if (!probe || !probe.ok || !/json/.test(probe.headers.get('content-type') || '')) {
+  if (!isJson(probe)) {
     const back = $('back').hidden ? '' : `<a class="fb-back" href="${$('back').href}">Back to the building</a>`;
     loadingEl.innerHTML = `<div class="fallback"><h2>This floor's walkthrough files are not on this computer</h2>
-      <p>The walkthrough is drawn from a baked copy of the scan (the <code>data</code> and <code>pano</code> folders next
-        to this page), which is not in git. Until they are copied here, walk the same floor in Matterport's tour.</p>
+      <p>The walkthrough is drawn from a baked copy of the scan, which is not in git. Make it with
+        <code>python -m pipeline.bake ${SCAN}</code>; until then, walk the same floor in Matterport's tour.</p>
       <p><a class="fb-tour" href="https://my.matterport.com/show/?m=${SCAN}&play=1&qs=1">Open the Matterport tour of this floor</a>${back}</p></div>`;
     throw new Error('walkthrough data missing');
   }
 }
-const bin = async (name, Type) => new Type(await (await fetch(`data/${name}`)).arrayBuffer());
-const [S, pos, uv, idx, dropFlags] = await Promise.all([fetch('data/scene.json').then((r) => r.json()), bin('pos.bin', Float32Array), bin('uv.bin', Float32Array), bin('idx.bin', Uint32Array), bin('drop.bin', Uint8Array)]);
+const bin = async (name, Type) => new Type(await (await fetch(dataFile(name))).arrayBuffer());
+const [S, pos, uv, idx, dropFlags] = await Promise.all([fetch(dataFile('scene.json')).then((r) => r.json()), bin('pos.bin', Float32Array), bin('uv.bin', Float32Array), bin('idx.bin', Uint32Array), bin('drop.bin', Uint8Array)]);
 $('s-area').textContent = S.stats.areaSf.toLocaleString('en-US') + ' sq ft';
 $('s-panos').textContent = S.panos.length;
 $('s-share').textContent = Math.round(S.share * 100) + '%';
@@ -133,7 +155,7 @@ const panos = S.panos.map((p, i) => {
 const FACE_ORDER = [2, 4, 0, 5, 1, 3];   // cube +x,-x,+y,-y,+z,-z  <-  scan faces (0 up, 1-4 sides turning right, 5 down)
 const loadImg = (url) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('missing ' + url)); im.src = url; });
 async function loadCube(p, res) {
-  const imgs = await Promise.all(FACE_ORDER.map((f) => loadImg(`pano/${res}/${p.id}_${f}.jpg`)));
+  const imgs = await Promise.all(FACE_ORDER.map((f) => loadImg(panoFile(`${res}/${p.id}_${f}.jpg`))));
   const t = new THREE.CubeTexture(imgs);
   t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
   t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true;
@@ -188,7 +210,7 @@ const skyMat = new THREE.ShaderMaterial({
 
 // ---------- geometry ----------
 const texLoader = new THREE.TextureLoader();
-const atlases = await Promise.all(Array.from({ length: S.atlases }, (_, i) => texLoader.loadAsync(`data/atlas${i}.jpg`)));
+const atlases = await Promise.all(Array.from({ length: S.atlases }, (_, i) => texLoader.loadAsync(dataFile(`atlas${i}.jpg`))));
 atlases.forEach((t) => { t.anisotropy = renderer.capabilities.getMaxAnisotropy(); });
 const posAttr = new THREE.BufferAttribute(pos, 3), uvAttr = new THREE.BufferAttribute(uv, 2), dropAttr = new THREE.BufferAttribute(Float32Array.from(dropFlags, (v) => (v === 1 ? 1 : 2)), 1);
 const meshes = S.groups.map(([start, count, ai]) => {
@@ -218,11 +240,11 @@ const span = Math.max(pb.max.x - pb.min.x, pb.max.z - pb.min.z);
 }
 // daylight band
 const [bx, by, bw, bh] = S.bandRect;
-const band = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), new THREE.MeshBasicMaterial({ map: await texLoader.loadAsync('data/band.png'), transparent: true, depthWrite: false }));
+const band = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), new THREE.MeshBasicMaterial({ map: await texLoader.loadAsync(dataFile('band.png')), transparent: true, depthWrite: false }));
 band.rotation.x = -Math.PI / 2; band.position.set(bx + bw / 2, S.floorY + 0.08, -(by + bh / 2)); band.visible = false; band.renderOrder = 1; scene.add(band);
 
 // clean floor under everything, so nothing is missing where walls and furniture stood
-const fillTex = await texLoader.loadAsync('data/floorfill.png'); fillTex.colorSpace = THREE.SRGBColorSpace;
+const fillTex = await texLoader.loadAsync(dataFile('floorfill.png')); fillTex.colorSpace = THREE.SRGBColorSpace;
 fillTex.colorSpace = THREE.NoColorSpace; fillTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 const fill = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), new THREE.ShaderMaterial({
   uniforms: { map: { value: fillTex }, uRect: { value: new THREE.Vector4() } }, vertexShader: VERT,
@@ -238,8 +260,14 @@ fill.rotation.x = -Math.PI / 2; fill.position.set(bx + bw / 2, S.floorY - 0.035,
 U.uFloor.value = S.floorY; U.uMaxD.value = span * 0.8;
 
 // ---------- empty shell: photo-baked exterior walls, ceiling backing, walkable area ----------
-const SH = await fetch('data/shell.json').then((r) => r.json());
-const wallTex = await texLoader.loadAsync('data/walls.jpg'); wallTex.colorSpace = THREE.SRGBColorSpace; wallTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+// The empty-floor shell is the bake's last step (pipeline/bake/shell.py). A floor baked without it still shows its photos
+// and dollhouse: the shell stands in from the scene's bounds (no photo walls, core or columns) and Remove walls is off.
+const shellJson = await fetch(dataFile('shell.json')).then((r) => (isJson(r) ? r.json() : null)).catch(() => null);
+const HAS_SHELL = !!shellJson;
+const SH = shellJson || { rect: [S.bandRect[0], S.bandRect[0] + S.bandRect[2], S.bandRect[1], S.bandRect[1] + S.bandRect[3]],
+  z0: S.floorY, z1: S.ceilY, eye: 1.6, pieces: [], core: [], columns: [] };
+const wallTex = HAS_SHELL ? await texLoader.loadAsync(dataFile('walls.jpg')).catch(() => null) : null;
+if (wallTex) { wallTex.colorSpace = THREE.SRGBColorSpace; wallTex.anisotropy = renderer.capabilities.getMaxAnisotropy(); }
 const shellWalls = (() => {
   const p = [], t = [];
   for (const w of SH.pieces) {
@@ -313,11 +341,13 @@ for (const blk of SH.core) {
   const shape = new THREE.Shape(blk.outer.map(([x, y]) => new THREE.Vector2(x, y))); blk.holes.forEach((hh) => shape.holes.push(new THREE.Path(hh.map(([x, y]) => new THREE.Vector2(x, y)))));
   const cap = new THREE.Mesh(new THREE.ShapeGeometry(shape), capMat); cap.rotation.x = -Math.PI / 2; cap.position.y = SH.z1 + 0.01; capMat.side = THREE.DoubleSide; coreGroup.add(cap);   // shape (x, y) lands on world (x, -y)
 }
-const walkMask = await (async () => {
-  const im = await loadImg('data/walk.png'); const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
+const walkMask = !HAS_SHELL ? null : await (async () => {
+  const im = await loadImg(dataFile('walk.png')).catch(() => null); if (!im) return null;
+  const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
   const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0); return { w: im.width, h: im.height, d: cx.getImageData(0, 0, im.width, im.height).data };
 })();
-const walkable = (x, z) => { const px = Math.floor((x - bx) / bw * walkMask.w), py = Math.floor((by + bh + z) / bh * walkMask.h); if (!(px >= 0 && py >= 0 && px < walkMask.w && py < walkMask.h && walkMask.d[(py * walkMask.w + px) * 4] > 127)) return false;
+const walkable = (x, z) => { if (!walkMask) return x > SH.rect[0] && x < SH.rect[1] && -z > SH.rect[2] && -z < SH.rect[3];   // no mask: the whole plate
+  const px = Math.floor((x - bx) / bw * walkMask.w), py = Math.floor((by + bh + z) / bh * walkMask.h); if (!(px >= 0 && py >= 0 && px < walkMask.w && py < walkMask.h && walkMask.d[(py * walkMask.w + px) * 4] > 127)) return false;
   for (const c of SH.columns || []) if (Math.abs(x - c.x) < c.size / 2 + 0.3 && Math.abs(z + c.y) < c.size / 2 + 0.3) return false; return true; };
 const EYE = S.floorY + SH.eye;
 
@@ -447,6 +477,7 @@ function setMode(m) {
 let sayTimer = 0;
 function say(text) { $('hint').textContent = text; clearTimeout(sayTimer); sayTimer = setTimeout(() => setUi(mode), 2600); }
 async function setWalls(down) {
+  if (down && !HAS_SHELL) return say('This floor has no empty-floor bake yet: run python -m pipeline.bake with the shell step.');
   if (dropping || busy || down === removed) return;
   if (!down && aptsOn) await setApts(false);
   if (mode === 'walk' || mode === 'shell') { await leaveWalk('doll'); }
@@ -464,6 +495,7 @@ async function setWalls(down) {
   dropping = false;
 }
 $('walls').addEventListener('click', () => setWalls(!removed));
+if (!HAS_SHELL) { $('walls').disabled = true; $('walls').title = 'This floor has no empty-floor bake yet'; }
 $('cmd').addEventListener('submit', (e) => {
   e.preventDefault(); const t = $('cmd-in').value.toLowerCase().trim(); $('cmd-in').value = ''; if (!t) return;
   if (/apartment|layout|units?\b/.test(t)) { /(hide|remove|off|clear|close)/.test(t) ? setApts(false) : setApts(true); return; }
@@ -478,7 +510,7 @@ $('cmd').addEventListener('submit', (e) => {
 // ---------- apartment layout: the agent's new walls, in the same scan metres as the shell ----------
 // data/layout.json (written by the conversion agent): walls [{a:[x,y], b:[x,y], kind}], units [{type, area_sf, polygon, label_at}],
 // structure {columns [{x,y,confidence}], exits [{x,y,kind,confidence}]}, summary. Scan (x, y) lands on world (x, -y), like SH.pieces.
-const LAY = await fetch('data/layout.json').then((r) => (r.ok && /json/.test(r.headers.get('content-type') || '') ? r.json() : null)).catch(() => null);
+const LAY = await fetch(dataFile('layout.json')).then((r) => (r.ok && /json/.test(r.headers.get('content-type') || '') ? r.json() : null)).catch(() => null);
 let aptsOn = false;
 const aptGroup = new THREE.Group(); aptGroup.visible = false; scene.add(aptGroup);
 const aptRise = new THREE.Group(); aptRise.position.y = SH.z0; aptGroup.add(aptRise);   // scaled up from the floor as the walls rise
