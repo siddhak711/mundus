@@ -151,6 +151,23 @@ def test_private_scope_isolates_runs(world):
     assert world.db.scalar("SELECT count(*) FROM claim") == 0
 
 
+def test_scoped_read_leaves_shared_claims_alone(world):
+    """A run-scoped read must not mark shared claims stale, even when they are due."""
+    from mundus_world.types.ctx import CLAIM_SCOPE
+    rec = _ev(world, "record")
+    cid = world.claims.put(PLACE, "market.tenant_count", 3, "Three tenants are recorded.", [rec], 0.9)["claim"]["id"]
+    with world.db.write() as c:
+        c.execute("UPDATE claim SET created_at='2000-01-01T00:00:00Z' WHERE claim_id=?", (cid,))
+    tok = CLAIM_SCOPE.set("run-a")
+    try:
+        world.claims.get(PLACE)
+    finally:
+        CLAIM_SCOPE.reset(tok)
+    assert world.db.scalar("SELECT status FROM claim WHERE claim_id=?", (cid,)) == "active"
+    world.claims.get(PLACE)
+    assert world.db.scalar("SELECT status FROM claim WHERE claim_id=?", (cid,)) == "stale"
+
+
 def test_old_database_is_purged_of_aerial_facts(tmp_path):
     from mundus_world.repo.db import Database
     db = Database(tmp_path / "old.db")

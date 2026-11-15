@@ -24,6 +24,18 @@ def world_client(admin: bool = False) -> httpx.Client:
     return httpx.Client(base_url=base, timeout=60, headers={"Authorization": f"Bearer {token}"} if token else {})
 
 
+def purge_scoped_claims() -> None:
+    """Deletes every run-scoped claim. Failure is reported, never swallowed: leftovers sit in the live database."""
+    try:
+        with world_client(admin=True) as a:
+            r = a.post("/v1/admin/claims/purge-scoped")
+            r.raise_for_status()
+            print("purged private claims:", r.json(), flush=True)
+    except httpx.HTTPError as e:
+        print(f"WARNING: could not purge private claims ({e}); "
+              "run POST /v1/admin/claims/purge-scoped before the next suite", file=sys.stderr, flush=True)
+
+
 def plan(tasks: list[dict[str, Any]], combos: list[dict[str, Any]], repeats: int) -> list[tuple[int, str, str]]:
     """Run order, interleaved: within each repeat, each task is queued once per combination back to back, so load on
     the backend and the model providers falls on every combination equally."""
@@ -211,12 +223,10 @@ async def cmd_run(args) -> int:
                       f"tokens={m.get('tokens_total')} calls={m.get('model_calls')}/{m.get('tool_calls')}"
                       + (f" ERROR {run['error']}" if run["error"] else ""), flush=True)
 
-        await asyncio.gather(*(one(rep, tid, cname) for rep, tid, cname in order))
-    try:                                    # private memories are only needed during the run
-        with world_client(admin=True) as a:
-            a.post("/v1/admin/claims/purge-scoped")
-    except httpx.HTTPError:
-        pass
+        try:
+            await asyncio.gather(*(one(rep, tid, cname) for rep, tid, cname in order))
+        finally:                            # private memories are only needed during the run, even a failed one
+            purge_scoped_claims()
     from mundus_eval.report import write_report
     print(write_report(out_dir))
     return 0

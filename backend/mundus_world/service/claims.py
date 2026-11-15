@@ -203,7 +203,8 @@ class Claims:
 
     # ---- staleness ---------------------------------------------------------
     def refresh_stale(self, place_id: str | None = None) -> int:
-        where, params = ("WHERE status='active'", [])
+        # Only the caller's own scope: a run-scoped read must never change shared claims or another run's.
+        where, params = ("WHERE status='active' AND scope=?", [CLAIM_SCOPE.get()])
         if place_id:
             where += " AND place_id=?"
             params.append(place_id)
