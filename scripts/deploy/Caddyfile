@@ -1,16 +1,25 @@
-# HTTPS front for both services. sslip.io gives the VM's IP a hostname, so Caddy can get a certificate.
+# HTTPS front for all three services. sslip.io gives the VM's IP a hostname, so Caddy can get a certificate.
 @HOST@ {
 	encode gzip
 
-	# Agent server: shared-secret header, so strangers cannot spend the model credits.
+	# Agent server: shared-secret header, so strangers cannot call it directly. The site's Ask Atlas drawer reaches
+	# it from inside the VM instead, so the public site can use the agent without the token.
 	handle_path /agent/* {
 		@noauth not header X-Agent-Token @AGENT_TOKEN@
 		respond @noauth "unauthorized" 401
 		reverse_proxy 127.0.0.1:2024
 	}
 
-	# World API: REST under /v1, MCP under /mcp, health check. Bearer token is checked by the API itself.
-	handle {
+	# World API: REST under /v1, MCP under /mcp, image shortcuts, health check and API docs.
+	# Bearer token is checked by the API itself.
+	@world path /v1/* /mcp /mcp/* /healthz /places/* /panos/* /docs /docs/* /redoc /openapi.json
+	handle @world {
 		reverse_proxy 127.0.0.1:8000
+	}
+
+	# Everything else is the Atlas site (server.py): pages, /api/*, /data/*, /cache/*. Public, no login.
+	# Ask Atlas answers stream as server-sent events, which Caddy passes through without buffering.
+	handle {
+		reverse_proxy 127.0.0.1:5190
 	}
 }
