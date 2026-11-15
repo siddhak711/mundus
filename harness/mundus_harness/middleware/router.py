@@ -70,15 +70,20 @@ class RouterMiddleware(AgentMiddleware):
         rec = runctx.record(rid)
         text = self._last_user_text(state)
         ctx = getattr(runtime, "context", None) or {}
-        place_id = ctx.get("place_id") if isinstance(ctx, dict) else getattr(ctx, "place_id", None)
+        page_place = ctx.get("place_id") if isinstance(ctx, dict) else getattr(ctx, "place_id", None)
         candidates: list[dict] = []
-        if not place_id and text:
+        if text:
             try:
                 candidates = resolve_candidates(self.client, text)
             except WorldError:
                 candidates = []
-            if candidates and candidates[0]["match_score"] >= 0.7:
-                place_id = candidates[0]["place_id"]
+        # A place named exactly in the question wins over the one open on the page (context.place_id); the page place
+        # answers "this building" questions. Without a page place, the best search hit is enough.
+        named = next((c["place_id"] for c in candidates if c["match_score"] >= 1.0), None)
+        if named or page_place:
+            place_id = named or page_place
+        else:
+            place_id = candidates[0]["place_id"] if candidates and candidates[0]["match_score"] >= 0.7 else None
         need = self._classify(text)
         covered: list[str] = []
         cov: dict[str, tuple[str, int]] = {}

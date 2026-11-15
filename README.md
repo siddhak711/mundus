@@ -104,7 +104,16 @@ On a fresh Ubuntu 24.04 VM with ports 80 and 443 open:
 git clone https://github.com/siddhak711/mundus && cd mundus && bash scripts/deploy/vm_setup.sh
 ```
 
-The script asks for the keys once, ingests the 15 places, and starts both services behind HTTPS.
+The script asks for the keys once, ingests the 15 places, builds the Atlas site's index from the same CoStar kit,
+and starts three services behind HTTPS on one hostname:
+
+| Path | Service | Access |
+|---|---|---|
+| `/v1/*`, `/mcp/`, `/healthz`, `/docs` | World API (`mundus-world`, port 8000) | Bearer `WORLD_API_TOKEN` |
+| `/agent/*` | Agent server (`mundus-harness`, port 2024) | Header `X-Agent-Token: <AGENT_TOKEN>` |
+| everything else | Atlas site (`mundus-site`, `server.py`, port 5190) | Public. Ask Atlas calls the agent server inside the VM, so anyone with the URL can spend model credits |
+
+On a VM set up before the site was added, pull and rerun the same script: every step skips work already done.
 
 Without SSH (Google Compute Engine): pass `scripts/deploy/vm_boot.sh` as the instance's `startup-script` metadata
 and the keys as `mundus-<KEY>` metadata attributes. It runs the same setup at boot and logs to the serial console.
