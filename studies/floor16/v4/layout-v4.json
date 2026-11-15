@@ -1,0 +1,6727 @@
+{
+ "version": "v4",
+ "coords": "scan metres (x, y), same as shell.json",
+ "areas": {
+  "gross_sf": 25667,
+  "core_sf": 4489,
+  "units_sf": 15765,
+  "circulation_sf": 2513,
+  "storage_sf": 2901,
+  "lockers_sf": 1638,
+  "cowork_sf": 1263,
+  "efficiency": 0.7443771964944775
+ },
+ "unit_mix": {
+  "1BR/1BA": 20,
+  "2BR/2BA corner": 4
+ },
+ "units": [
+  {
+   "id": "S1",
+   "type": "2BR/2BA corner",
+   "poly": [
+    [
+     -26.42,
+     -10.3
+    ],
+    [
+     -26.42,
+     -1.370000000000001
+    ],
+    [
+     -38.42,
+     -1.370000000000001
+    ],
+    [
+     -38.42,
+     -10.3
+    ]
+   ],
+   "sf": 1153,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -38.42,
+      -10.3,
+      -35.22,
+      -6.550000000000001
+     ],
+     "w": 3.2,
+     "d": 3.75,
+     "sf": 129
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -38.42,
+      -6.550000000000001,
+      -35.22,
+      -5.500000000000001
+     ],
+     "w": 3.2,
+     "d": 1.05,
+     "sf": 36
+    },
+    {
+     "type": "bed",
+     "rect": [
+      -29.42,
+      -10.3,
+      -26.42,
+      -6.550000000000001
+     ],
+     "w": 3.0,
+     "d": 3.75,
+     "sf": 121
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -29.42,
+      -6.550000000000001,
+      -26.42,
+      -5.500000000000001
+     ],
+     "w": 3.0,
+     "d": 1.05,
+     "sf": 34
+    },
+    {
+     "type": "living",
+     "rect": [
+      -35.22,
+      -10.3,
+      -29.42,
+      -5.500000000000001
+     ],
+     "w": 5.8,
+     "d": 4.8,
+     "sf": 300
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -29.37,
+      -5.500000000000001,
+      -28.17,
+      -1.370000000000001
+     ],
+     "w": 1.2,
+     "d": 4.13,
+     "sf": 53
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -28.17,
+      -3.820000000000001,
+      -26.42,
+      -1.370000000000001
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -28.17,
+      -5.500000000000001,
+      -26.42,
+      -3.820000000000001
+     ],
+     "w": 1.75,
+     "d": 1.68,
+     "sf": 32
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -38.42,
+      -5.500000000000001,
+      -29.37,
+      -1.370000000000001
+     ],
+     "w": 9.05,
+     "d": 4.13,
+     "sf": 402
+    }
+   ],
+   "door": [
+    -28.770000000000003,
+    -1.370000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -29.72,
+     -1.72
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -27.3,
+      -2.6
+     ],
+     "run_m": 5.76
+    },
+    {
+     "kind": "bath2",
+     "pos": [
+      -27.3,
+      -4.66
+     ],
+     "run_m": 7.83
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -29.72,
+      -1.72
+     ],
+     "run_m": 7.31
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -30.32,
+      -1.72
+     ],
+     "run_m": 7.91
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -29.12,
+      -1.72
+     ],
+     "run_m": 6.71
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.76,
+    "bath2": 7.83,
+    "sink": 7.31,
+    "dishwasher": 7.91,
+    "washer": 6.71
+   },
+   "drain_run_m": 7.91,
+   "chases": [
+    [
+     -27.595000000000002,
+     -1.6700000000000017,
+     -26.995,
+     -1.370000000000001
+    ],
+    [
+     -27.595000000000002,
+     -4.120000000000001,
+     -26.995,
+     -3.820000000000001
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C11",
+     "kind": "possible",
+     "overlaps": [
+      {
+       "room": "wardrobe",
+       "m2": 0.41
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    },
+    {
+     "id": "H5",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 28.0,
+   "access": null,
+   "rent_mo": 5908,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "300 sf / 4.80 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "129 sf / 3.20 m, 121 sf / 3.00 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45, 1.75\u00d71.68"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "9.05 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "5.80 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "1153 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.8, bath2 7.8, sink 7.3, dishwasher 7.9, washer 6.7"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "S2",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -19.82,
+     -10.3
+    ],
+    [
+     -19.82,
+     -1.370000000000001
+    ],
+    [
+     -26.42,
+     -1.370000000000001
+    ],
+    [
+     -26.42,
+     -10.3
+    ]
+   ],
+   "sf": 634,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -26.42,
+      -10.3,
+      -23.450000000000003,
+      -6.550000000000001
+     ],
+     "w": 2.97,
+     "d": 3.75,
+     "sf": 120
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -26.42,
+      -6.550000000000001,
+      -23.450000000000003,
+      -5.500000000000001
+     ],
+     "w": 2.97,
+     "d": 1.05,
+     "sf": 34
+    },
+    {
+     "type": "living",
+     "rect": [
+      -23.450000000000003,
+      -10.3,
+      -19.82,
+      -5.500000000000001
+     ],
+     "w": 3.63,
+     "d": 4.8,
+     "sf": 188
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -26.42,
+      -3.820000000000001,
+      -24.67,
+      -1.370000000000001
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -26.42,
+      -5.500000000000001,
+      -24.67,
+      -3.820000000000001
+     ],
+     "w": 1.75,
+     "d": 1.68,
+     "sf": 32
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -24.67,
+      -5.500000000000001,
+      -23.470000000000002,
+      -1.370000000000001
+     ],
+     "w": 1.2,
+     "d": 4.13,
+     "sf": 53
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -23.470000000000002,
+      -5.500000000000001,
+      -19.82,
+      -1.370000000000001
+     ],
+     "w": 3.65,
+     "d": 4.13,
+     "sf": 162
+    }
+   ],
+   "door": [
+    -24.07,
+    -1.370000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -20.17,
+     -1.72
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -25.55,
+      -2.6
+     ],
+     "run_m": 4.22
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -20.17,
+      -1.72
+     ],
+     "run_m": 2.25
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -20.77,
+      -1.72
+     ],
+     "run_m": 2.85
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -25.02,
+      -4.17
+     ],
+     "run_m": 5.8
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 4.22,
+    "sink": 2.25,
+    "dishwasher": 2.85,
+    "washer": 5.8
+   },
+   "drain_run_m": 5.8,
+   "chases": [
+    [
+     -25.845000000000002,
+     -1.6700000000000017,
+     -25.245,
+     -1.370000000000001
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "H6",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "wardrobe",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 25.2,
+   "access": null,
+   "rent_mo": 3401,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "188 sf / 3.63 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "120 sf / 2.97 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "3.65 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.63 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "634 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 4.2, sink 2.2, dishwasher 2.8, washer 5.8"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "S3",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -9.23,
+     -10.3
+    ],
+    [
+     -9.23,
+     -3.750000000000001
+    ],
+    [
+     -19.82,
+     -3.750000000000001
+    ],
+    [
+     -19.82,
+     -10.3
+    ]
+   ],
+   "sf": 747,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -19.82,
+      -10.3,
+      -16.42,
+      -6.550000000000001
+     ],
+     "w": 3.4,
+     "d": 3.75,
+     "sf": 137
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -19.82,
+      -6.550000000000001,
+      -16.42,
+      -5.500000000000001
+     ],
+     "w": 3.4,
+     "d": 1.05,
+     "sf": 38
+    },
+    {
+     "type": "living",
+     "rect": [
+      -16.42,
+      -10.3,
+      -9.23,
+      -5.500000000000001
+     ],
+     "w": 7.19,
+     "d": 4.8,
+     "sf": 371
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -19.82,
+      -5.500000000000001,
+      -17.37,
+      -3.750000000000001
+     ],
+     "w": 2.45,
+     "d": 1.75,
+     "sf": 46
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -17.37,
+      -5.500000000000001,
+      -16.17,
+      -3.750000000000001
+     ],
+     "w": 1.2,
+     "d": 1.75,
+     "sf": 23
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -16.17,
+      -5.500000000000001,
+      -9.23,
+      -3.750000000000001
+     ],
+     "w": 6.94,
+     "d": 1.75,
+     "sf": 131
+    }
+   ],
+   "door": [
+    -16.770000000000003,
+    -3.750000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -15.82,
+     -4.1
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -18.59,
+      -4.63
+     ],
+     "run_m": 3.58
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -15.82,
+      -4.1
+     ],
+     "run_m": 2.73
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -15.22,
+      -4.1
+     ],
+     "run_m": 2.73
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -16.42,
+      -4.1
+     ],
+     "run_m": 2.73
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 3.58,
+    "sink": 2.73,
+    "dishwasher": 2.73,
+    "washer": 2.73
+   },
+   "drain_run_m": 3.58,
+   "chases": [
+    [
+     -18.895,
+     -4.050000000000001,
+     -18.294999999999998,
+     -3.750000000000001
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "H7",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "wardrobe",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 34.4,
+   "access": null,
+   "rent_mo": 3816,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "371 sf / 4.80 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "137 sf / 3.40 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "2.45\u00d71.75"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "6.94 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "7.19 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "747 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 3.6, sink 2.7, dishwasher 2.7, washer 2.7"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": false
+  },
+  {
+   "id": "S4",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -3.7300000000000004,
+     -10.3
+    ],
+    [
+     -3.7300000000000004,
+     -1.370000000000001
+    ],
+    [
+     -9.23,
+     -1.370000000000001
+    ],
+    [
+     -9.23,
+     -10.3
+    ]
+   ],
+   "sf": 529,
+   "rooms": [
+    {
+     "type": "living",
+     "rect": [
+      -9.23,
+      -10.3,
+      -6.23,
+      -5.500000000000001
+     ],
+     "w": 3.0,
+     "d": 4.8,
+     "sf": 155
+    },
+    {
+     "type": "bed",
+     "rect": [
+      -6.23,
+      -10.3,
+      -3.7300000000000004,
+      -6.550000000000001
+     ],
+     "w": 2.5,
+     "d": 3.75,
+     "sf": 101
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -6.23,
+      -6.550000000000001,
+      -3.7300000000000004,
+      -5.500000000000001
+     ],
+     "w": 2.5,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -5.48,
+      -3.820000000000001,
+      -3.7300000000000004,
+      -1.370000000000001
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -5.48,
+      -5.500000000000001,
+      -3.7300000000000004,
+      -3.820000000000001
+     ],
+     "w": 1.75,
+     "d": 1.68,
+     "sf": 32
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -6.680000000000001,
+      -5.500000000000001,
+      -5.48,
+      -1.370000000000001
+     ],
+     "w": 1.2,
+     "d": 4.13,
+     "sf": 53
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -9.23,
+      -5.500000000000001,
+      -6.680000000000001,
+      -1.370000000000001
+     ],
+     "w": 2.55,
+     "d": 4.13,
+     "sf": 113
+    }
+   ],
+   "door": [
+    -6.08,
+    -1.370000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -8.88,
+     -1.72
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -4.61,
+      -2.6
+     ],
+     "run_m": 3.81
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -8.88,
+      -1.72
+     ],
+     "run_m": 3.88
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -8.28,
+      -1.72
+     ],
+     "run_m": 4.48
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -4.08,
+      -4.17
+     ],
+     "run_m": 4.86
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 3.81,
+    "sink": 3.88,
+    "dishwasher": 4.48,
+    "washer": 4.86
+   },
+   "drain_run_m": 4.86,
+   "chases": [
+    [
+     -4.905,
+     -1.6700000000000017,
+     -4.305000000000001,
+     -1.370000000000001
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C1",
+     "kind": "possible",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    },
+    {
+     "id": "H8",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 42.7,
+   "access": "mobility",
+   "rent_mo": 3015,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "155 sf / 3.00 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "101 sf / 2.50 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.55 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.00 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "529 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 3.8, sink 3.9, dishwasher 4.5, washer 4.9"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "S5",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     1.870000000000001,
+     -10.3
+    ],
+    [
+     1.870000000000001,
+     -1.370000000000001
+    ],
+    [
+     -3.7300000000000004,
+     -1.370000000000001
+    ],
+    [
+     -3.7300000000000004,
+     -10.3
+    ]
+   ],
+   "sf": 538,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -3.7300000000000004,
+      -10.3,
+      -1.2099999999999995,
+      -6.550000000000001
+     ],
+     "w": 2.52,
+     "d": 3.75,
+     "sf": 102
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -3.7300000000000004,
+      -6.550000000000001,
+      -1.2099999999999995,
+      -5.500000000000001
+     ],
+     "w": 2.52,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "living",
+     "rect": [
+      -1.2099999999999995,
+      -10.3,
+      1.870000000000001,
+      -5.500000000000001
+     ],
+     "w": 3.08,
+     "d": 4.8,
+     "sf": 159
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -3.7300000000000004,
+      -3.820000000000001,
+      -1.9800000000000004,
+      -1.370000000000001
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -3.7300000000000004,
+      -5.500000000000001,
+      -1.9800000000000004,
+      -3.820000000000001
+     ],
+     "w": 1.75,
+     "d": 1.68,
+     "sf": 32
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -1.9800000000000004,
+      -5.500000000000001,
+      -0.7800000000000005,
+      -1.370000000000001
+     ],
+     "w": 1.2,
+     "d": 4.13,
+     "sf": 53
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -0.7800000000000005,
+      -5.500000000000001,
+      1.870000000000001,
+      -2.7700000000000014
+     ],
+     "w": 2.65,
+     "d": 2.73,
+     "sf": 78
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -0.7800000000000005,
+      -2.7700000000000014,
+      1.870000000000001,
+      -1.370000000000001
+     ],
+     "w": 2.65,
+     "d": 1.4,
+     "sf": 40
+    }
+   ],
+   "door": [
+    -1.3800000000000003,
+    -1.370000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -0.43,
+     -3.12
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -2.86,
+      -2.6
+     ],
+     "run_m": 2.72
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -0.43,
+      -3.12
+     ],
+     "run_m": 3.97
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      0.17,
+      -3.12
+     ],
+     "run_m": 4.57
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -0.43,
+      -1.72
+     ],
+     "run_m": 2.57
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 2.72,
+    "sink": 3.97,
+    "dishwasher": 4.57,
+    "washer": 2.57
+   },
+   "drain_run_m": 4.57,
+   "chases": [
+    [
+     -3.1550000000000002,
+     -1.6700000000000017,
+     -2.5550000000000006,
+     -1.370000000000001
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C21",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.25
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    },
+    {
+     "id": "H9",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 42.5,
+   "access": "hearing/vision",
+   "rent_mo": 3048,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "159 sf / 3.08 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "102 sf / 2.52 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.65 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.08 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "538 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 2.7, sink 4.0, dishwasher 4.6, washer 2.6"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "S6",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     7.469999999999999,
+     -10.3
+    ],
+    [
+     7.469999999999999,
+     -1.370000000000001
+    ],
+    [
+     1.870000000000001,
+     -1.370000000000001
+    ],
+    [
+     1.870000000000001,
+     -10.3
+    ]
+   ],
+   "sf": 538,
+   "rooms": [
+    {
+     "type": "living",
+     "rect": [
+      1.870000000000001,
+      -10.3,
+      4.949999999999999,
+      -5.500000000000001
+     ],
+     "w": 3.08,
+     "d": 4.8,
+     "sf": 159
+    },
+    {
+     "type": "bed",
+     "rect": [
+      4.949999999999999,
+      -10.3,
+      7.469999999999999,
+      -6.550000000000001
+     ],
+     "w": 2.52,
+     "d": 3.75,
+     "sf": 102
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      4.949999999999999,
+      -6.550000000000001,
+      7.469999999999999,
+      -5.500000000000001
+     ],
+     "w": 2.52,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "bath",
+     "rect": [
+      5.719999999999999,
+      -5.500000000000001,
+      7.469999999999999,
+      -3.0500000000000007
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      5.719999999999999,
+      -3.0500000000000007,
+      7.469999999999999,
+      -1.370000000000001
+     ],
+     "w": 1.75,
+     "d": 1.68,
+     "sf": 32
+    },
+    {
+     "type": "hall",
+     "rect": [
+      4.519999999999999,
+      -5.500000000000001,
+      5.719999999999999,
+      -1.370000000000001
+     ],
+     "w": 1.2,
+     "d": 4.13,
+     "sf": 53
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      1.870000000000001,
+      -5.500000000000001,
+      4.519999999999999,
+      -1.370000000000001
+     ],
+     "w": 2.65,
+     "d": 4.13,
+     "sf": 118
+    }
+   ],
+   "door": [
+    5.119999999999999,
+    -1.370000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     4.17,
+     -1.72
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      6.59,
+      -4.28
+     ],
+     "run_m": 7.13
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      4.17,
+      -1.72
+     ],
+     "run_m": 4.7
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      3.57,
+      -1.72
+     ],
+     "run_m": 4.74
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      7.12,
+      -1.72
+     ],
+     "run_m": 4.52
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 7.13,
+    "sink": 4.7,
+    "dishwasher": 4.74,
+    "washer": 4.52
+   },
+   "drain_run_m": 7.13,
+   "chases": [
+    [
+     6.294999999999999,
+     -3.3500000000000005,
+     6.894999999999999,
+     -3.0500000000000007
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C7",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 36.1,
+   "access": null,
+   "rent_mo": 3048,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "159 sf / 3.08 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "102 sf / 2.52 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.65 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.08 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "538 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 7.1, sink 4.7, dishwasher 4.7, washer 4.5"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "S7",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     12.970000000000002,
+     -10.3
+    ],
+    [
+     12.970000000000002,
+     -1.370000000000001
+    ],
+    [
+     7.469999999999999,
+     -1.370000000000001
+    ],
+    [
+     7.469999999999999,
+     -10.3
+    ]
+   ],
+   "sf": 529,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      7.469999999999999,
+      -10.3,
+      9.969999999999999,
+      -6.550000000000001
+     ],
+     "w": 2.5,
+     "d": 3.75,
+     "sf": 101
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      7.469999999999999,
+      -6.550000000000001,
+      9.969999999999999,
+      -5.500000000000001
+     ],
+     "w": 2.5,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "living",
+     "rect": [
+      9.969999999999999,
+      -10.3,
+      12.970000000000002,
+      -5.500000000000001
+     ],
+     "w": 3.0,
+     "d": 4.8,
+     "sf": 155
+    },
+    {
+     "type": "bath",
+     "rect": [
+      7.469999999999999,
+      -5.500000000000001,
+      9.219999999999999,
+      -3.0500000000000007
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      7.469999999999999,
+      -3.0500000000000007,
+      9.219999999999999,
+      -1.370000000000001
+     ],
+     "w": 1.75,
+     "d": 1.68,
+     "sf": 32
+    },
+    {
+     "type": "hall",
+     "rect": [
+      9.219999999999999,
+      -5.500000000000001,
+      10.419999999999998,
+      -1.370000000000001
+     ],
+     "w": 1.2,
+     "d": 4.13,
+     "sf": 53
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      10.419999999999998,
+      -5.500000000000001,
+      12.970000000000002,
+      -2.7700000000000014
+     ],
+     "w": 2.55,
+     "d": 2.73,
+     "sf": 75
+    },
+    {
+     "type": "closet",
+     "rect": [
+      10.419999999999998,
+      -2.7700000000000014,
+      12.970000000000002,
+      -1.370000000000001
+     ],
+     "w": 2.55,
+     "d": 1.4,
+     "sf": 38
+    }
+   ],
+   "door": [
+    9.819999999999999,
+    -1.370000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     12.62,
+     -3.12
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      8.34,
+      -4.28
+     ],
+     "run_m": 7.02
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      12.62,
+      -3.12
+     ],
+     "run_m": 6.26
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      12.02,
+      -3.12
+     ],
+     "run_m": 6.26
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      8.87,
+      -1.72
+     ],
+     "run_m": 4.42
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 7.02,
+    "sink": 6.26,
+    "dishwasher": 6.26,
+    "washer": 4.42
+   },
+   "drain_run_m": 7.02,
+   "chases": [
+    [
+     8.044999999999998,
+     -3.3500000000000005,
+     8.645,
+     -3.0500000000000007
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C15",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.41
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    },
+    {
+     "id": "H10",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "wardrobe",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 31.2,
+   "access": "mobility",
+   "rent_mo": 3015,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "155 sf / 3.00 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "101 sf / 2.50 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.55 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.00 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "529 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 7.0, sink 6.3, dishwasher 6.3, washer 4.4"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "S8",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     18.470000000000002,
+     -10.3
+    ],
+    [
+     18.470000000000002,
+     -1.370000000000001
+    ],
+    [
+     12.970000000000002,
+     -1.370000000000001
+    ],
+    [
+     12.970000000000002,
+     -10.3
+    ]
+   ],
+   "sf": 529,
+   "rooms": [
+    {
+     "type": "living",
+     "rect": [
+      12.970000000000002,
+      -10.3,
+      15.970000000000002,
+      -5.500000000000001
+     ],
+     "w": 3.0,
+     "d": 4.8,
+     "sf": 155
+    },
+    {
+     "type": "bed",
+     "rect": [
+      15.970000000000002,
+      -10.3,
+      18.470000000000002,
+      -6.550000000000001
+     ],
+     "w": 2.5,
+     "d": 3.75,
+     "sf": 101
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      15.970000000000002,
+      -6.550000000000001,
+      18.470000000000002,
+      -5.500000000000001
+     ],
+     "w": 2.5,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "bath",
+     "rect": [
+      16.720000000000002,
+      -3.820000000000001,
+      18.470000000000002,
+      -1.370000000000001
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      16.720000000000002,
+      -5.500000000000001,
+      18.470000000000002,
+      -3.820000000000001
+     ],
+     "w": 1.75,
+     "d": 1.68,
+     "sf": 32
+    },
+    {
+     "type": "hall",
+     "rect": [
+      15.520000000000003,
+      -5.500000000000001,
+      16.720000000000002,
+      -1.370000000000001
+     ],
+     "w": 1.2,
+     "d": 4.13,
+     "sf": 53
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      12.970000000000002,
+      -5.500000000000001,
+      15.520000000000003,
+      -2.7700000000000014
+     ],
+     "w": 2.55,
+     "d": 2.73,
+     "sf": 75
+    },
+    {
+     "type": "closet",
+     "rect": [
+      12.970000000000002,
+      -2.7700000000000014,
+      15.520000000000003,
+      -1.370000000000001
+     ],
+     "w": 2.55,
+     "d": 1.4,
+     "sf": 38
+    }
+   ],
+   "door": [
+    16.120000000000005,
+    -1.370000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     15.17,
+     -3.12
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      17.6,
+      -2.6
+     ],
+     "run_m": 4.74
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      15.17,
+      -3.12
+     ],
+     "run_m": 5.56
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      14.57,
+      -3.12
+     ],
+     "run_m": 6.16
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      15.17,
+      -1.72
+     ],
+     "run_m": 4.16
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 4.74,
+    "sink": 5.56,
+    "dishwasher": 6.16,
+    "washer": 4.16
+   },
+   "drain_run_m": 6.16,
+   "chases": [
+    [
+     17.295,
+     -1.6700000000000017,
+     17.895000000000003,
+     -1.370000000000001
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C14",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.462
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    },
+    {
+     "id": "H11",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "wardrobe",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 25.0,
+   "access": "mobility",
+   "rent_mo": 3015,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "155 sf / 3.00 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "101 sf / 2.50 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.55 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.00 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "529 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 4.7, sink 5.6, dishwasher 6.2, washer 4.2"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "S9",
+   "type": "2BR/2BA corner",
+   "poly": [
+    [
+     30.3,
+     -10.3
+    ],
+    [
+     30.3,
+     -1.370000000000001
+    ],
+    [
+     18.470000000000002,
+     -1.370000000000001
+    ],
+    [
+     18.470000000000002,
+     -10.3
+    ]
+   ],
+   "sf": 1137,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      27.1,
+      -10.3,
+      30.3,
+      -6.550000000000001
+     ],
+     "w": 3.2,
+     "d": 3.75,
+     "sf": 129
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      27.1,
+      -6.550000000000001,
+      30.3,
+      -5.500000000000001
+     ],
+     "w": 3.2,
+     "d": 1.05,
+     "sf": 36
+    },
+    {
+     "type": "bed",
+     "rect": [
+      18.470000000000002,
+      -10.3,
+      21.470000000000002,
+      -6.550000000000001
+     ],
+     "w": 3.0,
+     "d": 3.75,
+     "sf": 121
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      18.470000000000002,
+      -6.550000000000001,
+      21.470000000000002,
+      -5.500000000000001
+     ],
+     "w": 3.0,
+     "d": 1.05,
+     "sf": 34
+    },
+    {
+     "type": "living",
+     "rect": [
+      21.470000000000002,
+      -10.3,
+      27.1,
+      -5.500000000000001
+     ],
+     "w": 5.63,
+     "d": 4.8,
+     "sf": 291
+    },
+    {
+     "type": "hall",
+     "rect": [
+      20.220000000000002,
+      -5.500000000000001,
+      21.42,
+      -1.370000000000001
+     ],
+     "w": 1.2,
+     "d": 4.13,
+     "sf": 53
+    },
+    {
+     "type": "bath",
+     "rect": [
+      18.470000000000002,
+      -3.820000000000001,
+      20.220000000000002,
+      -1.370000000000001
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "bath",
+     "rect": [
+      18.470000000000002,
+      -5.500000000000001,
+      20.220000000000002,
+      -3.820000000000001
+     ],
+     "w": 1.75,
+     "d": 1.68,
+     "sf": 32
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      21.42,
+      -5.500000000000001,
+      30.3,
+      -1.370000000000001
+     ],
+     "w": 8.88,
+     "d": 4.13,
+     "sf": 395
+    }
+   ],
+   "door": [
+    20.76,
+    -1.370000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     21.77,
+     -1.72
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      19.35,
+      -2.6
+     ],
+     "run_m": 5.59
+    },
+    {
+     "kind": "bath2",
+     "pos": [
+      19.35,
+      -4.66
+     ],
+     "run_m": 7.66
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      21.77,
+      -1.72
+     ],
+     "run_m": 7.14
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      22.37,
+      -1.72
+     ],
+     "run_m": 7.74
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      21.17,
+      -1.72
+     ],
+     "run_m": 6.54
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.59,
+    "bath2": 7.66,
+    "sink": 7.14,
+    "dishwasher": 7.74,
+    "washer": 6.54
+   },
+   "drain_run_m": 7.74,
+   "chases": [
+    [
+     19.045,
+     -1.6700000000000017,
+     19.645000000000003,
+     -1.370000000000001
+    ],
+    [
+     19.045,
+     -4.120000000000001,
+     19.645000000000003,
+     -3.820000000000001
+    ]
+   ],
+   "column_overlaps": [],
+   "egress_to_stair_m": 28.8,
+   "access": null,
+   "rent_mo": 5849,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "291 sf / 4.80 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "129 sf / 3.20 m, 121 sf / 3.00 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45, 1.75\u00d71.68"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "8.88 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "5.63 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "1137 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.6, bath2 7.7, sink 7.1, dishwasher 7.7, washer 6.5"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "E1",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     30.3,
+     -1.37
+    ],
+    [
+     30.3,
+     4.13
+    ],
+    [
+     21.3,
+     4.13
+    ],
+    [
+     21.3,
+     -1.37
+    ]
+   ],
+   "sf": 533,
+   "rooms": [
+    {
+     "type": "living",
+     "rect": [
+      25.5,
+      -1.37,
+      30.3,
+      1.63
+     ],
+     "w": 3.0,
+     "d": 4.8,
+     "sf": 155
+    },
+    {
+     "type": "bed",
+     "rect": [
+      26.55,
+      1.63,
+      30.3,
+      4.13
+     ],
+     "w": 2.5,
+     "d": 3.75,
+     "sf": 101
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      25.5,
+      1.63,
+      26.55,
+      4.13
+     ],
+     "w": 2.5,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "bath",
+     "rect": [
+      23.05,
+      2.38,
+      25.5,
+      4.13
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      21.3,
+      2.38,
+      23.05,
+      4.13
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      21.3,
+      1.18,
+      25.5,
+      2.38
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      22.700000000000003,
+      -1.37,
+      25.5,
+      1.18
+     ],
+     "w": 2.55,
+     "d": 2.8,
+     "sf": 77
+    },
+    {
+     "type": "closet",
+     "rect": [
+      21.3,
+      -1.37,
+      22.700000000000003,
+      1.18
+     ],
+     "w": 2.55,
+     "d": 1.4,
+     "sf": 38
+    }
+   ],
+   "door": [
+    21.3,
+    1.7799999999999998
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     23.05,
+     0.83
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      24.27,
+      3.25
+     ],
+     "run_m": 5.81
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      23.05,
+      0.83
+     ],
+     "run_m": 5.87
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      23.05,
+      0.23
+     ],
+     "run_m": 6.47
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      21.65,
+      3.78
+     ],
+     "run_m": 3.19
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.81,
+    "sink": 5.87,
+    "dishwasher": 6.47,
+    "washer": 3.19
+   },
+   "drain_run_m": 6.47,
+   "chases": [
+    [
+     23.05,
+     2.955,
+     23.35,
+     3.5549999999999997
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C6",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.462
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    },
+    {
+     "id": "C18",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.41
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 19.5,
+   "access": null,
+   "rent_mo": 3030,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "155 sf / 3.00 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "101 sf / 2.50 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.55 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.00 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "533 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.8, sink 5.9, dishwasher 6.5, washer 3.2"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "E2",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     30.3,
+     4.13
+    ],
+    [
+     30.3,
+     9.629999999999999
+    ],
+    [
+     21.3,
+     9.629999999999999
+    ],
+    [
+     21.3,
+     4.13
+    ]
+   ],
+   "sf": 533,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      26.55,
+      4.13,
+      30.3,
+      6.63
+     ],
+     "w": 2.5,
+     "d": 3.75,
+     "sf": 101
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      25.5,
+      4.13,
+      26.55,
+      6.63
+     ],
+     "w": 2.5,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "living",
+     "rect": [
+      25.5,
+      6.63,
+      30.3,
+      9.629999999999999
+     ],
+     "w": 3.0,
+     "d": 4.8,
+     "sf": 155
+    },
+    {
+     "type": "bath",
+     "rect": [
+      23.05,
+      4.13,
+      25.5,
+      5.88
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      21.3,
+      4.13,
+      23.05,
+      5.88
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      21.3,
+      5.88,
+      25.5,
+      7.08
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      22.700000000000003,
+      7.08,
+      25.5,
+      9.629999999999999
+     ],
+     "w": 2.55,
+     "d": 2.8,
+     "sf": 77
+    },
+    {
+     "type": "closet",
+     "rect": [
+      21.3,
+      7.08,
+      22.700000000000003,
+      9.629999999999999
+     ],
+     "w": 2.55,
+     "d": 1.4,
+     "sf": 38
+    }
+   ],
+   "door": [
+    21.3,
+    6.48
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     23.05,
+     9.28
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      24.27,
+      5.0
+     ],
+     "run_m": 5.81
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      23.05,
+      9.28
+     ],
+     "run_m": 4.58
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      23.05,
+      8.68
+     ],
+     "run_m": 4.58
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      21.65,
+      9.28
+     ],
+     "run_m": 3.18
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.81,
+    "sink": 4.58,
+    "dishwasher": 4.58,
+    "washer": 3.18
+   },
+   "drain_run_m": 5.81,
+   "chases": [
+    [
+     23.05,
+     4.705,
+     23.35,
+     5.305
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C2",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.462
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    },
+    {
+     "id": "C17",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.41
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 15.5,
+   "access": null,
+   "rent_mo": 3030,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "155 sf / 3.00 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "101 sf / 2.50 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.55 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.00 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "533 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.8, sink 4.6, dishwasher 4.6, washer 3.2"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "E3",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     30.3,
+     9.629999999999999
+    ],
+    [
+     30.3,
+     15.129999999999999
+    ],
+    [
+     21.3,
+     15.129999999999999
+    ],
+    [
+     21.3,
+     9.629999999999999
+    ]
+   ],
+   "sf": 533,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      26.55,
+      9.629999999999999,
+      30.3,
+      12.129999999999999
+     ],
+     "w": 2.5,
+     "d": 3.75,
+     "sf": 101
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      25.5,
+      9.629999999999999,
+      26.55,
+      12.129999999999999
+     ],
+     "w": 2.5,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "living",
+     "rect": [
+      25.5,
+      12.129999999999999,
+      30.3,
+      15.129999999999999
+     ],
+     "w": 3.0,
+     "d": 4.8,
+     "sf": 155
+    },
+    {
+     "type": "bath",
+     "rect": [
+      21.3,
+      9.629999999999999,
+      23.75,
+      11.379999999999999
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      23.75,
+      9.629999999999999,
+      25.5,
+      11.379999999999999
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      21.3,
+      11.379999999999999,
+      25.5,
+      12.579999999999998
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      22.700000000000003,
+      12.579999999999998,
+      25.5,
+      15.129999999999999
+     ],
+     "w": 2.55,
+     "d": 2.8,
+     "sf": 77
+    },
+    {
+     "type": "closet",
+     "rect": [
+      21.3,
+      12.579999999999998,
+      22.700000000000003,
+      15.129999999999999
+     ],
+     "w": 2.55,
+     "d": 1.4,
+     "sf": 38
+    }
+   ],
+   "door": [
+    21.3,
+    11.979999999999999
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     23.05,
+     14.78
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      22.52,
+      10.5
+     ],
+     "run_m": 4.07
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      23.05,
+      14.78
+     ],
+     "run_m": 4.58
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      23.05,
+      14.18
+     ],
+     "run_m": 4.58
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      21.65,
+      14.78
+     ],
+     "run_m": 3.18
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 4.07,
+    "sink": 4.58,
+    "dishwasher": 4.58,
+    "washer": 3.18
+   },
+   "drain_run_m": 4.58,
+   "chases": [
+    [
+     21.3,
+     10.204999999999998,
+     21.6,
+     10.805
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C3",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.41
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 17.9,
+   "access": null,
+   "rent_mo": 3030,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "155 sf / 3.00 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "101 sf / 2.50 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.55 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.00 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "533 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 4.1, sink 4.6, dishwasher 4.6, washer 3.2"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": false
+  },
+  {
+   "id": "E4",
+   "type": "2BR/2BA corner",
+   "poly": [
+    [
+     30.3,
+     15.129999999999999
+    ],
+    [
+     30.3,
+     24.4
+    ],
+    [
+     21.3,
+     24.4
+    ],
+    [
+     21.3,
+     15.129999999999999
+    ]
+   ],
+   "sf": 898,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      26.55,
+      21.2,
+      30.3,
+      24.4
+     ],
+     "w": 3.2,
+     "d": 3.75,
+     "sf": 129
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      25.5,
+      21.2,
+      26.55,
+      24.4
+     ],
+     "w": 3.2,
+     "d": 1.05,
+     "sf": 36
+    },
+    {
+     "type": "bed",
+     "rect": [
+      26.55,
+      15.129999999999999,
+      30.3,
+      17.63
+     ],
+     "w": 2.5,
+     "d": 3.75,
+     "sf": 101
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      25.5,
+      15.129999999999999,
+      26.55,
+      17.63
+     ],
+     "w": 2.5,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "living",
+     "rect": [
+      25.5,
+      17.63,
+      30.3,
+      21.2
+     ],
+     "w": 3.57,
+     "d": 4.8,
+     "sf": 184
+    },
+    {
+     "type": "hall",
+     "rect": [
+      21.3,
+      16.88,
+      25.5,
+      18.08
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "bath",
+     "rect": [
+      21.3,
+      15.129999999999999,
+      23.75,
+      16.88
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "bath",
+     "rect": [
+      23.75,
+      15.129999999999999,
+      25.5,
+      16.88
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      21.3,
+      18.08,
+      25.5,
+      24.4
+     ],
+     "w": 6.32,
+     "d": 4.2,
+     "sf": 286
+    }
+   ],
+   "door": [
+    21.3,
+    17.424999999999997
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     21.65,
+     18.43
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      22.52,
+      16.0
+     ],
+     "run_m": 4.58
+    },
+    {
+     "kind": "bath2",
+     "pos": [
+      24.62,
+      16.0
+     ],
+     "run_m": 6.68
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      21.65,
+      18.43
+     ],
+     "run_m": 6.13
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      21.65,
+      19.03
+     ],
+     "run_m": 6.73
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      21.65,
+      17.83
+     ],
+     "run_m": 5.53
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 4.58,
+    "bath2": 6.68,
+    "sink": 6.13,
+    "dishwasher": 6.73,
+    "washer": 5.53
+   },
+   "drain_run_m": 6.73,
+   "chases": [
+    [
+     21.3,
+     15.704999999999998,
+     21.6,
+     16.305
+    ],
+    [
+     23.75,
+     15.704999999999998,
+     24.05,
+     16.305
+    ]
+   ],
+   "column_overlaps": [],
+   "egress_to_stair_m": 27.1,
+   "access": null,
+   "rent_mo": 4971,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "184 sf / 3.57 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "129 sf / 3.20 m, 101 sf / 2.50 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45, 1.75\u00d71.75"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "6.32 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.57 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "898 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 4.6, bath2 6.7, sink 6.1, dishwasher 6.7, washer 5.5"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": false
+  },
+  {
+   "id": "N1",
+   "type": "2BR/2BA corner",
+   "poly": [
+    [
+     -26.42,
+     15.399999999999999
+    ],
+    [
+     -26.42,
+     24.4
+    ],
+    [
+     -38.42,
+     24.4
+    ],
+    [
+     -38.42,
+     15.399999999999999
+    ]
+   ],
+   "sf": 1163,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -38.42,
+      20.65,
+      -35.22,
+      24.4
+     ],
+     "w": 3.2,
+     "d": 3.75,
+     "sf": 129
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -38.42,
+      19.599999999999998,
+      -35.22,
+      20.65
+     ],
+     "w": 3.2,
+     "d": 1.05,
+     "sf": 36
+    },
+    {
+     "type": "bed",
+     "rect": [
+      -29.42,
+      20.65,
+      -26.42,
+      24.4
+     ],
+     "w": 3.0,
+     "d": 3.75,
+     "sf": 121
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -29.42,
+      19.599999999999998,
+      -26.42,
+      20.65
+     ],
+     "w": 3.0,
+     "d": 1.05,
+     "sf": 34
+    },
+    {
+     "type": "living",
+     "rect": [
+      -35.22,
+      19.599999999999998,
+      -29.42,
+      24.4
+     ],
+     "w": 5.8,
+     "d": 4.8,
+     "sf": 300
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -29.37,
+      15.399999999999999,
+      -28.17,
+      19.599999999999998
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -28.17,
+      15.399999999999999,
+      -26.42,
+      17.849999999999998
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -28.17,
+      17.849999999999998,
+      -26.42,
+      19.599999999999998
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -38.42,
+      15.399999999999999,
+      -29.37,
+      19.599999999999998
+     ],
+     "w": 9.05,
+     "d": 4.2,
+     "sf": 409
+    }
+   ],
+   "door": [
+    -28.770000000000003,
+    15.399999999999999
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -29.72,
+     15.75
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -27.3,
+      16.62
+     ],
+     "run_m": 6.9
+    },
+    {
+     "kind": "bath2",
+     "pos": [
+      -27.3,
+      18.72
+     ],
+     "run_m": 9.0
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -29.72,
+      15.75
+     ],
+     "run_m": 8.45
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -30.32,
+      15.75
+     ],
+     "run_m": 9.05
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -29.12,
+      15.75
+     ],
+     "run_m": 7.85
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 6.9,
+    "bath2": 9.0,
+    "sink": 8.45,
+    "dishwasher": 9.05,
+    "washer": 7.85
+   },
+   "drain_run_m": 9.05,
+   "chases": [
+    [
+     -27.595000000000002,
+     15.399999999999999,
+     -26.995,
+     15.7
+    ],
+    [
+     -27.595000000000002,
+     17.849999999999998,
+     -26.995,
+     18.15
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "H4",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 29.6,
+   "access": null,
+   "rent_mo": 5944,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "300 sf / 4.80 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "129 sf / 3.20 m, 121 sf / 3.00 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45, 1.75\u00d71.75"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "9.05 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "5.80 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "1163 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": false,
+     "measured": "bath1 6.9, bath2 9.0, sink 8.4, dishwasher 9.0, washer 7.8"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "N2",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -20.32,
+     15.399999999999999
+    ],
+    [
+     -20.32,
+     24.4
+    ],
+    [
+     -26.42,
+     24.4
+    ],
+    [
+     -26.42,
+     15.399999999999999
+    ]
+   ],
+   "sf": 591,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -26.42,
+      20.65,
+      -23.675,
+      24.4
+     ],
+     "w": 2.75,
+     "d": 3.75,
+     "sf": 111
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -26.42,
+      19.599999999999998,
+      -23.675,
+      20.65
+     ],
+     "w": 2.75,
+     "d": 1.05,
+     "sf": 31
+    },
+    {
+     "type": "living",
+     "rect": [
+      -23.675,
+      19.599999999999998,
+      -20.32,
+      24.4
+     ],
+     "w": 3.36,
+     "d": 4.8,
+     "sf": 173
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -26.42,
+      15.399999999999999,
+      -24.67,
+      17.849999999999998
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -26.42,
+      17.849999999999998,
+      -24.67,
+      19.599999999999998
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -24.67,
+      15.399999999999999,
+      -23.470000000000002,
+      19.599999999999998
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -23.470000000000002,
+      15.399999999999999,
+      -20.32,
+      19.599999999999998
+     ],
+     "w": 3.15,
+     "d": 4.2,
+     "sf": 142
+    }
+   ],
+   "door": [
+    -24.07,
+    15.399999999999999
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -23.12,
+     15.75
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -25.55,
+      16.62
+     ],
+     "run_m": 5.4
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -23.12,
+      15.75
+     ],
+     "run_m": 4.51
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -22.52,
+      15.75
+     ],
+     "run_m": 4.51
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -25.02,
+      18.2
+     ],
+     "run_m": 6.96
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.4,
+    "sink": 4.51,
+    "dishwasher": 4.51,
+    "washer": 6.96
+   },
+   "drain_run_m": 6.96,
+   "chases": [
+    [
+     -25.845000000000002,
+     15.399999999999999,
+     -25.245,
+     15.7
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "H3",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "wardrobe",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 26.2,
+   "access": null,
+   "rent_mo": 3243,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "173 sf / 3.36 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "111 sf / 2.75 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "3.15 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.36 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "591 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.4, sink 4.5, dishwasher 4.5, washer 7.0"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "N3",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -14.219999999999999,
+     15.399999999999999
+    ],
+    [
+     -14.219999999999999,
+     24.4
+    ],
+    [
+     -20.32,
+     24.4
+    ],
+    [
+     -20.32,
+     15.399999999999999
+    ]
+   ],
+   "sf": 591,
+   "rooms": [
+    {
+     "type": "living",
+     "rect": [
+      -20.32,
+      19.599999999999998,
+      -16.965,
+      24.4
+     ],
+     "w": 3.36,
+     "d": 4.8,
+     "sf": 173
+    },
+    {
+     "type": "bed",
+     "rect": [
+      -16.965,
+      20.65,
+      -14.219999999999999,
+      24.4
+     ],
+     "w": 2.75,
+     "d": 3.75,
+     "sf": 111
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -16.965,
+      19.599999999999998,
+      -14.219999999999999,
+      20.65
+     ],
+     "w": 2.75,
+     "d": 1.05,
+     "sf": 31
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -15.969999999999999,
+      15.399999999999999,
+      -14.219999999999999,
+      17.849999999999998
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -15.969999999999999,
+      17.849999999999998,
+      -14.219999999999999,
+      19.599999999999998
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -17.169999999999998,
+      15.399999999999999,
+      -15.969999999999999,
+      19.599999999999998
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -20.32,
+      15.399999999999999,
+      -17.169999999999998,
+      19.599999999999998
+     ],
+     "w": 3.15,
+     "d": 4.2,
+     "sf": 142
+    }
+   ],
+   "door": [
+    -16.57,
+    15.399999999999999
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -17.52,
+     15.75
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -15.09,
+      16.62
+     ],
+     "run_m": 5.48
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -17.52,
+      15.75
+     ],
+     "run_m": 4.55
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -18.12,
+      15.75
+     ],
+     "run_m": 4.53
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -15.62,
+      18.2
+     ],
+     "run_m": 7.03
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.48,
+    "sink": 4.55,
+    "dishwasher": 4.53,
+    "washer": 7.03
+   },
+   "drain_run_m": 7.03,
+   "chases": [
+    [
+     -15.395,
+     15.399999999999999,
+     -14.794999999999998,
+     15.7
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "H2",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.457
+      },
+      {
+       "room": "wardrobe",
+       "m2": 0.105
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 33.8,
+   "access": null,
+   "rent_mo": 3243,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "173 sf / 3.36 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "111 sf / 2.75 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "3.15 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.36 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "591 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.5, sink 4.5, dishwasher 4.5, washer 7.0"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "N4",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -8.120000000000001,
+     15.399999999999999
+    ],
+    [
+     -8.120000000000001,
+     24.4
+    ],
+    [
+     -14.219999999999999,
+     24.4
+    ],
+    [
+     -14.219999999999999,
+     15.399999999999999
+    ]
+   ],
+   "sf": 591,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -14.219999999999999,
+      20.65,
+      -11.475,
+      24.4
+     ],
+     "w": 2.74,
+     "d": 3.75,
+     "sf": 111
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -14.219999999999999,
+      19.599999999999998,
+      -11.475,
+      20.65
+     ],
+     "w": 2.74,
+     "d": 1.05,
+     "sf": 31
+    },
+    {
+     "type": "living",
+     "rect": [
+      -11.475,
+      19.599999999999998,
+      -8.120000000000001,
+      24.4
+     ],
+     "w": 3.35,
+     "d": 4.8,
+     "sf": 173
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -14.219999999999999,
+      15.399999999999999,
+      -12.469999999999999,
+      17.849999999999998
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -14.219999999999999,
+      17.849999999999998,
+      -12.469999999999999,
+      19.599999999999998
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -12.469999999999999,
+      15.399999999999999,
+      -11.27,
+      19.599999999999998
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -11.27,
+      15.399999999999999,
+      -8.120000000000001,
+      19.599999999999998
+     ],
+     "w": 3.15,
+     "d": 4.2,
+     "sf": 142
+    }
+   ],
+   "door": [
+    -11.87,
+    15.399999999999999
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -10.92,
+     15.75
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -13.34,
+      16.62
+     ],
+     "run_m": 5.52
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -10.92,
+      15.75
+     ],
+     "run_m": 4.67
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -10.32,
+      15.75
+     ],
+     "run_m": 4.68
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -13.87,
+      18.2
+     ],
+     "run_m": 7.07
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.52,
+    "sink": 4.67,
+    "dishwasher": 4.68,
+    "washer": 7.07
+   },
+   "drain_run_m": 7.07,
+   "chases": [
+    [
+     -13.645,
+     15.399999999999999,
+     -13.044999999999998,
+     15.7
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "H1",
+     "kind": "hidden",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 38.4,
+   "access": null,
+   "rent_mo": 3243,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "173 sf / 3.35 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "111 sf / 2.74 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "3.15 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.35 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "591 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.5, sink 4.7, dishwasher 4.7, washer 7.1"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "N5",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -2.020000000000003,
+     15.399999999999999
+    ],
+    [
+     -2.020000000000003,
+     24.4
+    ],
+    [
+     -8.120000000000001,
+     24.4
+    ],
+    [
+     -8.120000000000001,
+     15.399999999999999
+    ]
+   ],
+   "sf": 591,
+   "rooms": [
+    {
+     "type": "living",
+     "rect": [
+      -8.120000000000001,
+      19.599999999999998,
+      -4.765000000000002,
+      24.4
+     ],
+     "w": 3.35,
+     "d": 4.8,
+     "sf": 173
+    },
+    {
+     "type": "bed",
+     "rect": [
+      -4.765000000000002,
+      20.65,
+      -2.020000000000003,
+      24.4
+     ],
+     "w": 2.74,
+     "d": 3.75,
+     "sf": 111
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -4.765000000000002,
+      19.599999999999998,
+      -2.020000000000003,
+      20.65
+     ],
+     "w": 2.74,
+     "d": 1.05,
+     "sf": 31
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -3.770000000000003,
+      15.399999999999999,
+      -2.020000000000003,
+      17.849999999999998
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -3.770000000000003,
+      17.849999999999998,
+      -2.020000000000003,
+      19.599999999999998
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -4.970000000000003,
+      15.399999999999999,
+      -3.770000000000003,
+      19.599999999999998
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -8.120000000000001,
+      15.399999999999999,
+      -4.970000000000003,
+      19.599999999999998
+     ],
+     "w": 3.15,
+     "d": 4.2,
+     "sf": 142
+    }
+   ],
+   "door": [
+    -4.370000000000003,
+    15.399999999999999
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -5.32,
+     15.75
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -2.9,
+      16.62
+     ],
+     "run_m": 5.02
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -5.32,
+      15.75
+     ],
+     "run_m": 4.68
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -5.92,
+      15.75
+     ],
+     "run_m": 4.72
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -3.42,
+      18.2
+     ],
+     "run_m": 6.58
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.02,
+    "sink": 4.68,
+    "dishwasher": 4.72,
+    "washer": 6.58
+   },
+   "drain_run_m": 6.58,
+   "chases": [
+    [
+     -3.195000000000003,
+     15.399999999999999,
+     -2.5950000000000033,
+     15.7
+    ]
+   ],
+   "column_overlaps": [],
+   "egress_to_stair_m": 46.0,
+   "access": null,
+   "rent_mo": 3243,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "173 sf / 3.35 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "111 sf / 2.74 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "3.15 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.35 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "591 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.0, sink 4.7, dishwasher 4.7, washer 6.6"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "N6",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     4.1,
+     15.399999999999999
+    ],
+    [
+     4.1,
+     24.4
+    ],
+    [
+     -2.020000000000003,
+     24.4
+    ],
+    [
+     -2.020000000000003,
+     15.399999999999999
+    ]
+   ],
+   "sf": 593,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -2.020000000000003,
+      20.95,
+      0.7339999999999982,
+      24.4
+     ],
+     "w": 2.75,
+     "d": 3.45,
+     "sf": 102
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -2.020000000000003,
+      19.599999999999998,
+      0.7339999999999982,
+      20.95
+     ],
+     "w": 2.75,
+     "d": 1.35,
+     "sf": 40
+    },
+    {
+     "type": "living",
+     "rect": [
+      0.7339999999999982,
+      19.599999999999998,
+      4.1,
+      24.4
+     ],
+     "w": 3.37,
+     "d": 4.8,
+     "sf": 174
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -2.020000000000003,
+      15.399999999999999,
+      -0.2700000000000031,
+      17.849999999999998
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -2.020000000000003,
+      17.849999999999998,
+      -0.2700000000000031,
+      19.599999999999998
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -0.2700000000000031,
+      15.399999999999999,
+      0.9299999999999968,
+      19.599999999999998
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      0.9299999999999968,
+      15.399999999999999,
+      4.1,
+      19.599999999999998
+     ],
+     "w": 3.17,
+     "d": 4.2,
+     "sf": 143
+    }
+   ],
+   "door": [
+    0.32999999999999685,
+    15.399999999999999
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     3.75,
+     15.75
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -1.15,
+      16.62
+     ],
+     "run_m": 5.39
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      3.75,
+      15.75
+     ],
+     "run_m": 3.99
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      3.15,
+      15.75
+     ],
+     "run_m": 4.28
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -1.67,
+      18.2
+     ],
+     "run_m": 6.58
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 5.39,
+    "sink": 3.99,
+    "dishwasher": 4.28,
+    "washer": 6.58
+   },
+   "drain_run_m": 6.58,
+   "chases": [
+    [
+     -1.4450000000000032,
+     15.399999999999999,
+     -0.8450000000000031,
+     15.7
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C16",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "wardrobe",
+       "m2": 0.25
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 42.5,
+   "access": null,
+   "rent_mo": 3250,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "174 sf / 3.37 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "102 sf / 2.75 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "3.17 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.37 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "593 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 5.4, sink 4.0, dishwasher 4.3, washer 6.6"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "N7",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     12.7,
+     17.97
+    ],
+    [
+     12.7,
+     24.4
+    ],
+    [
+     4.1,
+     24.4
+    ],
+    [
+     4.1,
+     17.97
+    ]
+   ],
+   "sf": 595,
+   "rooms": [
+    {
+     "type": "living",
+     "rect": [
+      4.1,
+      19.599999999999998,
+      9.299999999999999,
+      24.4
+     ],
+     "w": 5.2,
+     "d": 4.8,
+     "sf": 269
+    },
+    {
+     "type": "bed",
+     "rect": [
+      9.299999999999999,
+      20.65,
+      12.7,
+      24.4
+     ],
+     "w": 3.4,
+     "d": 3.75,
+     "sf": 137
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      9.299999999999999,
+      19.599999999999998,
+      12.7,
+      20.65
+     ],
+     "w": 3.4,
+     "d": 1.05,
+     "sf": 38
+    },
+    {
+     "type": "bath",
+     "rect": [
+      10.25,
+      17.97,
+      12.7,
+      19.599999999999998
+     ],
+     "w": 2.45,
+     "d": 1.63,
+     "sf": 43
+    },
+    {
+     "type": "hall",
+     "rect": [
+      9.05,
+      17.97,
+      10.25,
+      19.599999999999998
+     ],
+     "w": 1.2,
+     "d": 1.63,
+     "sf": 21
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      4.1,
+      17.97,
+      9.05,
+      19.599999999999998
+     ],
+     "w": 4.95,
+     "d": 1.63,
+     "sf": 87
+    }
+   ],
+   "door": [
+    9.65,
+    17.97
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     8.7,
+     18.32
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      11.47,
+      18.78
+     ],
+     "run_m": 3.3
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      8.7,
+      18.32
+     ],
+     "run_m": 2.83
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      8.1,
+      18.32
+     ],
+     "run_m": 2.83
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      9.3,
+      18.32
+     ],
+     "run_m": 2.83
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 3.3,
+    "sink": 2.83,
+    "dishwasher": 2.83,
+    "washer": 2.83
+   },
+   "drain_run_m": 3.3,
+   "chases": [
+    [
+     11.174999999999999,
+     17.97,
+     11.775,
+     18.27
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C10",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 32.4,
+   "access": null,
+   "rent_mo": 3257,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "269 sf / 4.80 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "137 sf / 3.40 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "2.45\u00d71.63"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "4.95 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "5.20 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "595 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 3.3, sink 2.8, dishwasher 2.8, washer 2.8"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "N8",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     21.3,
+     17.97
+    ],
+    [
+     21.3,
+     24.4
+    ],
+    [
+     12.7,
+     24.4
+    ],
+    [
+     12.7,
+     17.97
+    ]
+   ],
+   "sf": 595,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      12.7,
+      20.65,
+      16.099999999999998,
+      24.4
+     ],
+     "w": 3.4,
+     "d": 3.75,
+     "sf": 137
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      12.7,
+      19.599999999999998,
+      16.099999999999998,
+      20.65
+     ],
+     "w": 3.4,
+     "d": 1.05,
+     "sf": 38
+    },
+    {
+     "type": "living",
+     "rect": [
+      16.099999999999998,
+      19.599999999999998,
+      21.3,
+      24.4
+     ],
+     "w": 5.2,
+     "d": 4.8,
+     "sf": 269
+    },
+    {
+     "type": "bath",
+     "rect": [
+      12.7,
+      17.97,
+      15.149999999999999,
+      19.599999999999998
+     ],
+     "w": 2.45,
+     "d": 1.63,
+     "sf": 43
+    },
+    {
+     "type": "hall",
+     "rect": [
+      15.149999999999999,
+      17.97,
+      16.349999999999998,
+      19.599999999999998
+     ],
+     "w": 1.2,
+     "d": 1.63,
+     "sf": 21
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      16.349999999999998,
+      17.97,
+      21.3,
+      19.599999999999998
+     ],
+     "w": 4.95,
+     "d": 1.63,
+     "sf": 87
+    }
+   ],
+   "door": [
+    15.749999999999998,
+    17.97
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     16.7,
+     18.32
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      13.92,
+      18.78
+     ],
+     "run_m": 4.0
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      16.7,
+      18.32
+     ],
+     "run_m": 2.82
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      17.3,
+      18.32
+     ],
+     "run_m": 2.82
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      16.1,
+      18.32
+     ],
+     "run_m": 2.82
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 4.0,
+    "sink": 2.82,
+    "dishwasher": 2.82,
+    "washer": 2.82
+   },
+   "drain_run_m": 4.0,
+   "chases": [
+    [
+     13.624999999999998,
+     17.97,
+     14.225,
+     18.27
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C12",
+     "kind": "probable",
+     "overlaps": [
+      {
+       "room": "living",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 26.4,
+   "access": null,
+   "rent_mo": 3257,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "269 sf / 4.80 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "137 sf / 3.40 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "2.45\u00d71.63"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "4.95 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "5.20 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "595 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 4.0, sink 2.8, dishwasher 2.8, washer 2.8"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "W1",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -29.42,
+     -1.37
+    ],
+    [
+     -29.42,
+     4.23
+    ],
+    [
+     -38.42,
+     4.23
+    ],
+    [
+     -38.42,
+     -1.37
+    ]
+   ],
+   "sf": 543,
+   "rooms": [
+    {
+     "type": "living",
+     "rect": [
+      -38.42,
+      -1.37,
+      -33.620000000000005,
+      1.71
+     ],
+     "w": 3.08,
+     "d": 4.8,
+     "sf": 159
+    },
+    {
+     "type": "bed",
+     "rect": [
+      -38.42,
+      1.71,
+      -34.67,
+      4.23
+     ],
+     "w": 2.52,
+     "d": 3.75,
+     "sf": 102
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -34.67,
+      1.71,
+      -33.620000000000005,
+      4.23
+     ],
+     "w": 2.52,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -31.87,
+      2.4800000000000004,
+      -29.42,
+      4.23
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -33.620000000000005,
+      2.4800000000000004,
+      -31.87,
+      4.23
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -33.620000000000005,
+      1.2800000000000005,
+      -29.42,
+      2.4800000000000004
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -33.620000000000005,
+      -1.37,
+      -30.82,
+      1.2800000000000005
+     ],
+     "w": 2.65,
+     "d": 2.8,
+     "sf": 80
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -30.82,
+      -1.37,
+      -29.42,
+      1.2800000000000005
+     ],
+     "w": 2.65,
+     "d": 1.4,
+     "sf": 40
+    }
+   ],
+   "door": [
+    -29.42,
+    1.8800000000000003
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -31.17,
+     0.93
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -30.65,
+      3.36
+     ],
+     "run_m": 4.88
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -31.17,
+      0.93
+     ],
+     "run_m": 6.11
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -31.17,
+      0.33
+     ],
+     "run_m": 6.71
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -29.77,
+      0.93
+     ],
+     "run_m": 4.71
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 4.88,
+    "sink": 6.11,
+    "dishwasher": 6.71,
+    "washer": 4.71
+   },
+   "drain_run_m": 6.71,
+   "chases": [
+    [
+     -29.720000000000002,
+     3.0550000000000006,
+     -29.42,
+     3.6550000000000002
+    ]
+   ],
+   "column_overlaps": [
+    {
+     "id": "C4",
+     "kind": "possible",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.41
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    },
+    {
+     "id": "C13",
+     "kind": "possible",
+     "overlaps": [
+      {
+       "room": "closet",
+       "m2": 0.562
+      }
+     ],
+     "ok": true,
+     "hard_rule_break": false
+    }
+   ],
+   "egress_to_stair_m": 18.8,
+   "access": null,
+   "rent_mo": 3066,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "159 sf / 3.08 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "102 sf / 2.52 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.65 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.08 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "543 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 4.9, sink 6.1, dishwasher 6.7, washer 4.7"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "W2",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -29.42,
+     4.23
+    ],
+    [
+     -29.42,
+     9.830000000000002
+    ],
+    [
+     -38.42,
+     9.830000000000002
+    ],
+    [
+     -38.42,
+     4.23
+    ]
+   ],
+   "sf": 543,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -38.42,
+      4.23,
+      -34.67,
+      6.750000000000002
+     ],
+     "w": 2.52,
+     "d": 3.75,
+     "sf": 102
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -34.67,
+      4.23,
+      -33.620000000000005,
+      6.750000000000002
+     ],
+     "w": 2.52,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "living",
+     "rect": [
+      -38.42,
+      6.750000000000002,
+      -33.620000000000005,
+      9.830000000000002
+     ],
+     "w": 3.08,
+     "d": 4.8,
+     "sf": 159
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -31.87,
+      4.23,
+      -29.42,
+      5.98
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -33.620000000000005,
+      4.23,
+      -31.87,
+      5.98
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -33.620000000000005,
+      5.98,
+      -29.42,
+      7.180000000000001
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -33.620000000000005,
+      7.180000000000001,
+      -29.42,
+      9.830000000000002
+     ],
+     "w": 2.65,
+     "d": 4.2,
+     "sf": 120
+    }
+   ],
+   "door": [
+    -29.42,
+    6.58
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -29.77,
+     7.53
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -30.65,
+      5.11
+     ],
+     "run_m": 4.88
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -29.77,
+      7.53
+     ],
+     "run_m": 4.01
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -29.77,
+      8.13
+     ],
+     "run_m": 4.01
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -32.22,
+      4.58
+     ],
+     "run_m": 6.46
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 4.88,
+    "sink": 4.01,
+    "dishwasher": 4.01,
+    "washer": 6.46
+   },
+   "drain_run_m": 6.46,
+   "chases": [
+    [
+     -29.720000000000002,
+     4.805000000000001,
+     -29.42,
+     5.405
+    ]
+   ],
+   "column_overlaps": [],
+   "egress_to_stair_m": 15.8,
+   "access": null,
+   "rent_mo": 3066,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "159 sf / 3.08 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "102 sf / 2.52 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.65 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.08 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "543 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 4.9, sink 4.0, dishwasher 4.0, washer 6.5"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": true
+  },
+  {
+   "id": "W3",
+   "type": "1BR/1BA",
+   "poly": [
+    [
+     -29.42,
+     9.830000000000002
+    ],
+    [
+     -29.42,
+     15.4
+    ],
+    [
+     -38.42,
+     15.4
+    ],
+    [
+     -38.42,
+     9.830000000000002
+    ]
+   ],
+   "sf": 540,
+   "rooms": [
+    {
+     "type": "bed",
+     "rect": [
+      -38.42,
+      9.830000000000002,
+      -34.67,
+      12.336500000000001
+     ],
+     "w": 2.51,
+     "d": 3.75,
+     "sf": 101
+    },
+    {
+     "type": "wardrobe",
+     "rect": [
+      -34.67,
+      9.830000000000002,
+      -33.620000000000005,
+      12.336500000000001
+     ],
+     "w": 2.51,
+     "d": 1.05,
+     "sf": 28
+    },
+    {
+     "type": "living",
+     "rect": [
+      -38.42,
+      12.336500000000001,
+      -33.620000000000005,
+      15.4
+     ],
+     "w": 3.06,
+     "d": 4.8,
+     "sf": 158
+    },
+    {
+     "type": "bath",
+     "rect": [
+      -31.87,
+      9.830000000000002,
+      -29.42,
+      11.580000000000002
+     ],
+     "w": 1.75,
+     "d": 2.45,
+     "sf": 46
+    },
+    {
+     "type": "closet",
+     "rect": [
+      -33.620000000000005,
+      9.830000000000002,
+      -31.87,
+      11.580000000000002
+     ],
+     "w": 1.75,
+     "d": 1.75,
+     "sf": 33
+    },
+    {
+     "type": "hall",
+     "rect": [
+      -33.620000000000005,
+      11.580000000000002,
+      -29.42,
+      12.780000000000001
+     ],
+     "w": 1.2,
+     "d": 4.2,
+     "sf": 54
+    },
+    {
+     "type": "kitchen",
+     "rect": [
+      -33.620000000000005,
+      12.780000000000001,
+      -29.42,
+      15.4
+     ],
+     "w": 2.62,
+     "d": 4.2,
+     "sf": 118
+    }
+   ],
+   "door": [
+    -29.42,
+    12.180000000000001
+   ],
+   "entry_clear_m": 1.2,
+   "door_clear_m": 0.91,
+   "sinks": [
+    [
+     -29.77,
+     13.13
+    ]
+   ],
+   "fixtures": [
+    {
+     "kind": "bath1",
+     "pos": [
+      -30.65,
+      10.71
+     ],
+     "run_m": 4.88
+    },
+    {
+     "kind": "sink",
+     "pos": [
+      -29.77,
+      13.13
+     ],
+     "run_m": 5.88
+    },
+    {
+     "kind": "dishwasher",
+     "pos": [
+      -29.77,
+      13.73
+     ],
+     "run_m": 6.48
+    },
+    {
+     "kind": "washer",
+     "pos": [
+      -32.22,
+      10.18
+     ],
+     "run_m": 6.46
+    }
+   ],
+   "drain_runs_m": {
+    "bath1": 4.88,
+    "sink": 5.88,
+    "dishwasher": 6.48,
+    "washer": 6.46
+   },
+   "drain_run_m": 6.48,
+   "chases": [
+    [
+     -29.720000000000002,
+     10.405000000000001,
+     -29.42,
+     11.005000000000003
+    ]
+   ],
+   "column_overlaps": [],
+   "egress_to_stair_m": 20.2,
+   "access": null,
+   "rent_mo": 3055,
+   "checks": {
+    "living >= 120 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "158 sf / 3.06 m"
+    },
+    "bedrooms >= 70 sf and >= 7 ft": {
+     "ok": true,
+     "measured": "101 sf / 2.51 m"
+    },
+    "bedrooms and living on the glass": {
+     "ok": true,
+     "measured": "all start at the glass line"
+    },
+    "entry >= 1.07 m clear, door 0.91 m": {
+     "ok": true,
+     "measured": "1.20 m"
+    },
+    "door on the corridor": {
+     "ok": true,
+     "measured": "yes"
+    },
+    "bath 1.5 m turning circle": {
+     "ok": true,
+     "measured": "1.75\u00d72.45"
+    },
+    "kitchen run >= 2.4 m (40 in aisle)": {
+     "ok": true,
+     "measured": "2.62 m"
+    },
+    "living room >= 3.0 m wide": {
+     "ok": true,
+     "measured": "3.06 m"
+    },
+    "one-bed >= 500 sf": {
+     "ok": true,
+     "measured": "540 sf"
+    },
+    "every drain run <= 8 m": {
+     "ok": true,
+     "measured": "bath1 4.9, sink 5.9, dishwasher 6.5, washer 6.5"
+    },
+    "no column overlap in bath/hall (> 0.02 m\u00b2)": {
+     "ok": true,
+     "measured": "0.000 m\u00b2"
+    },
+    "columns only in allowed rooms": {
+     "ok": true,
+     "measured": "ok"
+    }
+   },
+   "wet_rooms_paired": false
+  }
+ ],
+ "corridor": [
+  [
+   -29.42,
+   -1.37,
+   -18.3,
+   0.12
+  ],
+  [
+   -19.82,
+   -3.75,
+   -18.3,
+   0.12
+  ],
+  [
+   -19.82,
+   -3.75,
+   -9.23,
+   -2.23
+  ],
+  [
+   -10.75,
+   -3.75,
+   -9.23,
+   0.12
+  ],
+  [
+   -10.75,
+   -1.37,
+   21.3,
+   0.12
+  ],
+  [
+   19.78,
+   -1.37,
+   21.3,
+   17.97
+  ],
+  [
+   4.1,
+   16.45,
+   21.3,
+   17.97
+  ],
+  [
+   4.1,
+   13.88,
+   5.62,
+   16.45
+  ],
+  [
+   -29.42,
+   13.88,
+   5.62,
+   15.4
+  ],
+  [
+   -29.42,
+   -1.37,
+   -27.9,
+   15.4
+  ]
+ ],
+ "stair_links": [
+  {
+   "rect": [
+    -27.9,
+    5.5,
+    -25.775,
+    7.0
+   ],
+   "rating": "enclosed \u00bd hr rated corridor",
+   "clear_width_m": 1.5
+  },
+  {
+   "rect": [
+    18.475,
+    7.0,
+    19.78,
+    8.5
+   ],
+   "rating": "enclosed \u00bd hr rated corridor",
+   "clear_width_m": 1.3
+  }
+ ],
+ "stairs": [
+  {
+   "name": "Stair 1 (west core)",
+   "rect": [
+    -25.6,
+    4.0,
+    -22.8,
+    8.5
+   ],
+   "door": [
+    -25.775,
+    6.25
+   ]
+  },
+  {
+   "name": "Stair 2 (east core)",
+   "rect": [
+    15.6,
+    5.0,
+    18.3,
+    10.5
+   ],
+   "door": [
+    18.475,
+    7.75
+   ]
+  }
+ ],
+ "lobbies": [
+  {
+   "name": "Elevator lobby, west core",
+   "rect": [
+    -9.5,
+    0.12,
+    -5.5,
+    2.85
+   ],
+   "door": [
+    -7.5,
+    0.12
+   ],
+   "opens_onto": "corridor"
+  },
+  {
+   "name": "Elevator lobby, east core",
+   "rect": [
+    10.6,
+    0.12,
+    13.2,
+    3.05
+   ],
+   "door": [
+    11.9,
+    0.12
+   ],
+   "opens_onto": "corridor"
+  }
+ ],
+ "storage": {
+  "lockers_sf": 1638,
+  "cowork_sf": 1263,
+  "separation": "1 hr wall at x = 0.29",
+  "note": "neither is on a path to a stair; stair links are enclosed passages"
+ },
+ "stair_separation_m": 44.28,
+ "worst_travel_to_stair_m": 46.0,
+ "corridor_loop": true,
+ "columns": [
+  {
+   "id": "C1",
+   "kind": "possible",
+   "x": -7.15,
+   "y": -6.32,
+   "size": 0.75,
+   "where": "S4 living 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S4 living",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C2",
+   "kind": "probable",
+   "x": 22.03,
+   "y": 5.42,
+   "size": 0.68,
+   "where": "E2 closet 0.46 m\u00b2",
+   "overlaps": [
+    {
+     "room": "E2 closet",
+     "m2": 0.462
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C3",
+   "kind": "probable",
+   "x": 22.06,
+   "y": 13.57,
+   "size": 0.64,
+   "where": "E3 closet 0.41 m\u00b2",
+   "overlaps": [
+    {
+     "room": "E3 closet",
+     "m2": 0.41
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C4",
+   "kind": "possible",
+   "x": -30.22,
+   "y": 0.72,
+   "size": 0.64,
+   "where": "W1 closet 0.41 m\u00b2",
+   "overlaps": [
+    {
+     "room": "W1 closet",
+     "m2": 0.41
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C5",
+   "kind": "probable",
+   "x": 14.61,
+   "y": 16.04,
+   "size": 0.64,
+   "where": "storage / co-working zone",
+   "overlaps": [],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C6",
+   "kind": "probable",
+   "x": 22.12,
+   "y": 0.54,
+   "size": 0.68,
+   "where": "E1 closet 0.46 m\u00b2",
+   "overlaps": [
+    {
+     "room": "E1 closet",
+     "m2": 0.462
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C7",
+   "kind": "probable",
+   "x": 6.16,
+   "y": -1.75,
+   "size": 0.75,
+   "where": "S6 closet 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S6 closet",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C8",
+   "kind": "probable",
+   "x": 6.04,
+   "y": 16.06,
+   "size": 0.64,
+   "where": "storage / co-working zone",
+   "overlaps": [],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C9",
+   "kind": "probable",
+   "x": -11.15,
+   "y": -1.86,
+   "size": 0.64,
+   "where": "storage / co-working zone",
+   "overlaps": [],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C10",
+   "kind": "probable",
+   "x": 8.67,
+   "y": 20.24,
+   "size": 0.75,
+   "where": "N7 living 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "N7 living",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C11",
+   "kind": "possible",
+   "x": -35.94,
+   "y": -5.94,
+   "size": 0.64,
+   "where": "S1 wardrobe 0.41 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S1 wardrobe",
+     "m2": 0.41
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C12",
+   "kind": "probable",
+   "x": 17.18,
+   "y": 20.19,
+   "size": 0.75,
+   "where": "N8 living 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "N8 living",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C13",
+   "kind": "possible",
+   "x": -30.18,
+   "y": -0.82,
+   "size": 0.75,
+   "where": "W1 closet 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "W1 closet",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C14",
+   "kind": "probable",
+   "x": 14.62,
+   "y": -1.91,
+   "size": 0.68,
+   "where": "S8 closet 0.46 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S8 closet",
+     "m2": 0.462
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C15",
+   "kind": "probable",
+   "x": 11.34,
+   "y": -1.8,
+   "size": 0.64,
+   "where": "S7 closet 0.41 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S7 closet",
+     "m2": 0.41
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C16",
+   "kind": "probable",
+   "x": -0.18,
+   "y": 20.62,
+   "size": 0.5,
+   "where": "N6 wardrobe 0.25 m\u00b2",
+   "overlaps": [
+    {
+     "room": "N6 wardrobe",
+     "m2": 0.25
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C17",
+   "kind": "probable",
+   "x": 21.94,
+   "y": 8.55,
+   "size": 0.64,
+   "where": "E2 closet 0.41 m\u00b2",
+   "overlaps": [
+    {
+     "room": "E2 closet",
+     "m2": 0.41
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C18",
+   "kind": "probable",
+   "x": 22.22,
+   "y": -0.93,
+   "size": 0.64,
+   "where": "E1 closet 0.41 m\u00b2",
+   "overlaps": [
+    {
+     "room": "E1 closet",
+     "m2": 0.41
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C19",
+   "kind": "probable",
+   "x": 11.32,
+   "y": 16.11,
+   "size": 0.6,
+   "where": "storage / co-working zone",
+   "overlaps": [],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C20",
+   "kind": "possible",
+   "x": 4.41,
+   "y": 12.13,
+   "size": 0.6,
+   "where": "storage / co-working zone",
+   "overlaps": [],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "C21",
+   "kind": "probable",
+   "x": 1.56,
+   "y": -2.04,
+   "size": 0.5,
+   "where": "S5 closet 0.25 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S5 closet",
+     "m2": 0.25
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H1",
+   "kind": "hidden",
+   "x": -8.7,
+   "y": 20.2,
+   "size": 0.75,
+   "where": "N4 living 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "N4 living",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H2",
+   "kind": "hidden",
+   "x": -17.2,
+   "y": 20.2,
+   "size": 0.75,
+   "where": "N3 living 0.46 m\u00b2; N3 wardrobe 0.10 m\u00b2",
+   "overlaps": [
+    {
+     "room": "N3 living",
+     "m2": 0.457
+    },
+    {
+     "room": "N3 wardrobe",
+     "m2": 0.105
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H3",
+   "kind": "hidden",
+   "x": -25.7,
+   "y": 20.2,
+   "size": 0.75,
+   "where": "N2 wardrobe 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "N2 wardrobe",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H4",
+   "kind": "hidden",
+   "x": -34.2,
+   "y": 20.2,
+   "size": 0.75,
+   "where": "N1 living 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "N1 living",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H5",
+   "kind": "hidden",
+   "x": -34.2,
+   "y": -6.1,
+   "size": 0.75,
+   "where": "S1 living 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S1 living",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H6",
+   "kind": "hidden",
+   "x": -25.7,
+   "y": -6.1,
+   "size": 0.75,
+   "where": "S2 wardrobe 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S2 wardrobe",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H7",
+   "kind": "hidden",
+   "x": -17.2,
+   "y": -6.1,
+   "size": 0.75,
+   "where": "S3 wardrobe 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S3 wardrobe",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H8",
+   "kind": "hidden",
+   "x": -8.7,
+   "y": -6.1,
+   "size": 0.75,
+   "where": "S4 living 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S4 living",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H9",
+   "kind": "hidden",
+   "x": -0.18,
+   "y": -6.1,
+   "size": 0.75,
+   "where": "S5 living 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S5 living",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H10",
+   "kind": "hidden",
+   "x": 8.67,
+   "y": -6.1,
+   "size": 0.75,
+   "where": "S7 wardrobe 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S7 wardrobe",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  },
+  {
+   "id": "H11",
+   "kind": "hidden",
+   "x": 17.18,
+   "y": -6.1,
+   "size": 0.75,
+   "where": "S8 wardrobe 0.56 m\u00b2",
+   "overlaps": [
+    {
+     "room": "S8 wardrobe",
+     "m2": 0.562
+    }
+   ],
+   "ok": true,
+   "hard": false
+  }
+ ],
+ "money": {
+  "n": 24,
+  "avg_rent": 3585.0649166666667,
+  "gpr": 1054098.696,
+  "noi": 650905.94478,
+  "build": 10686375.0,
+  "linkage": 354943.28,
+  "acq": 5544072,
+  "owner_cost": 11041318.28,
+  "buyer_cost": 16585390.28,
+  "yoc_buyer": 0.0392457418119919,
+  "yoc_owner": 0.05895183240565003,
+  "value": 11032304.14881356,
+  "profit_buyer": -5553086.131186439,
+  "vs_office": -29094.05521999998,
+  "storage_noi": 23759.19,
+  "yoc_buyer_with_storage": 0.04067827909926036,
+  "rent_needed_buyer": null,
+  "rent_uplift_buyer": 0.8218537017983569,
+  "rent_uplift_owner_vs_office": 0.044697786912721194,
+  "breakeven_cost_per_rentable_sf": 203.27081302078832,
+  "owner_points": 4.4181188956,
+  "fitout_sensitivity": {
+   "assumption": "$55,000 per extra unit (one kitchen + one bath) over v3's 22 units; information only, not scored",
+   "extra_units": 2,
+   "extra_cost": 110000,
+   "noi": 650905.94478,
+   "owner_cost": 11151318.28,
+   "buyer_cost": 16695390.28,
+   "yoc_owner": 0.05837031357515876,
+   "yoc_buyer": 0.038987165550705534,
+   "vs_office_after_carrying_fitout": -36959.05521999998,
+   "note": "vs office here charges the extra fit-out at the 7.15% required yield per year"
+  }
+ },
+ "self_score": {
+  "items": {
+   "LA zoning": {
+    "points": 5,
+    "max": 5,
+    "measured": "24 units, residential"
+   },
+   "Room size, daylight, escape": {
+    "points": 7.0,
+    "max": 7,
+    "measured": "100% of units pass; all bedrooms and living rooms on the glass"
+   },
+   "Exits and stairs": {
+    "points": 8,
+    "max": 8,
+    "measured": "worst travel to stair door 46.0 m (limit 76.2); stairs 44.3 m apart (min 25.7); loop yes; 2 enclosed lobbies; stair links enclosed \u00bd hr, 1.30 m wide"
+   },
+   "Accessibility": {
+    "points": 8.0,
+    "max": 8,
+    "measured": "baths 100%, kitchens 100%; 3 mobility + 1 hearing/vision of 24; mobility baths column-free: True"
+   },
+   "Fire, sound, ventilation": {
+    "points": 6.83,
+    "max": 7,
+    "measured": "1 hr demising + \u00bd hr corridor + 1 hr lockers/co-working wall labelled; chases clear 100%; wet rooms paired 83%"
+   },
+   "No hard failures": {
+    "points": 5,
+    "max": 5,
+    "measured": "0 breaks"
+   },
+   "Detected columns": {
+    "points": 10.0,
+    "max": 10,
+    "measured": "21/21 pass the footprint test"
+   },
+   "Hidden columns": {
+    "points": 8.0,
+    "max": 8,
+    "measured": "11/11 pass the footprint test"
+   },
+   "Drains to the core": {
+    "points": 6.46,
+    "max": 7,
+    "measured": "96% of units have every wet group <= 8 m; worst N1 dishwasher 9.0 m; paired 83%"
+   },
+   "Loads and earthquake": {
+    "points": 5.0,
+    "max": 5,
+    "measured": "chases 0.6\u00d70.3 m, 100% at least 0.6 m from any column"
+   },
+   "Buyer yield": {
+    "points": 6.59,
+    "max": 12,
+    "measured": "3.92% vs 7.15%"
+   },
+   "Owner view vs office": {
+    "points": 4.42,
+    "max": 8,
+    "measured": "NOI $0.651M vs office $0.680M: gap $-0.0291M \u2192 5 + 20 \u00d7 gap"
+   },
+   "Share of floor rented": {
+    "points": 5.58,
+    "max": 6,
+    "measured": "74.4%"
+   },
+   "Unit size vs market": {
+    "points": 4.0,
+    "max": 4,
+    "measured": "average 657 sf; smallest one-bed 529 sf"
+   }
+  },
+  "hard_breaks": 0,
+  "total": 89.9
+ },
+ "geometry_errors": []
+}

@@ -1,0 +1,671 @@
+{
+ "comps": {
+  "n": 167,
+  "buildings": 38,
+  "rent_med": 3245.0,
+  "rent_q1": 2675.0,
+  "rent_q3": 3561.25,
+  "sf_med": 681.0,
+  "psf_med": 4.6767676767676765,
+  "fit": [
+   974.4308538445492,
+   3.3353283667473734
+  ]
+ },
+ "schemes": {
+  "A": {
+   "units": 28,
+   "areas": {
+    "gross_sf": 25667,
+    "core_sf": 4489,
+    "corridor_sf": 2907,
+    "amenity_sf": 5814,
+    "units_sf": 12453,
+    "efficiency": 0.5879994831142392
+   },
+   "worst_egress_m": 38.7,
+   "columns": [
+    {
+     "i": 1,
+     "x": -7.15,
+     "y": -6.32,
+     "size": 0.75,
+     "grade": "possible",
+     "where": "in a wall of S5",
+     "ok": true
+    },
+    {
+     "i": 2,
+     "x": 22.03,
+     "y": 5.42,
+     "size": 0.68,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 3,
+     "x": 22.06,
+     "y": 13.57,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 4,
+     "x": -30.22,
+     "y": 0.72,
+     "size": 0.64,
+     "grade": "possible",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 5,
+     "x": 14.61,
+     "y": 16.04,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 6,
+     "x": 22.12,
+     "y": 0.54,
+     "size": 0.68,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 7,
+     "x": 6.16,
+     "y": -1.75,
+     "size": 0.75,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 8,
+     "x": 6.04,
+     "y": 16.06,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 9,
+     "x": -11.15,
+     "y": -1.86,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 10,
+     "x": 8.67,
+     "y": 20.24,
+     "size": 0.75,
+     "grade": "probable",
+     "where": "in a wall of N8",
+     "ok": true
+    },
+    {
+     "i": 11,
+     "x": -35.94,
+     "y": -5.94,
+     "size": 0.64,
+     "grade": "possible",
+     "where": "in a wall of S1",
+     "ok": true
+    },
+    {
+     "i": 12,
+     "x": 17.18,
+     "y": 20.19,
+     "size": 0.75,
+     "grade": "probable",
+     "where": "in a wall of N10",
+     "ok": true
+    },
+    {
+     "i": 13,
+     "x": -30.18,
+     "y": -0.82,
+     "size": 0.75,
+     "grade": "possible",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 14,
+     "x": 14.62,
+     "y": -1.91,
+     "size": 0.68,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 15,
+     "x": 11.34,
+     "y": -1.8,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 16,
+     "x": -0.18,
+     "y": 20.62,
+     "size": 0.5,
+     "grade": "probable",
+     "where": "in a wall of N7",
+     "ok": true
+    },
+    {
+     "i": 17,
+     "x": 21.94,
+     "y": 8.55,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 18,
+     "x": 22.22,
+     "y": -0.93,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 19,
+     "x": 11.32,
+     "y": 16.11,
+     "size": 0.6,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 20,
+     "x": 4.41,
+     "y": 12.13,
+     "size": 0.6,
+     "grade": "possible",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 21,
+     "x": 1.56,
+     "y": -2.04,
+     "size": 0.5,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    }
+   ],
+   "finance": {
+    "market": {
+     "scenario": "market",
+     "case": "mid",
+     "n": 28,
+     "avg_rent": 2457.8181449554436,
+     "gpr": 851026.8967050291,
+     "noi": 565932.8863088443,
+     "conv": 12833500,
+     "acq": 5544072,
+     "linkage": 430178.92000000004,
+     "total": 18807750.92,
+     "per_unit": 671705.39,
+     "yoc": 0.030090407338765644,
+     "value": 9592082.818793971,
+     "profit": -9215668.10120603,
+     "hurdle": 0.0715,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 75.61827806369115
+    },
+    "mixed": {
+     "scenario": "mixed",
+     "case": "mid",
+     "n": 28,
+     "avg_rent": 2492.9085390674127,
+     "gpr": 862817.2691266506,
+     "noi": 573773.4839692226,
+     "conv": 12833500,
+     "acq": 5544072,
+     "linkage": 0.0,
+     "total": 18377572.0,
+     "per_unit": 656341.8571428572,
+     "yoc": 0.031221397688945125,
+     "value": 9724974.304563096,
+     "profit": -8652597.695436904,
+     "hurdle": 0.0715,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 96.65063979419175
+    },
+    "affordable": {
+     "scenario": "affordable",
+     "case": "mid",
+     "n": 28,
+     "avg_rent": 1874.0,
+     "gpr": 654864,
+     "noi": 435484.55999999994,
+     "conv": 12833500,
+     "acq": 5544072,
+     "linkage": 0.0,
+     "total": 18377572.0,
+     "per_unit": 656341.8571428572,
+     "yoc": 0.02369652313156493,
+     "value": 7381094.237288135,
+     "profit": -10996477.762711864,
+     "hurdle": 0.0715,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 21.296651219587257
+    }
+   },
+   "cost_cases": {
+    "low": {
+     "scenario": "market",
+     "case": "low",
+     "n": 28,
+     "avg_rent": 2457.8181449554436,
+     "gpr": 842626.8967050291,
+     "noi": 560346.8863088443,
+     "conv": 10266800,
+     "acq": 2387031,
+     "linkage": 430178.92000000004,
+     "total": 13084009.92,
+     "per_unit": 467286.0685714286,
+     "yoc": 0.04282684664219853,
+     "value": 12452153.02908543,
+     "profit": -631856.8909145705,
+     "hurdle": 0.055,
+     "exit_cap": 0.045,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 287.174788078675
+    },
+    "mid": {
+     "scenario": "market",
+     "case": "mid",
+     "n": 28,
+     "avg_rent": 2457.8181449554436,
+     "gpr": 851026.8967050291,
+     "noi": 565932.8863088443,
+     "conv": 12833500,
+     "acq": 5544072,
+     "linkage": 430178.92000000004,
+     "total": 18807750.92,
+     "per_unit": 671705.39,
+     "yoc": 0.030090407338765644,
+     "value": 9592082.818793971,
+     "profit": -9215668.10120603,
+     "hurdle": 0.0715,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 75.61827806369115
+    },
+    "high": {
+     "scenario": "market",
+     "case": "high",
+     "n": 28,
+     "avg_rent": 2457.8181449554436,
+     "gpr": 859426.8967050291,
+     "noi": 519523.5590581901,
+     "conv": 15400200,
+     "acq": 13834513,
+     "linkage": 430178.92000000004,
+     "total": 29664891.92,
+     "per_unit": 1059460.4257142858,
+     "yoc": 0.017513077764086796,
+     "value": 8805484.05183373,
+     "profit": -20859407.86816627,
+     "hurdle": 0.074,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": -282.23412491052756
+    }
+   }
+  },
+  "B": {
+   "units": 22,
+   "areas": {
+    "gross_sf": 25667,
+    "core_sf": 4489,
+    "corridor_sf": 2907,
+    "amenity_sf": 5814,
+    "units_sf": 12453,
+    "efficiency": 0.5879994831142391
+   },
+   "worst_egress_m": 40.5,
+   "columns": [
+    {
+     "i": 1,
+     "x": -7.15,
+     "y": -6.32,
+     "size": 0.75,
+     "grade": "possible",
+     "where": "in a wall of S4",
+     "ok": true
+    },
+    {
+     "i": 2,
+     "x": 22.03,
+     "y": 5.42,
+     "size": 0.68,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 3,
+     "x": 22.06,
+     "y": 13.57,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 4,
+     "x": -30.22,
+     "y": 0.72,
+     "size": 0.64,
+     "grade": "possible",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 5,
+     "x": 14.61,
+     "y": 16.04,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 6,
+     "x": 22.12,
+     "y": 0.54,
+     "size": 0.68,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 7,
+     "x": 6.16,
+     "y": -1.75,
+     "size": 0.75,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 8,
+     "x": 6.04,
+     "y": 16.06,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 9,
+     "x": -11.15,
+     "y": -1.86,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 10,
+     "x": 8.67,
+     "y": 20.24,
+     "size": 0.75,
+     "grade": "probable",
+     "where": "in a wall of N6",
+     "ok": true
+    },
+    {
+     "i": 11,
+     "x": -35.94,
+     "y": -5.94,
+     "size": 0.64,
+     "grade": "possible",
+     "where": "in a wall of S1",
+     "ok": true
+    },
+    {
+     "i": 12,
+     "x": 17.18,
+     "y": 20.19,
+     "size": 0.75,
+     "grade": "probable",
+     "where": "in a wall of N7",
+     "ok": true
+    },
+    {
+     "i": 13,
+     "x": -30.18,
+     "y": -0.82,
+     "size": 0.75,
+     "grade": "possible",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 14,
+     "x": 14.62,
+     "y": -1.91,
+     "size": 0.68,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 15,
+     "x": 11.34,
+     "y": -1.8,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 16,
+     "x": -0.18,
+     "y": 20.62,
+     "size": 0.5,
+     "grade": "probable",
+     "where": "in a wall of N5",
+     "ok": true
+    },
+    {
+     "i": 17,
+     "x": 21.94,
+     "y": 8.55,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 18,
+     "x": 22.22,
+     "y": -0.93,
+     "size": 0.64,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 19,
+     "x": 11.32,
+     "y": 16.11,
+     "size": 0.6,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    },
+    {
+     "i": 20,
+     "x": 4.41,
+     "y": 12.13,
+     "size": 0.6,
+     "grade": "possible",
+     "where": "amenity / back-of-house zone",
+     "ok": true
+    },
+    {
+     "i": 21,
+     "x": 1.56,
+     "y": -2.04,
+     "size": 0.5,
+     "grade": "probable",
+     "where": "in corridor inner wall",
+     "ok": true
+    }
+   ],
+   "finance": {
+    "market": {
+     "scenario": "market",
+     "case": "mid",
+     "n": 22,
+     "avg_rent": 2862.681526928119,
+     "gpr": 775547.9231090235,
+     "noi": 515739.36886750057,
+     "conv": 12833500,
+     "acq": 5544072,
+     "linkage": 430178.92000000004,
+     "total": 18807750.92,
+     "per_unit": 854897.7690909092,
+     "yoc": 0.027421639677239013,
+     "value": 8741345.235042384,
+     "profit": -10066405.684957618,
+     "hurdle": 0.0715,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 48.2677019565547
+    },
+    "mixed": {
+     "scenario": "mixed",
+     "case": "mid",
+     "n": 22,
+     "avg_rent": 2840.1659126605805,
+     "gpr": 769603.8009423933,
+     "noi": 511786.52762669144,
+     "conv": 12833500,
+     "acq": 5544072,
+     "linkage": 0.0,
+     "total": 18377572.0,
+     "per_unit": 835344.1818181818,
+     "yoc": 0.027848430011684428,
+     "value": 8674347.925876128,
+     "profit": -9703224.074123872,
+     "hurdle": 0.0715,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 62.873788648476264
+    },
+    "affordable": {
+     "scenario": "affordable",
+     "case": "mid",
+     "n": 22,
+     "avg_rent": 1874.0,
+     "gpr": 514536,
+     "noi": 342166.43999999994,
+     "conv": 12833500,
+     "acq": 5544072,
+     "linkage": 0.0,
+     "total": 18377572.0,
+     "per_unit": 835344.1818181818,
+     "yoc": 0.018618696746229586,
+     "value": 5799431.186440677,
+     "profit": -12578140.813559324,
+     "hurdle": 0.0715,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": -29.552631184610004
+    }
+   },
+   "cost_cases": {
+    "low": {
+     "scenario": "market",
+     "case": "low",
+     "n": 22,
+     "avg_rent": 2862.681526928119,
+     "gpr": 768947.9231090235,
+     "noi": 511350.36886750057,
+     "conv": 10266800,
+     "acq": 2387031,
+     "linkage": 430178.92000000004,
+     "total": 13084009.92,
+     "per_unit": 594727.7236363636,
+     "yoc": 0.039082083550384575,
+     "value": 11363341.530388903,
+     "profit": -1720668.389611097,
+     "hurdle": 0.055,
+     "exit_cap": 0.045,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 252.4669620117098
+    },
+    "mid": {
+     "scenario": "market",
+     "case": "mid",
+     "n": 22,
+     "avg_rent": 2862.681526928119,
+     "gpr": 775547.9231090235,
+     "noi": 515739.36886750057,
+     "conv": 12833500,
+     "acq": 5544072,
+     "linkage": 430178.92000000004,
+     "total": 18807750.92,
+     "per_unit": 854897.7690909092,
+     "yoc": 0.027421639677239013,
+     "value": 8741345.235042384,
+     "profit": -10066405.684957618,
+     "hurdle": 0.0715,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": 48.2677019565547
+    },
+    "high": {
+     "scenario": "market",
+     "case": "high",
+     "n": 22,
+     "avg_rent": 2862.681526928119,
+     "gpr": 782147.9231090235,
+     "noi": 472808.4195194047,
+     "conv": 15400200,
+     "acq": 13834513,
+     "linkage": 430178.92000000004,
+     "total": 29664891.92,
+     "per_unit": 1348404.1781818182,
+     "yoc": 0.015938315932330714,
+     "value": 8013702.025752623,
+     "profit": -21651189.89424738,
+     "hurdle": 0.074,
+     "exit_cap": 0.059,
+     "verdict": "not worth it",
+     "breakeven_cost_psf": -306.82935105472234
+    }
+   }
+  }
+ }
+}
